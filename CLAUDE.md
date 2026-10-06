@@ -11,6 +11,32 @@
 - `freecad-mcp.mcpb` — упакованное расширение для Claude Desktop (см. ниже). Выдано пользователю, в репозитории не обязательно хранить дальше.
 - `freecad-mcpb/manifest.json` — исходник манифеста, из которого собран `.mcpb` (на случай пересборки, напр. при добавлении auth-токена).
 
+## Версионирование модели — History Workbench
+
+В FreeCAD поставлен аддон [History Workbench](https://github.com/eblanshey/HistoryWorkbench)
+(0.2.1, LGPL-2.1) — git-версионирование `.FCStd` через GUI (diff в 3D и по дереву
+документа, без необходимости знать git). Установлен вручную (клон репозитория
+скопирован в Mod, как и для MCP-аддона — Addon Manager делает то же самое):
+`~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/HistoryWorkbench/`
+(копировались только `package.xml`, `README.md`, `LICENSE`, `freecad/history_wb/`;
+`.git`, `tests/`, `docs-static-site/`, dev-скрипты — не нужны в рантайме).
+
+Зависимости проверены и в порядке: системный `git` (2.49.0) и `PyYAML` (6.0.3,
+уже был в питоне самого FreeCAD) доступны изнутри flatpak-песочницы FreeCAD —
+несмотря на sandbox, `filesystems=host` в правах flatpak даёт доступ и к
+хостовым бинарникам. Подтверждено после рестарта: `Gui.listWorkbenches()`
+содержит `HistoryWorkbench` без ошибок импорта.
+
+Пользоваться: переключить workbench на "History" в выпадающем списке в GUI
+FreeCAD, "Initialize Project" → выбрать папку `/home/semen/ETZ`. Проверил по
+исходнику аддона (`git_port_adapter.py`, `initialize_repository()`): он просто
+вызывает `git init` в указанной папке — если там уже есть `.git` (а он уже
+есть, см. ниже), git-init по нему идёт безопасно повторно и репозиторий
+переиспользуется, **это тот же самый `/home/semen/ETZ/.git`**, отдельного
+репозитория аддон не заводит. Коммитит через `git add -- <конкретные файлы>`
+(не `-A`), то есть сам по себе не утащит в коммит что попало — стейджит только
+то, что выбрано в его UI (обычно `.FCStd`).
+
 ## Что строит макет (ETZ_poligon.FCMacro)
 
 Глобальная СК: начало — левый нижний угол полигона 600×500 мм, X вправо, Y вверх,
@@ -127,6 +153,18 @@ Claude Desktop (это НЕ обычный open-source Claude Desktop — вну
     `claude-desktop`), то есть расширение реально используется приложением,
     не только моей симуляцией.
   - Текущее состояние модели сохранено в `ETZ_Poligon.FCStd`.
+  - Инициализирован **git** в `/home/semen/ETZ` (`git init`, `.gitignore` для
+    `*.FCStd1/.FCBak/__pycache__`), сделан первый коммит `a9173a9` со всеми
+    файлами проекта.
+  - По вопросу "есть ли удобный аддон для git в FreeCAD" — найден и поставлен
+    **[History Workbench](https://github.com/eblanshey/HistoryWorkbench)**
+    (0.2.1): склонирован, в Mod скопированы только
+    `package.xml`/`README.md`/`LICENSE`/`freecad/history_wb/` (без `.git`,
+    `tests/`, `docs-static-site/` — не нужны в рантайме). Зависимости
+    (системный `git`, `PyYAML`) проверены через `execute_code` — обе доступны
+    изнутри flatpak-песочницы. FreeCAD пересохранён и перезапущен (`kill -9` +
+    повторный `flatpak run`), после рестарта `Gui.listWorkbenches()`
+    подтвердил `HistoryWorkbench` в списке без ошибок импорта.
 
 ## Известные нюансы / грабли на будущее
 
