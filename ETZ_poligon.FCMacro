@@ -1,0 +1,238 @@
+# -*- coding: utf-8 -*-
+# ETZ_poligon.FCMacro
+# Полигон проектного тура ВсОШ (Робототехника) 2026-27 по краткому ЕТЗ:
+#   полигон 600x500, зоны 1 и 2, область операционного поля 250x330,
+#   лист А4 с сеткой 9x6 клеток по 28 мм, столбец отбоя, метки ArUco 27/28/29,
+#   шашки Ø26x5 с крышкой 0,8 мм и шайбой М8 (ГОСТ 6958-78) внутри.
+#
+# Глобальная система координат модели: начало — левый нижний угол полигона
+# (как на рис. 1 ЕТЗ: зона 1 слева), X — вправо (600 мм), Y — вверх (500 мм),
+# Z — вверх от поверхности полигона.
+# Координаты поля (ЕТЗ п. 2.2) переводит функция field_to_global().
+#
+# Запуск: FreeCAD -> Макросы -> Макросы... -> выбрать файл -> Выполнить.
+
+import FreeCAD as App
+import Part
+
+DOC_NAME = "ETZ_Poligon"
+
+# ----------------------------------------------------------------------------
+# Расстановка шашек — правьте этот список.
+# (клетка, цвет[, высота_стопки]) ; клетка — "Б3", или "Отбой1".."Отбой5"
+# (строки А..Д столбца отбоя). Цвета: red, green, blue, yellow, magenta.
+# ----------------------------------------------------------------------------
+CHECKERS = [
+    ("А0", "red"),
+    ("Б3", "green"),
+    ("В5", "blue"),
+    ("Г7", "yellow"),
+    ("Д2", "magenta"),
+    ("Е8", "red"),
+    ("Отбой2", "blue"),
+]
+
+# ----------------------------------------------------------------------------
+# Размеры (мм)
+# ----------------------------------------------------------------------------
+POLY_W, POLY_H = 600.0, 500.0
+BASE_T = 5.0                      # толщина основания (условно)
+ZONE1_W = 350.0
+ZONE2_H = 80.0
+GAP = 5.0                         # зазор между зоной 2 и областью поля
+FIELD_AREA = (ZONE1_W, ZONE2_H + GAP, 250.0, 330.0)   # x, y, w, h
+SHEET_W, SHEET_H = 210.0, 297.0   # А4, длинная сторона вдоль Y полигона
+
+Z_ZONE = 0.0                      # цветные зоны — тонкие слои над основанием
+T_ZONE = 0.2
+Z_SHEET = Z_ZONE + T_ZONE
+T_SHEET = 0.1
+Z_PRINT = Z_SHEET + T_SHEET       # печать на листе
+T_PRINT = 0.05
+Z_TOP = Z_PRINT + T_PRINT         # на этой высоте стоят шашки
+
+CELL = 28.0
+CHECKER_D, CHECKER_H, LID_T, WALL_T = 26.0, 5.0, 0.8, 0.9
+WASHER_D, WASHER_d, WASHER_T = 24.0, 8.4, 2.0
+
+COLORS = {
+    "red": (0.85, 0.10, 0.10),
+    "green": (0.10, 0.65, 0.20),
+    "blue": (0.10, 0.30, 0.85),
+    "yellow": (0.95, 0.85, 0.10),
+    "magenta": (0.80, 0.10, 0.75),
+}
+ROWS = "АБВГДЕ"   # А = 1 ... Е = 6
+
+# Положение листа: по центру области поля
+SHEET_X0 = FIELD_AREA[0] + (FIELD_AREA[2] - SHEET_W) / 2.0   # 370
+SHEET_Y_TOP = FIELD_AREA[1] + (FIELD_AREA[3] + SHEET_H) / 2.0  # 398.5
+
+
+def page_to_global(px, py):
+    """Координаты на листе-шаблоне (прил. А, от левого верхнего угла, мм)."""
+    return SHEET_X0 + px, SHEET_Y_TOP - py
+
+
+# Начало координат поля O — центр метки id 27 (на шаблоне: 193, 272)
+O_GX, O_GY = page_to_global(193.0, 272.0)
+
+
+def field_to_global(X, Y):
+    """Координаты поля ЕТЗ (O — метка 27, OX к метке 28, OY к клеткам)."""
+    return O_GX - Y, O_GY + X
+
+
+def cell_center(name):
+    if name.startswith("Отбой"):
+        k = int(name[5:])
+        return field_to_global(252.0, CELL * k)
+    k = ROWS.index(name[0]) + 1
+    n = int(name[1:])
+    return field_to_global(CELL * n, CELL * k)
+
+
+# ----------------------------------------------------------------------------
+# Вспомогательные функции
+# ----------------------------------------------------------------------------
+doc = App.listDocuments().get(DOC_NAME)
+if doc is not None:
+    App.closeDocument(DOC_NAME)
+doc = App.newDocument(DOC_NAME)
+
+
+def add(shape, name, color, group, transparency=0):
+    obj = doc.addObject("Part::Feature", name)
+    obj.Shape = shape
+    group.addObject(obj)
+    if App.GuiUp:
+        obj.ViewObject.ShapeColor = color
+        obj.ViewObject.Transparency = transparency
+    return obj
+
+
+def box(x, y, w, h, z, t):
+    return Part.makeBox(w, h, t, App.Vector(x, y, z))
+
+
+def page_rect(px, py, w, h, z, t):
+    gx, gy = page_to_global(px, py + h)
+    return box(gx, gy, w, h, z, t)
+
+
+def disk(cx, cy, d, z, t):
+    return Part.makeCylinder(d / 2.0, t, App.Vector(cx, cy, z))
+
+
+def ring(cx, cy, d, width, z, t):
+    return disk(cx, cy, d + width, z, t).cut(disk(cx, cy, d - width, z, t))
+
+
+g_poly = doc.addObject("App::DocumentObjectGroup", "Poligon")
+g_poly.Label = "Полигон"
+g_field = doc.addObject("App::DocumentObjectGroup", "OperField")
+g_field.Label = "Операционное поле"
+g_chk = doc.addObject("App::DocumentObjectGroup", "Checkers")
+g_chk.Label = "Шашки"
+
+# ----------------------------------------------------------------------------
+# Полигон
+# ----------------------------------------------------------------------------
+add(box(0, 0, POLY_W, POLY_H, -BASE_T, BASE_T), "Base", (0.92, 0.92, 0.92), g_poly).Label = "Основание 600x500"
+add(box(0, 0, ZONE1_W, POLY_H, Z_ZONE, T_ZONE), "Zone1", (0.80, 0.82, 0.80), g_poly).Label = "Зона 1 (350x500)"
+add(box(ZONE1_W, 0, 250, ZONE2_H, Z_ZONE, T_ZONE), "Zone2_bottom", (0.80, 0.90, 0.55), g_poly).Label = "Зона 2 нижняя (250x80)"
+add(box(ZONE1_W, POLY_H - ZONE2_H, 250, ZONE2_H, Z_ZONE, T_ZONE), "Zone2_top", (0.80, 0.90, 0.55), g_poly).Label = "Зона 2 верхняя (250x80)"
+fx, fy, fw, fh = FIELD_AREA
+add(box(fx, fy, fw, fh, Z_ZONE, T_ZONE), "FieldArea", (1.00, 0.88, 0.45), g_poly).Label = "Область операционного поля (250x330)"
+
+# ----------------------------------------------------------------------------
+# Операционное поле (лист А4)
+# ----------------------------------------------------------------------------
+add(box(SHEET_X0, SHEET_Y_TOP - SHEET_H, SHEET_W, SHEET_H, Z_SHEET, T_SHEET),
+    "Sheet", (1.0, 1.0, 1.0), g_field).Label = "Лист А4"
+
+# Черные ограничительные полосы 6 мм (по шаблону)
+strips = page_rect(5, 34, 6, 258, Z_PRINT, T_PRINT).fuse(page_rect(5, 286, 174, 6, Z_PRINT, T_PRINT))
+add(strips, "BlackStrips", (0, 0, 0), g_field).Label = "Черные полосы"
+
+# Красная сетка (линии 0,3 мм, как на шаблоне)
+LW = 0.3
+lines = []
+for i in range(9):
+    py = 34 + 28 * i
+    lines.append(page_rect(11, py - LW / 2, 168, LW, Z_PRINT, T_PRINT))
+for i in range(6):
+    px = 39 + 28 * i
+    lines.append(page_rect(px - LW / 2, 34, LW, 252, Z_PRINT, T_PRINT))
+add(Part.makeCompound(lines), "GridLines", (0.88, 0.0, 0.0), g_field).Label = "Красная сетка"
+
+# Черные круги Ø6 и зеленые окружности Ø24,5 в центрах клеток
+dots, circles, labels = [], [], []
+for k in range(1, 7):
+    for n in range(9):
+        cx, cy = field_to_global(CELL * n, CELL * k)
+        dots.append(disk(cx, cy, 6.0, Z_PRINT, T_PRINT))
+        circles.append(ring(cx, cy, 24.5, 0.4, Z_PRINT, T_PRINT))
+for k in range(1, 6):   # столбец отбоя
+    cx, cy = field_to_global(252.0, CELL * k)
+    circles.append(ring(cx, cy, 24.5, 0.4, Z_PRINT, T_PRINT))
+add(Part.makeCompound(dots), "CellDots", (0, 0, 0), g_field).Label = "Круги Ø6 (центры клеток)"
+add(Part.makeCompound(circles), "CellCircles", (0.0, 0.62, 0.22), g_field).Label = "Окружности Ø24,5 и столбец отбоя"
+
+# Метки ArUco DICT_4X4_50 18x18 (клетка 3 мм). Белые клетки — из шаблона.
+ARUCO = {
+    27: ((184, 263), [(1, 4), (1, 2), (2, 3), (2, 1), (3, 3), (3, 1), (4, 3)]),
+    28: ((184, 39), [(1, 2), (2, 1), (3, 2), (4, 2), (4, 1)]),
+    29: ((16, 11), [(1, 2), (1, 1), (2, 3), (3, 3), (3, 2), (4, 4), (4, 3), (4, 2), (4, 1)]),
+}
+for mid, ((mx, my), whites) in ARUCO.items():
+    black = page_rect(mx, my, 18, 18, Z_PRINT, T_PRINT)
+    holes = [page_rect(mx + 3 * i, my + 3 * j, 3, 3, Z_PRINT, T_PRINT) for i, j in whites]
+    black = black.cut(Part.makeCompound(holes))
+    add(black, "ArUco_%d" % mid, (0, 0, 0), g_field).Label = "ArUco id %d" % mid
+    add(Part.makeCompound(holes), "ArUco_%d_white" % mid, (1, 1, 1), g_field).Label = "ArUco id %d (белое)" % mid
+
+# Оси координат поля (тонкие стрелки над листом — для наглядности)
+ox, oy = field_to_global(0, 0)
+ax_x = Part.makeCylinder(0.6, 40, App.Vector(ox, oy, Z_TOP + 0.5), App.Vector(0, 1, 0))
+ax_y = Part.makeCylinder(0.6, 40, App.Vector(ox, oy, Z_TOP + 0.5), App.Vector(-1, 0, 0))
+add(ax_x, "Axis_OX", (0.1, 0.1, 1.0), g_field).Label = "Ось OX поля"
+add(ax_y, "Axis_OY", (0.1, 0.1, 1.0), g_field).Label = "Ось OY поля"
+
+# ----------------------------------------------------------------------------
+# Шашки
+# ----------------------------------------------------------------------------
+
+
+def make_checker(cx, cy, z):
+    outer = disk(cx, cy, CHECKER_D, z, CHECKER_H)
+    cavity = disk(cx, cy, CHECKER_D - 2 * WALL_T, z, CHECKER_H - LID_T)
+    body = outer.cut(cavity)
+    wz = z + CHECKER_H - LID_T - WASHER_T     # шайба прилегает к крышке
+    washer = disk(cx, cy, WASHER_D, wz, WASHER_T).cut(disk(cx, cy, WASHER_d, wz, WASHER_T))
+    return body, washer
+
+
+for idx, item in enumerate(CHECKERS):
+    cell, color = item[0], item[1]
+    stack = item[2] if len(item) > 2 else 1
+    cx, cy = cell_center(cell)
+    for s in range(stack):
+        z = Z_TOP + s * CHECKER_H
+        body, washer = make_checker(cx, cy, z)
+        tag = "%d_%d" % (idx, s)
+        b = add(body, "Checker_" + tag, COLORS[color], g_chk)
+        b.Label = "Шашка %s %s" % (cell, color) + (" (%d)" % (s + 1) if stack > 1 else "")
+        w = add(washer, "Washer_" + tag, (0.55, 0.55, 0.6), g_chk)
+        w.Label = "Шайба М8 %s" % cell + (" (%d)" % (s + 1) if stack > 1 else "")
+
+doc.recompute()
+
+if App.GuiUp:
+    import FreeCADGui as Gui
+    Gui.activeDocument().activeView().viewIsometric()
+    Gui.SendMsgToActiveView("ViewFit")
+
+App.Console.PrintMessage(
+    "ETZ: полигон построен. Начало координат поля O (метка 27) в глобальных "
+    "координатах: (%.1f, %.1f) мм\n" % (O_GX, O_GY))

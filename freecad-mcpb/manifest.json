@@ -1,0 +1,19 @@
+{
+  "manifest_version": "0.3",
+  "name": "freecad-mcp",
+  "version": "0.1.25",
+  "description": "Control FreeCAD (create/edit models, run Python, inspect documents) via the freecad-mcp addon RPC server.",
+  "author": {
+    "name": "neka-nat",
+    "url": "https://github.com/neka-nat/freecad-mcp"
+  },
+  "server": {
+    "type": "binary",
+    "entry_point": "/home/semen/.local/bin/freecad-mcp",
+    "mcp_config": {
+      "command": "/home/semen/.local/bin/freecad-mcp",
+      "args": ["--only-text-feedback"],
+      "env": {}
+    }
+  }
+}

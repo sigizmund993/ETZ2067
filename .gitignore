@@ -1,0 +1,12 @@
+# FreeCAD backups/locks
+*.FCStd1
+*.FCBak
+*.FCStd.lock
+
+# Python
+__pycache__/
+*.pyc
+
+# OS/editor junk
+.DS_Store
+*.swp
