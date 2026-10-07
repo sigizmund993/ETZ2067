@@ -1,0 +1,279 @@
+Qt: Session management error: Could not open network socket
+Document with the UUID '9017cb3f-be43-4d78-a38d-a11a1060a505' already exists, change to 'ccef571e-006f-42bb-a9e8-73f34abf76be'
+MCP RPC: GUI task raised AttributeError: module 'FreeCADGui' has no attribute 'MainWindow'
+Traceback (most recent call last):
+  File "/home/semen/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/FreeCADMCP/./rpc_server/gui_dispatch.py", line 297, in _wrapped
+    res = task()
+  File "/home/semen/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/FreeCADMCP/./rpc_server/rpc_server.py", line 386, in task
+    exec(code, _EXEC_NAMESPACE)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 8, in <module>
+AttributeError: module 'FreeCADGui' has no attribute 'MainWindow'. Did you mean: 'getMainWindow'?
+Error executing Python code: AttributeError: module 'FreeCADGui' has no attribute 'MainWindow'
+--- code ---
+import FreeCAD as App
+import FreeCADGui as Gui
+
+print('Documents:', App.listDocuments())
+print('ActiveDocument:', App.ActiveDocument.Name if App.ActiveDocument else None)
+ad = Gui.ActiveDocument
+print('Gui.ActiveDocument:', ad.Document.Name if ad else None)
+print('Views:', [v.Document.Name for v in Gui.MainWindow.findChildren(Gui.MDIView)] if hasattr(Gui.MainWindow, 'findChildren') else 'n/a')
+print('mdiActiveView:', Gui.getMainWindow().activeWindow())
+doc = App.getDocument('ETZ_Poligon')
+g = doc.getObject('Poligon')
+print('Poligon child vis sample:', g.Group[0].Name, g.Group[0].ViewObject.Visibility)
+
+--- end ---
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Delete: Selection not restricted to one sketch and its subelements
+Error executing Python code: {'success': False, 'error': "GUI dispatch gave up after 90.0s waiting for 'execute_code' to start (queue_timeout=90s) (GUI thread is not processing tasks: mouse buttons held (3D navigation drag); 1 task(s) queued)"}
+--- code ---
+import FreeCADGui as Gui
+gd = Gui.ActiveDocument
+gd.resetEdit()
+App.ActiveDocument.recompute()
+print("In edit now:", gd.getInEdit())
+
+--- end ---
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: type of along extrusion is not supported.
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Extrusion: end face of tapered along extrusion is empty
+This means most probably that the along taper angle is too large or small.
+Error executing Python code: {'success': False, 'error': "GUI dispatch gave up after 90.0s waiting for 'execute_code' to start (queue_timeout=90s) (GUI thread is not processing tasks: mouse buttons held (3D navigation drag); 1 task(s) queued)"}
+--- code ---
+import FreeCADGui as Gui
+try:
+    from PySide import QtGui, QtCore
+    QDock = QtGui.QDockWidget
+except Exception:
+    from PySide6 import QtWidgets; QDock = QtWidgets.QDockWidget
+mw = Gui.getMainWindow()
+for d in mw.findChildren(QDock):
+    print(repr(d.objectName()), repr(d.windowTitle()), "visible:", d.isVisible(), "floating:", d.isFloating(), "geom:", d.geometry())
+print(App.Version()[:3])
+
+--- end ---
+PartDesign::Pad: Link(s) to object(s) 'Sketch' go out of the allowed scope 'Pad'. Instead, the linked object(s) reside within 'Assembly'.
+FreeCAD 1.1.3, Libs: 1.1.3R44987 (Git)
+(C) 2001-2011 FreeCAD contributors
+FreeCAD is free and open-source software licensed under the terms of LGPL2+ license.
+
+[MCP] Auto-start: RPC Server started at 127.0.0.1:9875 (PID 2).
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+DEBUG: Workbench history_wb activated.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
+\\\Python code executed successfully.
+Python code executed successfully.
+Python code executed successfully.
