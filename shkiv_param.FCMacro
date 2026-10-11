@@ -63,6 +63,14 @@ INPUTS = [
     ("PodshOD",       "App::PropertyLength",  "2 Шкив", 22.0, "Наружный Ø подшипника (608ZZ = 22)"),
     ("PodshW",        "App::PropertyLength",  "2 Шкив", 7.0,  "Толщина подшипника (608ZZ = 7)"),
     ("OtvUpora",      "App::PropertyLength",  "2 Шкив", 10.0, "Ø сквозного отверстия в упоре"),
+    ("OknoChislo",    "App::PropertyInteger", "2 Шкив", 3,
+     "Число окон облегчения. В референсе 3; спица всегда приходится под руку"),
+    ("OknoUgol",      "App::PropertyAngle",   "2 Шкив", 50.0,
+     "Угловая ширина одного окна. Остаток до 360/OknoChislo — ширина спицы"),
+    ("OknoZazorVnutr","App::PropertyLength",  "2 Шкив", 3.0,
+     "Отступ окна наружу от гнезда подшипника"),
+    ("OknoZazorNar",  "App::PropertyLength",  "2 Шкив", 4.0,
+     "Отступ окна внутрь от вершин зубьев (толщина обода под ремень)"),
 
     ("DiamTruby",     "App::PropertyLength",  "3 Рука", 10.0,
      "НАРУЖНЫЙ Ø трубы руки. Меняется свободно — седло, крышка и винты пересчитаются"),
@@ -72,6 +80,10 @@ INPUTS = [
     ("StenkaSedla",   "App::PropertyLength",  "3 Рука", 4.0,  "Материал под дном жёлоба"),
     ("StenkaKryshki", "App::PropertyLength",  "3 Рука", 3.0,  "Материал над трубой в крышке"),
     ("VintM",         "App::PropertyLength",  "3 Рука", 3.0,  "Номинал винта хомута: 3 = M3"),
+    ("GaykaAF",       "App::PropertyLength",  "3 Рука", 5.8,
+     "Размер под ключ паза гайки. M3 = 5.5 + 0.3 на усадку печати"),
+    ("GaykaTolsh",    "App::PropertyLength",  "3 Рука", 2.8,
+     "Высота паза гайки. M3 = 2.4 + 0.4 на усадку печати"),
 
     ("GlubZuba",      "App::PropertyLength",  "4 Профиль GT2", 0.555,
      "Радиус канавки зуба GT2"),
@@ -133,6 +145,19 @@ DERIVED = [
      "{V}.NachRadius + {V}.DlinaZahvata - 6 mm", "Вторая пара винтов"),
     ("TolshKryshki", "App::PropertyLength", "6 Производные",
      "{V}.DiamTruby / 2 + {V}.StenkaKryshki", "Толщина крышки"),
+    ("OknoRvn",      "App::PropertyLength", "6 Производные",
+     "{V}.PodshOD / 2 + {V}.OknoZazorVnutr", "Внутренний радиус окон"),
+    ("OknoRnar",     "App::PropertyLength", "6 Производные",
+     "{V}.VershinyD / 2 - {V}.OknoZazorNar", "Наружный радиус окон"),
+    ("OknoFaza",     "App::PropertyAngle",  "6 Производные",
+     "180 deg / {V}.OknoChislo - {V}.OknoUgol / 2",
+     "Доворот первого окна, чтобы спица пришлась ровно под седло руки"),
+    ("GaykaR",       "App::PropertyLength", "6 Производные",
+     "{V}.GaykaAF / sqrt(3)", "Радиус описанной окружности шестигранника"),
+    ("GaykaZ",       "App::PropertyLength", "6 Производные",
+     "{V}.VysotaShkiva",
+     "Низ паза гайки. Равен низу седла: паз открыт вниз, подошвы под гайкой "
+     "нет (её не на чем печатать там, где седло свисает за фланец)"),
 ]
 
 
@@ -238,6 +263,27 @@ def build_pulley(doc, body):
         {"Radius": "{V}.FlanecD / 2", "Height": "{V}.TolshFlanca",
          "Placement.Base.z": "{V}.TolshFlanca + {V}.VysotaVenca"})
 
+    # --- окна облегчения (как в референсе: 3 выреза между спицами) ---
+    # сектор режется насквозь, затем ступица возвращается сплошным диском;
+    # фаза подобрана так, чтобы спица всегда приходилась под седло руки
+    win = add(doc, body, "SubtractiveCylinder", "P_Window",
+              {"Radius": "{V}.OknoRnar", "Height": "{V}.VysotaShkiva + 2 mm",
+               "Angle": "{V}.OknoUgol",
+               "Placement.Base.z": "-1 mm",
+               "Placement.Rotation.Angle": "{V}.OknoFaza"},
+              rot=App.Rotation(App.Vector(0, 0, 1), 1))
+    wpat = doc.addObject("PartDesign::PolarPattern", "P_Windows")
+    wpat.BaseFeature = body.Tip
+    body.addObject(wpat)
+    wpat.Originals = [win]
+    wpat.Axis = (zax, [""])
+    wpat.Angle = 360.0
+    wpat.Mode = "Extent"
+    body.Tip = wpat
+    setx(wpat, "Occurrences", "{V}.OknoChislo")
+    add(doc, body, "AdditiveCylinder", "P_Hub",
+        {"Radius": "{V}.OknoRvn", "Height": "{V}.VysotaShkiva"})
+
     # --- седло под трубу (до сверловок, чтобы отверстия прошли и через него) ---
     add(doc, body, "AdditiveBox", "P_Saddle",
         {"Length": "{V}.DlinaZahvata", "Width": "2 * {V}.PoluShirSedla",
@@ -278,15 +324,41 @@ def build_pulley(doc, body):
     add(doc, body, "SubtractiveCylinder", "P_Seat",
         {"Radius": "{V}.PodshOD / 2", "Height": "{V}.PodshW"})
 
-    # --- резьбовые (самонарезные) отверстия под винты хомута ---
+    # --- крепёж хомута: сквозное отверстие сверху + паз под гайку M3 ---
+    # винт идёт с крышки вниз и затягивается в гайку, лежащую в пазу седла.
+    # Гайка заводится сбоку, тянущее усилие держит потолок паза (5+ мм),
+    # пол паза нужен только чтобы гайка не выпала.
     for i, (sx, sy) in enumerate([("VintX1", "+"), ("VintX1", "-"),
                                   ("VintX2", "+"), ("VintX2", "-")]):
-        add(doc, body, "SubtractiveCylinder", "P_Pilot%d" % (i + 1),
-            {"Radius": "({V}.VintM - 0.5 mm) / 2",
-             "Height": "{V}.VysotaSedla + 3 mm",
+        plus = (sy == "+")
+        ey = ("" if plus else "-") + "{V}.VintY"
+        # ближняя к центру пара сверлится насквозь через весь шкив: винт
+        # может выходить за гайку, длина винта перестаёт быть критичной.
+        # Дальняя пара висит за фланцем, сверлить там нечего.
+        skvoz = (sx == "VintX1")
+        z0 = "-1 mm" if skvoz else "{V}.VysotaShkiva - 2 mm"
+        hh = ("{V}.OsTruby + 2 mm" if skvoz
+              else "{V}.OsTruby - {V}.VysotaShkiva + 2 mm")
+        add(doc, body, "SubtractiveCylinder", "P_Screw%d" % (i + 1),
+            {"Radius": "({V}.VintM + 0.4 mm) / 2",
+             "Height": hh,
              "Placement.Base.x": "{V}." + sx,
-             "Placement.Base.y": ("" if sy == "+" else "-") + "{V}.VintY",
-             "Placement.Base.z": "{V}.OsTruby - ({V}.VysotaSedla + 3 mm)"})
+             "Placement.Base.y": ey,
+             "Placement.Base.z": z0})
+        add(doc, body, "SubtractivePrism", "P_Nut%d" % (i + 1),
+            {"Circumradius": "{V}.GaykaR", "Height": "{V}.GaykaTolsh",
+             "Placement.Base.x": "{V}." + sx,
+             "Placement.Base.y": ey,
+             "Placement.Base.z": "{V}.GaykaZ"},
+            rot=App.Rotation(App.Vector(0, 0, 1), 30), Polygon=6)
+        ybase = ("{V}.VintY" if plus else "-({V}.PoluShirSedla + 1 mm)")
+        add(doc, body, "SubtractiveBox", "P_NutSlot%d" % (i + 1),
+            {"Length": "{V}.GaykaAF",
+             "Width": "{V}.PoluShirSedla + 1 mm - {V}.VintY",
+             "Height": "{V}.GaykaTolsh",
+             "Placement.Base.x": "{V}." + sx + " - {V}.GaykaAF / 2",
+             "Placement.Base.y": ybase,
+             "Placement.Base.z": "{V}.GaykaZ"})
 
     body.Label = PULLEY_LABEL
     doc.recompute()
@@ -331,6 +403,86 @@ def build_cap(doc, part):
     return body
 
 
+LIB_SCREWS = ("Mechanical Parts/Fasteners/Bolts & Screws/Metric/"
+              "ISO4762_Hex_Socket_Head_Cap_Screw_M3x%d.fcstd")
+LIB_SCREW_LENGTHS = (10, 12, 16, 18, 20, 22, 25, 35)   # что есть в библиотеке
+LIB_NUT = "Mechanical Parts/Fasteners/Nuts/Metric/ISO4032_Hex_Nut_M3.fcstd"
+
+
+def lib_shape(rel):
+    """Достать геометрию детали из библиотеки и запечь её Placement.
+
+    У Part::Feature свойство Placement и Shape.Placement — одно и то же,
+    поэтому собственный разворот библиотечной детали надо внести прямо
+    в геометрию, иначе он потеряется при первом же присвоении Placement.
+    """
+    import os
+    path = os.path.join(App.getUserAppDataDir(), "Mod", "parts_library", rel)
+    if not os.path.exists(path):
+        return None
+    d = App.openDocument(path)
+    try:
+        best = None
+        for o in d.Objects:
+            sh = getattr(o, "Shape", None)
+            if sh is None or sh.isNull() or sh.Volume < 1e-9:
+                continue
+            best = o.Shape.copy()          # последняя фича цепочки = готовая деталь
+        if best is None:
+            return None
+        m = best.Placement.toMatrix()
+        best.Placement = App.Placement()
+        return best.transformGeometry(m)
+    finally:
+        App.closeDocument(d.Name)
+
+
+def build_hardware(doc, part, vs):
+    """Винты и гайки из библиотеки, расставленные по пазам хомута."""
+    for o in list(doc.Objects):
+        if o.Name.startswith("HW_"):
+            doc.removeObject(o.Name)
+    doc.recompute()
+
+    need = (vs.OsTruby.Value + vs.TolshKryshki.Value - vs.StenkaKryshki.Value
+            - vs.GaykaZ.Value)
+    length = next((L for L in LIB_SCREW_LENGTHS if L >= need), LIB_SCREW_LENGTHS[-1])
+    screw = lib_shape(LIB_SCREWS % length)
+    nut = lib_shape(LIB_NUT)
+    if screw is None or nut is None:
+        print("  крепёж: библиотека деталей недоступна, пропускаю")
+        return None, 0
+
+    made = 0
+    for i, (sx, sy) in enumerate([("VintX1", "+"), ("VintX1", "-"),
+                                  ("VintX2", "+"), ("VintX2", "-")]):
+        ey = ("" if sy == "+" else "-") + "{V}.VintY"
+        for kind, shape, zexpr, rot, color in (
+                ("Vint",  screw, "{V}.OsTruby + {V}.TolshKryshki - {V}.StenkaKryshki",
+                 None, (0.30, 0.32, 0.35)),
+                # доворот гайке не нужен: её грани уже совпадают с пазом.
+                # Проверено подбором — габаритная коробка скруглённой детали
+                # ориентацию шестигранника не показывает.
+                ("Gayka", nut, "{V}.GaykaZ", None, (0.55, 0.56, 0.58))):
+            o = doc.addObject("Part::Feature", "HW_%s%d" % (kind, i + 1))
+            o.Shape = shape.copy()
+            o.Label = ("Винт_M3x%d_%d" % (length, i + 1) if kind == "Vint"
+                       else "Гайка_M3_%d" % (i + 1))
+            part.addObject(o)
+            if rot is not None:
+                pl = o.Placement
+                pl.Rotation = rot
+                o.Placement = pl
+            setx(o, "Placement.Base.x", "{V}." + sx)
+            setx(o, "Placement.Base.y", ey)
+            setx(o, "Placement.Base.z", zexpr)
+            o.ViewObject.ShapeColor = color
+            o.ViewObject.DiffuseColor = [color]
+            made += 1
+    doc.recompute()
+    return length, made
+
+
 def main():
     doc = pick_doc()
     body = doc.getObject(BODY_NAME)
@@ -342,6 +494,7 @@ def main():
 
     build_pulley(doc, body)
     cap = build_cap(doc, part)
+    screw_len, hw_n = build_hardware(doc, part, vs)
 
     # узел целиком отъезжает от вала мотора на межосевое расстояние
     # и садится по высоте так, чтобы венцы ведущего и ведомого совпали
@@ -376,8 +529,17 @@ def main():
              vs.VenecZ.Value, vs.VenecZ.Value + vs.VysotaVenca.Value))
     print("  труба      Ø%.1f, хомут %.0f мм, ось на z=%.1f от низа шкива"
           % (vs.DiamTruby, vs.DlinaZahvata, vs.OsTruby))
-    print("  винты      4 x M%.0f, шаг %.1f x %.1f мм"
-          % (vs.VintM, vs.VintX2 - vs.VintX1, 2 * vs.VintY))
+    print("  окна       %d шт по %.0f°, R %.1f..%.1f (спица под седлом руки)"
+          % (vs.OknoChislo, vs.OknoUgol, vs.OknoRvn, vs.OknoRnar))
+    vint_len = (vs.OsTruby.Value + vs.TolshKryshki.Value - vs.StenkaKryshki.Value
+                - vs.GaykaZ.Value)
+    print("  винты      шаг %.1f x %.1f мм, нужно не меньше %.1f мм"
+          % (vs.VintX2 - vs.VintX1, 2 * vs.VintY, vint_len))
+    print("  пазы гаек  %.1f x %.1f, открыты вниз и вбок (гайка заводится сбоку)"
+          % (vs.GaykaAF, vs.GaykaTolsh))
+    if screw_len:
+        print("  крепёж     %d шт из библиотеки: ISO4762 M3x%d + ISO4032 гайка M3"
+              % (hw_n, screw_len))
     print("  шкив+седло %.2f x %.2f x %.2f мм | %.1f см3 (PLA ~%.0f г) | тел %d, валидно %s"
           % (bb.XLength, bb.YLength, bb.ZLength, v, v * 1.24, len(sh.Solids), sh.isValid()))
     print("  крышка     %.1f см3 (PLA ~%.0f г) | тел %d, валидно %s"
