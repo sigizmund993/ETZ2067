@@ -1,0 +1,393 @@
+# -*- coding: utf-8 -*-
+# shkiv_param.FCMacro
+#
+# Параметрический ведомый шкив GT2 с седлом под трубу руки и прижимной
+# крышкой. Все размеры заданы ОДНИМ набором переменных (VarSet "Привод"),
+# который виден в дереве документа — менять их можно прямо в GUI, модель
+# пересчитается сама. Макрос нужен только чтобы построить/перестроить
+# цепочку фич; после этого он не требуется.
+#
+# Что завязано на переменные:
+#   * диаметр шкива        <- Peredacha (передаточное число) и ZubVed
+#   * положение шкива      <- Peredacha и DlinaRemnya (решение формулы ремня)
+#   * седло/крышка/винты   <- DiamTruby (наружный Ø трубы руки)
+#
+# Геометрия собрана на примитивах PartDesign (AdditiveCylinder/Box,
+# SubtractiveCylinder/Box), а не на эскизах: у примитива каждый размер —
+# отдельное свойство, которое можно привязать выражением, и нет привязки
+# к именам рёбер (topological naming).
+#
+# Компоновка как в референсе-драйботе (makerworld 712239): корень руки
+# прижимается к верху шкива крышкой на винтах. Там это плоская пластина
+# и два винта на 28 мм; здесь — полукруглое седло под трубу и крышка.
+#
+# Запуск: FreeCAD -> Макросы... -> shkiv_param.FCMacro
+
+import math
+
+import FreeCAD as App
+
+DOC_HINT   = "ETZ_Robot"
+PART_NAME  = "Part002"     # контейнер, который двигается на межосевое расстояние
+BODY_NAME  = "Body003"     # тело шкива (существующее, переиспользуется)
+CAP_NAME   = "Body_Cap"    # тело крышки (создаётся)
+VS_NAME    = "Privod"
+
+PULLEY_LABEL = "Шкив_ведомый"
+CAP_LABEL    = "Крышка_хомута"
+
+# ---------------------------------------------------------------------------
+# Переменные. (значение по умолчанию, тип, группа, подсказка)
+# ВАЖНО: имя свойства не должно совпадать с обозначением единицы измерения —
+# "C", "T", "N", "F", "W" и т.п. парсер выражений читает как кулон/теслу/
+# ньютон, и выражение молча перестаёт вычисляться.
+# ---------------------------------------------------------------------------
+INPUTS = [
+    ("ZubVed",        "App::PropertyInteger", "1 Передача", 20,
+     "Зубьев на ведущем шкиве (на валу мотора)"),
+    ("Peredacha",     "App::PropertyFloat",   "1 Передача", 5.0,
+     "Передаточное число. Зубья ведомого = round(ZubVed * Peredacha)"),
+    ("DlinaRemnya",   "App::PropertyLength",  "1 Передача", 240.0,
+     "Длина ремня по каталогу, мм (GT2-240 = 120 зубьев)"),
+    ("ShagRemnya",    "App::PropertyLength",  "1 Передача", 2.0,
+     "Шаг ремня: GT2 = 2 мм"),
+    ("ShirinaRemnya", "App::PropertyLength",  "1 Передача", 6.0,
+     "Ширина ремня, мм"),
+    ("VenecZ",        "App::PropertyLength",  "1 Передача", 52.0,
+     "Z нижней кромки венца ВЕДУЩЕГО шкива. Измерено по модели: венец 20T "
+     "занимает z 52.000..59.000. Ведомый подгоняется под эту отметку"),
+
+    ("TolshFlanca",   "App::PropertyLength",  "2 Шкив", 1.5,  "Толщина фланца"),
+    ("BortFlanca",    "App::PropertyLength",  "2 Шкив", 2.0,
+     "На сколько фланец больше вершин зубьев (на сторону)"),
+    ("PodshOD",       "App::PropertyLength",  "2 Шкив", 22.0, "Наружный Ø подшипника (608ZZ = 22)"),
+    ("PodshW",        "App::PropertyLength",  "2 Шкив", 7.0,  "Толщина подшипника (608ZZ = 7)"),
+    ("OtvUpora",      "App::PropertyLength",  "2 Шкив", 10.0, "Ø сквозного отверстия в упоре"),
+
+    ("DiamTruby",     "App::PropertyLength",  "3 Рука", 10.0,
+     "НАРУЖНЫЙ Ø трубы руки. Меняется свободно — седло, крышка и винты пересчитаются"),
+    ("DlinaZahvata",  "App::PropertyLength",  "3 Рука", 32.0, "Длина хомута вдоль трубы"),
+    ("NachRadius",    "App::PropertyLength",  "3 Рука", 13.0,
+     "С какого радиуса начинается седло (должен быть больше радиуса гнезда подшипника)"),
+    ("StenkaSedla",   "App::PropertyLength",  "3 Рука", 4.0,  "Материал под дном жёлоба"),
+    ("StenkaKryshki", "App::PropertyLength",  "3 Рука", 3.0,  "Материал над трубой в крышке"),
+    ("VintM",         "App::PropertyLength",  "3 Рука", 3.0,  "Номинал винта хомута: 3 = M3"),
+
+    ("GlubZuba",      "App::PropertyLength",  "4 Профиль GT2", 0.555,
+     "Радиус канавки зуба GT2"),
+    ("SmeshZuba",     "App::PropertyLength",  "4 Профиль GT2", 0.449,
+     "Центр канавки на радиусе PD/2 - SmeshZuba"),
+]
+
+# производные: (имя, тип, группа, выражение, подсказка)
+DERIVED = [
+    ("ZubVedom",   "App::PropertyInteger", "5 Расчёт", "round({V}.ZubVed * {V}.Peredacha)",
+     "Зубьев на ведомом шкиве (целое)"),
+    ("PeredachaFakt", "App::PropertyFloat", "5 Расчёт", "{V}.ZubVedom / {V}.ZubVed",
+     "Фактическая передача после округления зубьев"),
+    ("DelitD1",    "App::PropertyLength",  "5 Расчёт", "{V}.ZubVed * {V}.ShagRemnya / pi",
+     "Делительный Ø ведущего"),
+    ("DelitD2",    "App::PropertyLength",  "5 Расчёт", "{V}.ZubVedom * {V}.ShagRemnya / pi",
+     "Делительный Ø ведомого"),
+    ("VershinyD",  "App::PropertyLength",  "5 Расчёт", "{V}.DelitD2 - 0.508 mm",
+     "Ø по вершинам зубьев ведомого"),
+    ("FlanecD",    "App::PropertyLength",  "5 Расчёт", "{V}.VershinyD + 2 * {V}.BortFlanca",
+     "Наружный Ø фланцев"),
+    # межосевое: C = (b + sqrt(b^2 - 8Q)) / 4,  b = L - pi(D1+D2)/2,  Q = (D2-D1)^2/4
+    ("RemenB",     "App::PropertyLength",  "5 Расчёт",
+     "{V}.DlinaRemnya - pi * ({V}.DelitD1 + {V}.DelitD2) / 2", "Промежуточная величина b"),
+    ("RemenQ",     "App::PropertyArea",    "5 Расчёт",
+     "({V}.DelitD2 - {V}.DelitD1) ^ 2 / 4", "Промежуточная величина Q"),
+    # max(...; 0) обязателен: при слишком коротком ремне подкоренное уходит
+    # в минус, sqrt даёт nan, и узел уезжает в неопределённую точку.
+    ("MezhOs",     "App::PropertyLength",  "5 Расчёт",
+     "({V}.RemenB + sqrt(max({V}.RemenB ^ 2 - 8 * {V}.RemenQ; 0 mm^2) / 1mm^2) * 1mm) / 4",
+     "МЕЖОСЕВОЕ расстояние от вала мотора — на него сдвинут весь узел"),
+    ("RemenMin",   "App::PropertyLength",  "5 Расчёт",
+     "({V}.DelitD1 + {V}.DelitD2) + pi * ({V}.DelitD1 + {V}.DelitD2) / 2"
+     " + ({V}.DelitD2 - {V}.DelitD1) ^ 2 / (2 * ({V}.DelitD1 + {V}.DelitD2))",
+     "Абсолютный минимум длины ремня для этих шкивов (шкивы вплотную)"),
+    ("ZapasRemnya","App::PropertyLength",  "5 Расчёт",
+     "{V}.DlinaRemnya - {V}.RemenMin",
+     "Запас длины ремня. <= 0 означает, что ремень физически не налезет"),
+    ("ZubVZaceplenii", "App::PropertyFloat", "5 Расчёт",
+     "(180 - 2 * asin(({V}.DelitD2 - {V}.DelitD1) / (2 * {V}.MezhOs)) / 1deg) / 360"
+     " * {V}.ZubVed",
+     "Зубьев ведущего шкива в зацеплении. Меньше 6 — ремень будет проскакивать"),
+
+    ("VysotaVenca",  "App::PropertyLength", "6 Производные", "{V}.ShirinaRemnya + 1 mm",
+     "Высота венца под ремень"),
+    ("VysotaShkiva", "App::PropertyLength", "6 Производные",
+     "2 * {V}.TolshFlanca + {V}.VysotaVenca", "Полная высота шкива"),
+    ("VysotaSedla",  "App::PropertyLength", "6 Производные",
+     "{V}.DiamTruby / 2 + {V}.StenkaSedla", "Высота седла над верхом шкива"),
+    ("OsTruby",      "App::PropertyLength", "6 Производные",
+     "{V}.VysotaShkiva + {V}.VysotaSedla", "Высота оси трубы (= верх седла)"),
+    ("PoluShirSedla","App::PropertyLength", "6 Производные",
+     "{V}.DiamTruby / 2 + {V}.VintM + 3.5 mm", "Полуширина седла/крышки"),
+    ("VintY",        "App::PropertyLength", "6 Производные",
+     "{V}.DiamTruby / 2 + {V}.VintM / 2 + 1.3 mm", "Смещение винтов от оси трубы"),
+    ("VintX1",       "App::PropertyLength", "6 Производные",
+     "{V}.NachRadius + 6 mm", "Первая пара винтов"),
+    ("VintX2",       "App::PropertyLength", "6 Производные",
+     "{V}.NachRadius + {V}.DlinaZahvata - 6 mm", "Вторая пара винтов"),
+    ("TolshKryshki", "App::PropertyLength", "6 Производные",
+     "{V}.DiamTruby / 2 + {V}.StenkaKryshki", "Толщина крышки"),
+]
+
+
+# ---------------------------------------------------------------------------
+def pick_doc():
+    act = App.ActiveDocument
+    if act is not None and act.getObject(BODY_NAME) is not None:
+        return act
+    for d in App.listDocuments().values():
+        if d.getObject(BODY_NAME) is not None:
+            return d
+    raise RuntimeError("не нашёл документ с телом " + BODY_NAME)
+
+
+def ensure_varset(doc):
+    """Создать VarSet или дополнить существующий, НЕ затирая значения пользователя."""
+    vs = doc.getObject(VS_NAME)
+    if vs is None:
+        vs = doc.addObject("App::VarSet", VS_NAME)
+        vs.Label = "Привод"
+        created = True
+    else:
+        created = False
+
+    for name, typ, grp, default, doc_str in INPUTS:
+        if not hasattr(vs, name):
+            vs.addProperty(typ, name, grp, doc_str)
+            setattr(vs, name, default)
+
+    for name, typ, grp, expr, doc_str in DERIVED:
+        if not hasattr(vs, name):
+            vs.addProperty(typ, name, grp, doc_str)
+        # выражение переустанавливаем всегда — формула принадлежит макросу
+        vs.setExpression(name, expr.format(V=VS_NAME))
+        doc.recompute()
+    return vs, created
+
+
+def setx(obj, prop, expr):
+    obj.setExpression(prop, expr.format(V=VS_NAME))
+
+
+def add(doc, body, kind, name, exprs=None, rot=None, **props):
+    """Добавить примитив PartDesign в конец цепочки тела."""
+    f = doc.addObject("PartDesign::" + kind, name)
+    f.BaseFeature = body.Tip
+    body.addObject(f)
+    for k, v in props.items():
+        setattr(f, k, v)
+    if rot is not None:
+        pl = f.Placement
+        pl.Rotation = rot
+        f.Placement = pl
+    for k, v in (exprs or {}).items():
+        setx(f, k, v)
+    body.Tip = f
+    return f
+
+
+def wipe(doc, body):
+    body.Tip = None
+    for n in reversed([o.Name for o in list(body.Group)]):
+        if doc.getObject(n) is not None:
+            doc.removeObject(n)
+    doc.recompute()
+
+
+ROT_X = App.Rotation(App.Vector(0, 1, 0), 90)   # ось примитива Z -> глобальный X
+
+
+def purge_orphans(doc):
+    """Снести фичи, оставшиеся без тела после прежних прогонов.
+
+    Осиротевшие фичи PartDesign сцеплены через BaseFeature и в дереве
+    показывают друг друга как детей, поэтому в RootObjects видно только
+    хвост цепочки — снимать приходится слоями, пока не кончатся.
+    """
+    for _ in range(50):
+        owned = set()
+        for o in doc.Objects:
+            if o.TypeId == "PartDesign::Body":
+                owned.update(x.Name for x in o.Group)
+        doomed = [o.Name for o in doc.Objects
+                  if o.Name.startswith(("K_", "P_")) and o.Name not in owned]
+        if not doomed:
+            return
+        for n in doomed:
+            if doc.getObject(n) is not None:
+                doc.removeObject(n)
+        doc.recompute()
+
+
+def build_pulley(doc, body):
+    wipe(doc, body)
+    zax = [o for o in body.Origin.OriginFeatures if o.Name.startswith("Z_Axis")][0]
+
+    add(doc, body, "AdditiveCylinder", "P_Flange1",
+        {"Radius": "{V}.FlanecD / 2", "Height": "{V}.TolshFlanca"})
+    add(doc, body, "AdditiveCylinder", "P_Rim",
+        {"Radius": "{V}.VershinyD / 2", "Height": "{V}.VysotaVenca",
+         "Placement.Base.z": "{V}.TolshFlanca"})
+    add(doc, body, "AdditiveCylinder", "P_Flange2",
+        {"Radius": "{V}.FlanecD / 2", "Height": "{V}.TolshFlanca",
+         "Placement.Base.z": "{V}.TolshFlanca + {V}.VysotaVenca"})
+
+    # --- седло под трубу (до сверловок, чтобы отверстия прошли и через него) ---
+    add(doc, body, "AdditiveBox", "P_Saddle",
+        {"Length": "{V}.DlinaZahvata", "Width": "2 * {V}.PoluShirSedla",
+         "Height": "{V}.VysotaSedla",
+         "Placement.Base.x": "{V}.NachRadius",
+         "Placement.Base.y": "-{V}.PoluShirSedla",
+         "Placement.Base.z": "{V}.VysotaShkiva"})
+    # полукруглый жёлоб: цилиндр по оси X + вырез всего, что над ним
+    add(doc, body, "SubtractiveCylinder", "P_TubeGroove",
+        {"Radius": "{V}.DiamTruby / 2", "Height": "{V}.DlinaZahvata + 20 mm",
+         "Placement.Base.x": "{V}.NachRadius - 10 mm",
+         "Placement.Base.z": "{V}.OsTruby"}, rot=ROT_X)
+    add(doc, body, "SubtractiveBox", "P_TubeOpen",
+        {"Length": "{V}.DlinaZahvata + 20 mm", "Width": "{V}.DiamTruby", "Height": "20 mm",
+         "Placement.Base.x": "{V}.NachRadius - 10 mm",
+         "Placement.Base.y": "-{V}.DiamTruby / 2",
+         "Placement.Base.z": "{V}.OsTruby"})
+
+    # --- зубья ---
+    groove = add(doc, body, "SubtractiveCylinder", "P_Groove",
+                 {"Radius": "{V}.GlubZuba", "Height": "{V}.VysotaVenca",
+                  "Placement.Base.x": "{V}.DelitD2 / 2 - {V}.SmeshZuba",
+                  "Placement.Base.z": "{V}.TolshFlanca"})
+    pat = doc.addObject("PartDesign::PolarPattern", "P_Teeth")
+    pat.BaseFeature = body.Tip
+    body.addObject(pat)
+    pat.Originals = [groove]
+    pat.Axis = (zax, [""])
+    pat.Angle = 360.0
+    pat.Mode = "Extent"
+    body.Tip = pat
+    setx(pat, "Occurrences", "{V}.ZubVedom")
+
+    # --- отверстия ---
+    add(doc, body, "SubtractiveCylinder", "P_Bore",
+        {"Radius": "{V}.OtvUpora / 2", "Height": "{V}.VysotaShkiva + 2 mm",
+         "Placement.Base.z": "-1 mm"})
+    add(doc, body, "SubtractiveCylinder", "P_Seat",
+        {"Radius": "{V}.PodshOD / 2", "Height": "{V}.PodshW"})
+
+    # --- резьбовые (самонарезные) отверстия под винты хомута ---
+    for i, (sx, sy) in enumerate([("VintX1", "+"), ("VintX1", "-"),
+                                  ("VintX2", "+"), ("VintX2", "-")]):
+        add(doc, body, "SubtractiveCylinder", "P_Pilot%d" % (i + 1),
+            {"Radius": "({V}.VintM - 0.5 mm) / 2",
+             "Height": "{V}.VysotaSedla + 3 mm",
+             "Placement.Base.x": "{V}." + sx,
+             "Placement.Base.y": ("" if sy == "+" else "-") + "{V}.VintY",
+             "Placement.Base.z": "{V}.OsTruby - ({V}.VysotaSedla + 3 mm)"})
+
+    body.Label = PULLEY_LABEL
+    doc.recompute()
+    return body
+
+
+def build_cap(doc, part):
+    old = doc.getObject(CAP_NAME)
+    if old is not None:
+        # removeObject на теле НЕ удаляет его фичи — они осиротеют в корне
+        # документа. Сначала вычищаем содержимое, только потом само тело.
+        wipe(doc, old)
+        doc.removeObject(old.Name)
+        doc.recompute()
+    purge_orphans(doc)
+    body = doc.addObject("PartDesign::Body", CAP_NAME)
+    part.addObject(body)
+    body.Label = CAP_LABEL
+
+    add(doc, body, "AdditiveBox", "K_Body",
+        {"Length": "{V}.DlinaZahvata", "Width": "2 * {V}.PoluShirSedla",
+         "Height": "{V}.TolshKryshki",
+         "Placement.Base.x": "{V}.NachRadius",
+         "Placement.Base.y": "-{V}.PoluShirSedla",
+         "Placement.Base.z": "{V}.OsTruby"})
+    add(doc, body, "SubtractiveCylinder", "K_Groove",
+        {"Radius": "{V}.DiamTruby / 2", "Height": "{V}.DlinaZahvata + 20 mm",
+         "Placement.Base.x": "{V}.NachRadius - 10 mm",
+         "Placement.Base.z": "{V}.OsTruby"}, rot=ROT_X)
+    for i, (sx, sy) in enumerate([("VintX1", "+"), ("VintX1", "-"),
+                                  ("VintX2", "+"), ("VintX2", "-")]):
+        s = ("" if sy == "+" else "-") + "{V}.VintY"
+        add(doc, body, "SubtractiveCylinder", "K_Hole%d" % (i + 1),
+            {"Radius": "({V}.VintM + 0.4 mm) / 2", "Height": "{V}.TolshKryshki + 2 mm",
+             "Placement.Base.x": "{V}." + sx, "Placement.Base.y": s,
+             "Placement.Base.z": "{V}.OsTruby - 1 mm"})
+        add(doc, body, "SubtractiveCylinder", "K_Cbore%d" % (i + 1),
+            {"Radius": "{V}.VintM", "Height": "{V}.StenkaKryshki",
+             "Placement.Base.x": "{V}." + sx, "Placement.Base.y": s,
+             "Placement.Base.z": "{V}.OsTruby + {V}.TolshKryshki - {V}.StenkaKryshki"})
+    doc.recompute()
+    return body
+
+
+def main():
+    doc = pick_doc()
+    body = doc.getObject(BODY_NAME)
+    part = doc.getObject(PART_NAME)
+    print("документ:", doc.Name, "|", doc.FileName)
+
+    vs, created = ensure_varset(doc)
+    print("набор переменных '%s' %s" % (vs.Label, "создан" if created else "найден, значения сохранены"))
+
+    build_pulley(doc, body)
+    cap = build_cap(doc, part)
+
+    # узел целиком отъезжает от вала мотора на межосевое расстояние
+    # и садится по высоте так, чтобы венцы ведущего и ведомого совпали
+    setx(part, "Placement.Base.y", "{V}.MezhOs")
+    setx(part, "Placement.Base.z", "{V}.VenecZ - {V}.TolshFlanca")
+    doc.recompute()
+
+    # ---------------- отчёт ----------------
+    sh = body.Shape
+    bb = sh.BoundBox
+    v = sh.Volume / 1000.0
+    cv = cap.Shape.Volume / 1000.0
+    print("")
+    print("  передача   %d -> %d зубьев, i = %.3f (задано %.3f)"
+          % (vs.ZubVed, vs.ZubVedom, vs.PeredachaFakt, vs.Peredacha))
+    print("  шкив       делительный Ø%.3f | вершины Ø%.3f | фланец Ø%.3f"
+          % (vs.DelitD2, vs.VershinyD, vs.FlanecD))
+    print("  ремень     GT2-%.0f, %.0f мм ширина -> межосевое %.3f мм"
+          % (vs.DlinaRemnya, vs.ShirinaRemnya, vs.MezhOs))
+    print("             запас длины %+.1f мм (минимум %.1f), зубьев в зацеплении %.1f"
+          % (vs.ZapasRemnya, vs.RemenMin, vs.ZubVZaceplenii))
+    if vs.ZapasRemnya <= 0:
+        print("  !! РЕМЕНЬ КОРОТОК для такой передачи — возьмите длиннее "
+              "или уменьшите Peredacha")
+    elif vs.ZubVZaceplenii < 6:
+        print("  !! в зацеплении меньше 6 зубьев — ремень будет проскакивать")
+    print("  положение  узел на (0, %.3f, %.3f) от вала мотора"
+          % (part.Placement.Base.y, part.Placement.Base.z))
+    z0 = part.Placement.Base.z + vs.TolshFlanca.Value
+    print("             венец ведомого z %.3f..%.3f, ведущего %.3f..%.3f"
+          % (z0, z0 + vs.VysotaVenca.Value,
+             vs.VenecZ.Value, vs.VenecZ.Value + vs.VysotaVenca.Value))
+    print("  труба      Ø%.1f, хомут %.0f мм, ось на z=%.1f от низа шкива"
+          % (vs.DiamTruby, vs.DlinaZahvata, vs.OsTruby))
+    print("  винты      4 x M%.0f, шаг %.1f x %.1f мм"
+          % (vs.VintM, vs.VintX2 - vs.VintX1, 2 * vs.VintY))
+    print("  шкив+седло %.2f x %.2f x %.2f мм | %.1f см3 (PLA ~%.0f г) | тел %d, валидно %s"
+          % (bb.XLength, bb.YLength, bb.ZLength, v, v * 1.24, len(sh.Solids), sh.isValid()))
+    print("  крышка     %.1f см3 (PLA ~%.0f г) | тел %d, валидно %s"
+          % (cv, cv * 1.24, len(cap.Shape.Solids), cap.Shape.isValid()))
+
+    if App.GuiUp:
+        import FreeCADGui as Gui
+        Gui.activeDocument().activeView().viewIsometric()
+        Gui.SendMsgToActiveView("ViewFit")
+
+
+if __name__ == "__main__":
+    main()

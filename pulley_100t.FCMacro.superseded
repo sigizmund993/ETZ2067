@@ -1,0 +1,182 @@
+# -*- coding: utf-8 -*-
+# pulley_100t.FCMacro
+# Ведомый шкив GT2 на 100 зубьев с гнездом подшипника 608ZZ (8x22x7)
+# и упором с отверстием Ø10 с одной стороны.
+#
+# Строится ВНУТРИ существующего Body003 (контейнер Part002) документа ETZ_Robot,
+# штатными фичами PartDesign — то есть остаётся редактируемым в GUI.
+# Профиль первого фланца берётся из уже нарисованного Sketch004 (Ø67.16 + Ø10).
+#
+# Конвенции скопированы с Pulley60 (Шкив_GT2_60T_608ZZ):
+#   все эскизы привязаны к XY-плоскости тела через AttachmentOffset по Z,
+#   фланец 1.5 + венец 7.0 + фланец 1.5, зубья = круговой паз r=0.555
+#   на радиусе PD/2-0.449, размноженный PolarPattern по Z-оси тела.
+#
+# Передача с ведущим 20T: i = 5.0. Ремень GT2 6 мм, 240 мм (120 зубьев),
+# межосевое 54.0 мм.
+#
+# Запуск: FreeCAD -> Макросы... -> pulley_100t.FCMacro
+# или через MCP: exec(compile(open(...).read(), ..., 'exec'), {'__name__':'__main__'})
+
+import math
+
+import FreeCAD as App
+import Part
+
+DOC_NAME = "ETZ_Robot"
+BODY_NAME = "Body003"
+BASE_SKETCH = "Sketch004"          # уже нарисован: Ø67.16 (фланец) + Ø10 (упор)
+NEW_LABEL = "Шкив_GT2_100T_608ZZ"
+
+# ----------------------------------------------------------------------------
+# Параметры — правьте только этот блок
+# ----------------------------------------------------------------------------
+TEETH = 100                        # зубьев: i = TEETH/20
+PITCH = 2.0                        # GT2
+BELT_W = 6.0                       # ширина ремня (под 10 мм поставьте 10.0)
+FLANGE_T = 1.5                     # толщина фланца
+
+BRG_OD, BRG_ID, BRG_W = 22.0, 8.0, 7.0    # 608ZZ (под 625ZZ: 16.0, 5.0, 5.0)
+BRG_FIT = 0.0                      # припуск посадки; 0 = номинал, печать и так зажимает
+BORE_D = 10.0                      # отверстие в упоре (берётся из Sketch004)
+
+GROOVE_R = 0.555                   # радиус канавки зуба GT2
+GROOVE_OFF = 0.449                 # её центр: PD/2 - GROOVE_OFF (даёт глубину зуба 0.75)
+
+# ----------------------------------------------------------------------------
+# Производные размеры
+# ----------------------------------------------------------------------------
+PD = TEETH * PITCH / math.pi               # делительный диаметр
+TIP_D = PD - 0.508                         # вершины зубьев
+BAND = BELT_W + 1.0                        # высота венца
+TOTAL_H = FLANGE_T + BAND + FLANGE_T
+SEAT_D = BRG_OD + BRG_FIT
+
+# имена создаваемых объектов — чтобы макрос можно было прогонять повторно
+NAMES = ["P100_Flange1", "P100_Rim_sk", "P100_Rim", "P100_Flange2_sk", "P100_Flange2",
+         "P100_Groove_sk", "P100_Groove", "P100_Teeth", "P100_Brg_sk", "P100_Seat"]
+
+
+def origin_feature(body, prefix):
+    for o in body.Origin.OriginFeatures:
+        if o.Name.startswith(prefix):
+            return o
+    raise RuntimeError("не нашёл origin-элемент " + prefix)
+
+
+def new_sketch(doc, body, name, xy, z):
+    sk = doc.addObject("Sketcher::SketchObject", name)
+    body.addObject(sk)
+    sk.AttachmentSupport = [(xy, ("",))]
+    sk.MapMode = "FlatFace"
+    sk.AttachmentOffset = App.Placement(App.Vector(0, 0, z), App.Rotation())
+    return sk
+
+
+def circle(sk, d, x=0.0, y=0.0):
+    sk.addGeometry(Part.Circle(App.Vector(x, y, 0), App.Vector(0, 0, 1), d / 2.0), False)
+
+
+def add_feature(doc, body, kind, name, profile, **props):
+    f = doc.addObject("PartDesign::" + kind, name)
+    f.BaseFeature = body.Tip
+    body.addObject(f)
+    if profile is not None:
+        f.Profile = profile
+    for k, v in props.items():
+        setattr(f, k, v)
+    body.Tip = f
+    return f
+
+
+def pick_doc():
+    """Активный документ, если в нём есть нужное тело; иначе ищем по имени."""
+    act = App.ActiveDocument
+    if act is not None and act.getObject(BODY_NAME) is not None:
+        return act
+    for d in App.listDocuments().values():
+        if d.getObject(BODY_NAME) is not None:
+            return d
+    raise RuntimeError("нет документа с телом " + BODY_NAME)
+
+
+def main():
+    doc = pick_doc()
+    body = doc.getObject(BODY_NAME)
+    print("документ:", doc.Name, "(", doc.FileName, ")")
+    base = doc.getObject(BASE_SKETCH)
+    if body is None or base is None:
+        raise RuntimeError("нет %s или %s в документе %s" % (BODY_NAME, BASE_SKETCH, DOC_NAME))
+
+    # снести прежний прогон и любые посторонние фичи тела; базовый эскиз остаётся
+    body.Tip = None
+    doomed = [o.Name for o in list(body.Group) if o.Name != BASE_SKETCH]
+    for n in reversed(doomed):
+        if doc.getObject(n) is not None:
+            print("  удаляю из тела:", n)
+            doc.removeObject(n)
+    doc.recompute()
+
+    xy = origin_feature(body, "XY_Plane")
+    zax = origin_feature(body, "Z_Axis")
+
+    # --- 1. нижний фланец: профиль уже нарисован (Ø67.16 + Ø10) ---
+    add_feature(doc, body, "Pad", "P100_Flange1", base, Length=FLANGE_T)
+    flange_d = 2.0 * max(g.Radius for g in base.Geometry if hasattr(g, "Radius"))
+
+    # --- 2. венец под ремень ---
+    sk = new_sketch(doc, body, "P100_Rim_sk", xy, FLANGE_T)
+    circle(sk, TIP_D); circle(sk, BORE_D)
+    add_feature(doc, body, "Pad", "P100_Rim", sk, Length=BAND)
+
+    # --- 3. верхний фланец ---
+    sk = new_sketch(doc, body, "P100_Flange2_sk", xy, FLANGE_T + BAND)
+    circle(sk, flange_d); circle(sk, BORE_D)
+    add_feature(doc, body, "Pad", "P100_Flange2", sk, Length=FLANGE_T)
+
+    # --- 4. зубья: канавка + круговой массив ---
+    sk = new_sketch(doc, body, "P100_Groove_sk", xy, FLANGE_T + BAND)
+    circle(sk, 2.0 * GROOVE_R, PD / 2.0 - GROOVE_OFF, 0.0)
+    groove = add_feature(doc, body, "Pocket", "P100_Groove", sk, Length=BAND)
+    pat = doc.addObject("PartDesign::PolarPattern", "P100_Teeth")
+    pat.BaseFeature = body.Tip
+    body.addObject(pat)
+    pat.Originals = [groove]
+    pat.Axis = (zax, [""])
+    pat.Angle = 360.0
+    pat.Occurrences = TEETH
+    pat.Mode = "Extent"
+    body.Tip = pat
+
+    # --- 5. гнездо подшипника снизу (упор остаётся сверху) ---
+    sk = new_sketch(doc, body, "P100_Brg_sk", xy, 0.0)
+    circle(sk, SEAT_D)
+    add_feature(doc, body, "Pocket", "P100_Seat", sk, Length=BRG_W, Reversed=True)
+
+    body.Label = NEW_LABEL
+    doc.recompute()
+
+    sh = body.Shape
+    bb = sh.BoundBox
+    v = sh.Volume / 1000.0
+    print("%s: зубьев %d, i с 20T = %.2f" % (NEW_LABEL, TEETH, TEETH / 20.0))
+    print("  делительный Ø%.3f | вершины Ø%.3f | фланец Ø%.2f" % (PD, TIP_D, flange_d))
+    print("  габарит %.2f x %.2f x %.2f мм | объём %.1f см3 (PLA ~%.0f г)"
+          % (bb.XLength, bb.YLength, bb.ZLength, v, v * 1.24))
+    print("  венец под ремень %.1f мм (ремень %.0f мм), высота шкива %.1f мм"
+          % (BAND, BELT_W, TOTAL_H))
+    print("  гнездо подшипника Ø%.2f x %.1f снизу (%s)"
+          % (SEAT_D, BRG_W,
+             {22.0: "608ZZ 8x22x7", 16.0: "625ZZ 5x16x5", 19.0: "635ZZ 5x19x6"}.get(BRG_OD, "")))
+    print("  упор сверху: толщина %.1f мм, отверстие Ø%.1f"
+          % (TOTAL_H - BRG_W, BORE_D))
+    print("  тел в форме: %d (должно быть 1), форма валидна: %s"
+          % (len(sh.Solids), sh.isValid()))
+    if App.GuiUp:
+        import FreeCADGui as Gui
+        Gui.activeDocument().activeView().viewIsometric()
+        Gui.SendMsgToActiveView("ViewFit")
+
+
+if __name__ == "__main__":
+    main()

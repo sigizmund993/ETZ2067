@@ -183,3 +183,87 @@ Claude Desktop (это НЕ обычный open-source Claude Desktop — вну
 - Если переустанавливаешь аддон или обновляешь `freecad-mcp` — версии должны
   совпадать (`get_rpc_status` → `version_check`), иначе будет варнинг о
   рассинхроне; после обновления аддона — перезапусти FreeCAD.
+
+## Библиотека готовых деталей (parts_library)
+
+Поставлена официальная [FreeCAD-library](https://github.com/FreeCAD/FreeCAD-library)
+в `~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/parts_library` — именно
+этот путь ищут MCP-инструменты `get_parts_list` / `insert_part_from_library`
+(см. `Mod/FreeCADMCP/rpc_server/parts_library.py`).
+
+**Клон разряженный (sparse), а не полный** — на диске было всего 1,5 ГБ свободно
+(99% занято), полная библиотека ~1 ГБ. Сделано так:
+```bash
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/FreeCAD/FreeCAD-library.git <path>/Mod/parts_library
+cd <path>/Mod/parts_library && git sparse-checkout set "Mechanical Parts/Bearings"
+```
+Итого 20 МБ. Добавить ещё раздел — `git sparse-checkout add "Mechanical Parts/Pulleys"`
+(нужна сеть: blob'ы докачиваются по требованию).
+
+Грабли:
+- `get_parts_list` фильтрует по расширению **`.FCStd` с учётом регистра**, а в
+  библиотеке половина файлов названа `.fcstd` строчными — в списке их не видно,
+  но `insert_part_from_library` по явному пути их открывает нормально.
+  Пример: `Mechanical Parts/Bearings/608ZZ_Ball_Bearing.fcstd`.
+- `insert_part_from_library` делает `mergeProject`, то есть вываливает в корень
+  документа всю внутреннюю требуху файла (у 608ZZ это `Sketch` + `Revolution` +
+  `Chamfer` — PartDesign-фичи без Body). Для покупной детали параметрика не
+  нужна: проще скопировать `.Shape` в `Part::Feature` и удалить merge-мусор.
+- Шейпы в библиотеке не обязаны стоять осью по Z (у 608ZZ ось вдоль **Y**),
+  и своя ориентация у них зашита в `Shape.Placement`. Если присвоить
+  `Shape.Placement` новое значение — исходный поворот теряется; нужно либо
+  домножать на старый, либо задавать поворот явно.
+
+## Параметрический привод руки (shkiv_param.FCMacro)
+
+[shkiv_param.FCMacro](shkiv_param.FCMacro) строит ведомый шкив GT2 с седлом
+под трубу руки и отдельную прижимную крышку. Все размеры живут в объекте
+**VarSet `Privod` (ярлык «Привод»)** в дереве документа `ETZ_Robot` — после
+первой сборки макрос не нужен, геометрия меняется правкой переменных в GUI.
+
+Ключевые связи (выражениями, пересчитываются сами):
+- `Peredacha` -> `ZubVedom = round(ZubVed * Peredacha)` -> делительный Ø,
+  вершины, фланцы, `Occurrences` кругового массива зубьев;
+- `Peredacha` + `DlinaRemnya` -> `MezhOs` (решение формулы длины ремня) ->
+  `Part002.Placement.Base.y`, то есть весь узел отъезжает от вала мотора;
+- `VenecZ` -> `Part002.Placement.Base.z`, венцы ведущего и ведомого совпадают;
+- `DiamTruby` -> жёлоб седла, крышка, положение и Ø винтов хомута.
+
+Геометрия собрана на **примитивах PartDesign** (`AdditiveCylinder/Box`,
+`SubtractiveCylinder/Box`), а не на эскизах: у примитива каждый размер — своё
+свойство под выражение, и нет зависимости от имён рёбер.
+
+`pulley_100t.FCMacro.superseded` — прежняя непараметрическая версия. Не
+запускать: она перестроит то же `Body003` жёстко заданными числами и снесёт
+всю цепочку с выражениями.
+
+### Грабли движка выражений FreeCAD
+
+- **Имя свойства не должно совпадать с обозначением единицы.** Свойство с
+  именем `C` (кулон) ломает любое выражение, которое на него ссылается, —
+  с бесполезным сообщением «Expression can not evaluate to a value».
+  Так же опасны `T`, `N`, `F`, `W`, `J`, `A`, `K`, `S`, `V`, `L`.
+- **Одно сломанное выражение отравляет весь документ.** После него *любой*
+  последующий `setExpression`/`recompute` возвращает ту же обобщённую ошибку,
+  даже для заведомо корректных выражений и в другом объекте. Диагностируя,
+  сначала удалите свойство с битым выражением, иначе будете чинить исправное.
+- `sqrt` не умеет единицы: пишите `sqrt(X / 1mm^2) * 1mm`.
+- `max(a; b)` и `max(a, b)` оба работают. Для формулы межосевого расстояния
+  `max(..., 0 mm^2)` обязателен: при слишком коротком ремне подкоренное
+  выражение уходит в минус, `sqrt` даёт **nan**, и объект молча уезжает в
+  неопределённую точку вместо ошибки.
+- Python-число нельзя складывать с `Quantity` — «Unit mismatch in plus
+  operation». Берите `.Value`.
+
+### Грабли PartDesign/API
+
+- `doc.removeObject(body.Name)` на теле **не удаляет его фичи** — они
+  осиротеют. В дереве при этом видно только хвост цепочки (фичи показывают
+  свой `BaseFeature` как ребёнка), поэтому чистить надо слоями, пока не
+  кончатся. См. `purge_orphans()` в макросе.
+- `obj.getGlobalPlacement()` **уже включает** собственный `Placement`
+  объекта, а у `Part::Feature` `Shape.Placement` — это он же. Перемножать
+  их нельзя: получите двойное смещение и ложные «пересечения» при проверке
+  сборки. Правильно:
+  `shape.Placement = obj.getGlobalPlacement() * obj.Placement.inverse() * shape.Placement`.

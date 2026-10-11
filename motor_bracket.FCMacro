@@ -1,0 +1,245 @@
+# -*- coding: utf-8 -*-
+# motor_bracket.FCMacro
+# Кронштейн станции привода: несёт шаговый мотор NEMA 17 и ось подшипника
+# ведомого шкива 60T. Встраивается в документ ETZ_Robot (контейнер "Part"),
+# остальные объекты документа не трогает.
+#
+# Все размеры сопряжений СНЯТЫ С ДОКУМЕНТА ETZ_Robot, а не придуманы:
+#   Body     (NEMA17)              -> корпус 42.3, z 0..40; буртик Ø22 z 40..42; вал Ø5 z 42..66
+#   Pulley   (Шкив_GT2_20T)        -> ступица Ø16 z 44..51, зубья z 52..59
+#   Pulley60 (Шкив_GT2_60T_608ZZ)  -> ось (0, 58.6), низ z 50.5, гнездо 608ZZ Ø22x7 снизу,
+#                                     осевое отверстие Ø14 сверху (через него лезет ключ)
+# Отсюда вся компоновка: мотор висит ПОД пластиной валом вверх, оба шкива и
+# ремень — НАД пластиной (зазор от верха пластины до низа шкива 2.5 мм),
+# подшипник запрессован в шкив, а пластина держит неподвижную ось М8.
+#
+# Крепёж (докупить):
+#   1 x винт М8х16 DIN 912 (с внутренним шестигранником, головка Ø13 — проходит
+#       в отверстие Ø14 шкива, затягивается шестигранником 6 мм сверху)
+#   1 x гайка М8 DIN 934 (садится в шестигранное гнездо снизу, не проворачивается)
+#   4 x винт М3х12 + шайба (мотор к пластине, через пазы натяжения)
+#   4 x винт М4 потайной DIN 7991 (пластина к раме; потайные — чтобы головки
+#       не задели фланец шкива, который проходит в 2.5 мм над пластиной)
+#
+# Запуск: FreeCAD -> Макросы... -> motor_bracket.FCMacro -> Выполнить
+# либо через MCP: exec(compile(open(...).read(), ..., 'exec'), {'__name__':'__main__'})
+
+import math
+
+import FreeCAD as App
+import Part
+
+DOC_NAME = "ETZ_Robot"
+CONTAINER = "Part"          # App::Part, в котором лежат мотор и шкивы
+OBJ_NAME = "MotorBracket"
+GROUP_NAME = "BracketRefs"
+
+# ----------------------------------------------------------------------------
+# Параметры — правьте только этот блок
+# ----------------------------------------------------------------------------
+MOTOR_X, MOTOR_Y = 0.0, 0.0        # ось мотора (Body)
+PUL_X, PUL_Y = 0.0, 58.6           # ось ведомого шкива (Pulley60)
+
+PLATE_Z0 = 40.0                    # низ пластины = посадочная плоскость мотора
+PLATE_T = 8.0                      # толщина пластины
+CORNER_R = 6.0
+
+PLATE_X0, PLATE_X1 = -28.15, 28.15 # габарит: корпус мотора 42.3 + по 7 мм поля
+PLATE_Y0, PLATE_Y1 = -32.0, 70.0
+
+# --- NEMA 17 ---
+NEMA_PCD = 31.0                    # квадрат крепёжных отверстий (стандарт NEMA 17)
+NEMA_SCREW_D = 3.4                 # М3 с зазором
+NEMA_BOSS_D = 23.0                 # буртик Ø22 с зазором
+NEMA_BOSS_H = 2.5                  # глубина выборки под буртик (буртик 2 мм)
+PULLEY_HUB_D = 17.5                # ступица шкива 20T Ø16 с зазором
+TENSION_TRAVEL = 5.0               # ход пазов натяжения вдоль Y (+-2.5 мм)
+
+# --- ось подшипника ведомого шкива ---
+PUL_BOTTOM_Z = 50.5                # низ шкива 60T = низ подшипника
+BRG_OD, BRG_ID, BRG_W = 22.0, 8.0, 7.0     # 608ZZ, запрессован в шкив
+AXLE_HOLE_D = 8.4                  # отверстие под М8
+AXLE_BOSS_D = 12.7                 # опорная бонка: упирается только во внутреннее
+                                   # кольцо подшипника (его наружный Ø ~13),
+                                   # до шариков и наружного кольца не достаёт
+NUT_AF = 13.4                      # М8 под ключ 13 + зазор на печать
+NUT_POCKET_T = 6.9                 # гнездо гайки (высота гайки 6.8)
+
+# --- крепление пластины к раме ---
+MOUNT_D = 4.5                      # М4 с зазором
+MOUNT_CS_D = 9.0                   # потай под DIN 7991 (головка Ø8.4, 90 град.)
+MOUNT_PTS = [(-16.0, -26.0), (16.0, -26.0), (-21.0, 64.0), (21.0, 64.0)]
+
+SHOW_REF = True                    # показать подшипник/винт/гайку как референс
+
+COL_PLATE = (0.35, 0.60, 0.85)
+COL_BRG = (0.80, 0.82, 0.85)
+COL_STEEL = (0.45, 0.45, 0.48)
+
+PLATE_Z1 = PLATE_Z0 + PLATE_T
+
+
+def vec(x, y, z=0.0):
+    return App.Vector(x, y, z)
+
+
+def cyl(d, h, x, y, z):
+    return Part.makeCylinder(d / 2.0, h, vec(x, y, z))
+
+
+def slot_y(x, y, travel, dia, z, h):
+    """Паз со скруглёнными концами, ось вдоль Y (направление натяжения ремня)."""
+    r = dia / 2.0
+    s = cyl(dia, h, x, y - travel / 2.0, z)
+    s = s.fuse(cyl(dia, h, x, y + travel / 2.0, z))
+    s = s.fuse(Part.makeBox(dia, travel, h, vec(x - r, y - travel / 2.0, z)))
+    return s
+
+
+def hex_prism(af, h, x, y, z):
+    """Шестигранная призма, af — размер под ключ."""
+    r = af / math.sqrt(3.0)
+    pts = [vec(x + r * math.cos(math.radians(60 * i)),
+               y + r * math.sin(math.radians(60 * i)), z) for i in range(7)]
+    pts[6] = pts[0]
+    return Part.Face(Part.makePolygon(pts)).extrude(vec(0, 0, h))
+
+
+def tube(od, idd, h, x, y, z):
+    return cyl(od, h, x, y, z).cut(cyl(idd, h + 2.0, x, y, z - 1.0))
+
+
+# ----------------------------------------------------------------------------
+# Кронштейн
+# ----------------------------------------------------------------------------
+def build_bracket():
+    body = Part.makeBox(PLATE_X1 - PLATE_X0, PLATE_Y1 - PLATE_Y0, PLATE_T,
+                        vec(PLATE_X0, PLATE_Y0, PLATE_Z0))
+    vertical = [e for e in body.Edges
+                if len(e.Vertexes) == 2
+                and abs(e.Vertexes[0].Point.x - e.Vertexes[1].Point.x) < 1e-6
+                and abs(e.Vertexes[0].Point.y - e.Vertexes[1].Point.y) < 1e-6]
+    body = body.makeFillet(CORNER_R, vertical)
+
+    # опорная бонка оси: добирает 2.5 мм от верха пластины до низа подшипника,
+    # иначе внутреннее кольцо пришлось бы подкладывать шайбами
+    boss_h = PUL_BOTTOM_Z - PLATE_Z1
+    body = body.fuse(cyl(AXLE_BOSS_D, boss_h + 0.01, PUL_X, PUL_Y, PLATE_Z1 - 0.01))
+
+    tools = []
+
+    # --- посадка мотора ---
+    # ступенчатое окно: снизу Ø23 под буртик, выше Ø17.5 под ступицу шкива 20T.
+    # Ступенька оставляет на 2.7 мм больше материала у крепёжных пазов, чем
+    # сквозное Ø23 (перемычка до паза М3 растёт с 2.3 до 5.0 мм).
+    tools.append(slot_y(MOTOR_X, MOTOR_Y, TENSION_TRAVEL, NEMA_BOSS_D,
+                        PLATE_Z0 - 1.0, NEMA_BOSS_H + 1.0))
+    tools.append(slot_y(MOTOR_X, MOTOR_Y, TENSION_TRAVEL, PULLEY_HUB_D,
+                        PLATE_Z0 + NEMA_BOSS_H, PLATE_T - NEMA_BOSS_H + 1.0))
+    # пазы натяжения ремня
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            tools.append(slot_y(MOTOR_X + sx * NEMA_PCD / 2.0,
+                                MOTOR_Y + sy * NEMA_PCD / 2.0,
+                                TENSION_TRAVEL, NEMA_SCREW_D,
+                                PLATE_Z0 - 1.0, PLATE_T + 2.0))
+
+    # --- станция подшипника ---
+    tools.append(cyl(AXLE_HOLE_D, PUL_BOTTOM_Z - PLATE_Z0 + 2.0,
+                     PUL_X, PUL_Y, PLATE_Z0 - 1.0))
+    # гнездо гайки М8 снизу: гайка не проворачивается, снизу ничего не торчит
+    tools.append(hex_prism(NUT_AF, NUT_POCKET_T + 1.0,
+                           PUL_X, PUL_Y, PLATE_Z0 - 1.0))
+
+    # --- крепление к раме, потайные М4 ---
+    for mx, my in MOUNT_PTS:
+        tools.append(cyl(MOUNT_D, PLATE_T + 2.0, mx, my, PLATE_Z0 - 1.0))
+        cs_h = (MOUNT_CS_D - MOUNT_D) / 2.0
+        tools.append(Part.makeCone(MOUNT_D / 2.0, MOUNT_CS_D / 2.0, cs_h,
+                                   vec(mx, my, PLATE_Z1 - cs_h)))
+
+    cutter = tools[0]
+    for t in tools[1:]:
+        cutter = cutter.fuse(t)
+    return body.cut(cutter)
+
+
+# ----------------------------------------------------------------------------
+# Референс: подшипник, винт, гайка (прозрачные, только для проверки стыков)
+# ----------------------------------------------------------------------------
+def build_refs():
+    out = []
+    brg_z0 = PUL_BOTTOM_Z
+    out.append(("Ref_Bearing_608ZZ",
+                tube(BRG_OD, BRG_ID, BRG_W, PUL_X, PUL_Y, brg_z0),
+                COL_BRG, 40))
+
+    # М8х16 DIN 912: головка Ø13 x 8 садится на внутреннее кольцо подшипника
+    head_z = brg_z0 + BRG_W
+    bolt = cyl(13.0, 8.0, PUL_X, PUL_Y, head_z)
+    bolt = bolt.fuse(cyl(8.0, 16.0, PUL_X, PUL_Y, head_z - 16.0))
+    out.append(("Ref_Bolt_M8x16", bolt, COL_STEEL, 30))
+
+    out.append(("Ref_Nut_M8",
+                hex_prism(13.0, 6.8, PUL_X, PUL_Y, PLATE_Z0).cut(
+                    cyl(8.0, 8.0, PUL_X, PUL_Y, PLATE_Z0 - 1.0)),
+                COL_STEEL, 30))
+    return out
+
+
+def main():
+    doc = App.getDocument(DOC_NAME)
+    cont = doc.getObject(CONTAINER)
+
+    # снести прежнюю версию своих объектов, остальной документ не трогаем
+    for name in [OBJ_NAME] + [n for n, _, _, _ in build_refs()] + [GROUP_NAME]:
+        o = doc.getObject(name)
+        if o is not None:
+            doc.removeObject(name)
+
+    obj = doc.addObject("Part::Feature", OBJ_NAME)
+    obj.Label = "Кронштейн мотор+подшипник"
+    obj.Shape = build_bracket()
+    if cont is not None:
+        cont.addObject(obj)
+    if App.GuiUp:
+        obj.ViewObject.ShapeColor = COL_PLATE
+
+    if SHOW_REF:
+        grp = doc.addObject("App::DocumentObjectGroup", GROUP_NAME)
+        grp.Label = "Крепёж (референс, не печатать)"
+        for name, shape, color, transp in build_refs():
+            o = doc.addObject("Part::Feature", name)
+            o.Shape = shape
+            grp.addObject(o)
+            if App.GuiUp:
+                o.ViewObject.ShapeColor = color
+                o.ViewObject.Transparency = transp
+        if cont is not None:
+            cont.addObject(grp)
+
+    doc.recompute()
+
+    bb = obj.Shape.BoundBox
+    v = obj.Shape.Volume / 1000.0
+    print("Кронштейн: %.1f x %.1f x %.1f мм, объём %.1f см3 (PLA ~%.0f г)"
+          % (bb.XLength, bb.YLength, bb.ZLength, v, v * 1.24))
+    print("Пластина z %.1f..%.1f | бонка оси до z %.1f | низ шкива 60T z %.1f"
+          % (PLATE_Z0, PLATE_Z1, PUL_BOTTOM_Z, PUL_BOTTOM_Z))
+    print("Зазор верх пластины -> низ шкива: %.2f мм (занят бонкой Ø%.1f)"
+          % (PUL_BOTTOM_Z - PLATE_Z1, AXLE_BOSS_D))
+    stack = BRG_W + (PUL_BOTTOM_Z - PLATE_Z1) + PLATE_T
+    print("Стопка под винт: подшипник %.1f + бонка %.1f + пластина %.1f = %.1f мм"
+          % (BRG_W, PUL_BOTTOM_Z - PLATE_Z1, PLATE_T, stack))
+    print("  -> М8х16: конец винта на z %.1f, в гайку (z %.1f..%.1f) входит %.1f мм"
+          % (PUL_BOTTOM_Z + BRG_W - 16.0, PLATE_Z0, PLATE_Z0 + 6.8,
+             (PLATE_Z0 + 6.8) - (PUL_BOTTOM_Z + BRG_W - 16.0)))
+    print("Натяжение: пазы +-%.1f мм вдоль Y" % (TENSION_TRAVEL / 2.0))
+    if App.GuiUp:
+        import FreeCADGui as Gui
+        Gui.activeDocument().activeView().viewIsometric()
+        Gui.SendMsgToActiveView("ViewFit")
+
+
+if __name__ == "__main__":
+    main()
