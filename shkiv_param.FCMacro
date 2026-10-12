@@ -53,6 +53,8 @@ ELB2CAP_NAME = "Body_Elbow2Cap"
 ELB2CAP_LABEL= "Локоть_крышка_2"
 TUBE2_NAME   = "Body_Tube2"     # вторая труба, проходит локоть насквозь
 TUBE2_LABEL  = "Труба_2_Ø10"
+ROD_NAME     = "Body_Rod"       # тяга параллелограмма (создаётся)
+ROD_LABEL    = "Тяга"
 JOINT_NAME   = "Body_RodJoint"  # шарнир тяги на конце трубы 2
 JOINT_LABEL  = "Шарнир_тяги"
 JNTCAP_NAME  = "Body_RodJointCap"
@@ -184,13 +186,21 @@ INPUTS = [
     ("Tube2Angle",    "App::PropertyAngle",   "3 Локоть", 90.0,
      "Угол предплечья в шарнире. Поворачивает хомут 2, крышку и саму трубу"),
 
+    ("RodThk",        "App::PropertyLength",  "4 Тяга", 3.0,
+     "Толщина тяги. Она идёт ПОД рычагом и под проушиной, в полосу "
+     "ремня не лезет"),
+    ("RodWall",       "App::PropertyLength",  "4 Тяга", 2.5,
+     "Материал тяги вокруг пальца. Задаёт и ширину тяги (2 x проушина)"),
+
     ("JointGrip",     "App::PropertyLength",  "4 Тяга", 20.0,
      "На сколько хомут шарнира тяги садится на конец трубы 2"),
     ("JointWall",     "App::PropertyLength",  "4 Тяга", 3.0,
      "Стенка проушины тяги вокруг отверстия, она же торцевая стенка хомута"),
 
-    ("Motor2X",       "App::PropertyLength",  "7 Моторы", 48.0,
-     "Смещение правого мотора по X от левого"),
+    ("MotorSize",     "App::PropertyLength",  "7 Моторы", 42.3,
+     "Габарит корпуса мотора (NEMA17 = 42.3). Из него считается шаг"),
+    ("MotorGap",      "App::PropertyLength",  "7 Моторы", 3.0,
+     "Зазор между корпусами моторов. Шаг = MotorSize + MotorGap"),
 
     ("ToothR",        "App::PropertyLength",  "4 Профиль GT2", 0.555,
      "Радиус канавки зуба GT2"),
@@ -385,6 +395,32 @@ DERIVED = [
     ("Elbow2Bot",    "App::PropertyLength", "6 Производные 2",
      "{V}.PivotBrgW + {V}.PivotCeil + {V}.TubeOD / 2",
      "От оси трубы 2 до низа проушины хомута 2"),
+    ("RodEyeR",      "App::PropertyLength", "6 Производные 2",
+     "{V}.LeverHoleD / 2 + {V}.RodWall",
+     "Радиус проушины тяги. Ширина тяги = 2 x этот радиус"),
+    ("RodZ",         "App::PropertyLength", "6 Производные 2",
+     "{V}.LeverZ - {V}.RodThk",
+     "Низ тяги. Верх тяги = низ рычага: тяга подходит под рычаг и под "
+     "проушину шарнира СНИЗУ (сверху обе закрыты шкивом и крышкой)"),
+    ("RodAX",        "App::PropertyLength", "6 Производные 2",
+     "{V}.LeverLen * cos({V}.LeverAngle)",
+     "X отверстия рычага от оси шкивов (= первый палец тяги)"),
+    ("RodAY",        "App::PropertyLength", "6 Производные 2",
+     "{V}.LeverLen * sin({V}.LeverAngle)", "Y отверстия рычага"),
+    ("RodBX",        "App::PropertyLength", "6 Производные 2",
+     "{V}.PivotX - {V}.LeverLen * cos({V}.Tube2Angle)",
+     "X пальца на шарнире тяги: вылет LeverLen от оси локтя, повёрнутый "
+     "на Tube2Angle"),
+    ("RodBY",        "App::PropertyLength", "6 Производные 2",
+     "-{V}.LeverLen * sin({V}.Tube2Angle)", "Y пальца на шарнире тяги"),
+    ("RodLen",       "App::PropertyLength", "6 Производные 2",
+     "sqrt((({V}.RodBX - {V}.RodAX) ^ 2 + ({V}.RodBY - {V}.RodAY) ^ 2)"
+     " / 1mm^2) * 1mm",
+     "МЕЖЦЕНТРОВОЕ тяги. При замкнутом параллелограмме равно PivotX"),
+    ("RodAngle",     "App::PropertyAngle",  "6 Производные 2",
+     "atan2({V}.RodBY - {V}.RodAY; {V}.RodBX - {V}.RodAX)",
+     "Куда смотрит тяга. Считается из обоих углов, поэтому тяга сама "
+     "поворачивается за рычагом и предплечьем"),
     ("JointEyeR",    "App::PropertyLength", "6 Производные 2",
      "max({V}.LeverHoleD / 2 + {V}.JointWall; {V}.LeverWidth / 2)",
      "Радиус проушины тяги. Не меньше глаза рычага, чтобы оба конца тяги "
@@ -411,12 +447,30 @@ DERIVED = [
     ("JointScrewX",  "App::PropertyLength", "6 Производные 2",
      "{V}.JointGrip / 2 - 6 mm",
      "Винты хомута тяги, симметрично его середине"),
-    ("Motor2Y",      "App::PropertyLength", "6 Производные",
-     "{V}.CenterDist - sqrt(max({V}.CenterDist2 ^ 2 - {V}.Motor2X ^ 2; 0 mm^2)"
-     " / 1mm^2) * 1mm",
-     "Y правого мотора: он отодвинут от общей оси шкивов на CenterDist2, "
-     "а по X уже сдвинут на Motor2X, отсюда и Y. Требует "
-     "CenterDist2 >= Motor2X"),
+    # --- компоновка: моторы бок о бок ПОЗАДИ шкивов, рука выходит между
+    # ними. Левый мотор — начало координат документа, поэтому двигается не
+    # он, а узел руки: его ось уезжает на PulleyAxisX вперёд и на
+    # ArmAxisY в сторону, ровно на середину между валами моторов.
+    ("MotorPitch",   "App::PropertyLength", "7 Моторы",
+     "{V}.MotorSize + {V}.MotorGap",
+     "Шаг между валами моторов поперёк руки. Корпуса стоят с зазором "
+     "MotorGap, плотнее некуда"),
+    ("ArmAxisY",     "App::PropertyLength", "7 Моторы",
+     "{V}.MotorPitch / 2",
+     "Y оси шкивов = ровно середина между валами моторов, поэтому рука "
+     "выходит между ними и оба ремня симметричны"),
+    ("PulleyAxisX",  "App::PropertyLength", "7 Моторы",
+     "sqrt(max({V}.CenterDist ^ 2 - {V}.ArmAxisY ^ 2; 0 mm^2) / 1mm^2) * 1mm",
+     "X оси шкивов от левого мотора: остаток межосевого после сдвига на "
+     "ArmAxisY. Рука смотрит вдоль +X, то есть ОТ моторов"),
+    ("Motor2X",      "App::PropertyLength", "7 Моторы",
+     "{V}.PulleyAxisX - sqrt(max({V}.CenterDist2 ^ 2 - {V}.ArmAxisY ^ 2;"
+     " 0 mm^2) / 1mm^2) * 1mm",
+     "X правого мотора: назад от оси шкивов на своё межосевое. При равных "
+     "ремнях совпадает с левым (оба вала на одной линии)"),
+    ("Motor2Y",      "App::PropertyLength", "7 Моторы",
+     "{V}.MotorPitch",
+     "Y правого мотора: шаг от левого. Ось руки проходит посередине"),
     ("Motor2Lift",   "App::PropertyLength", "6 Производные",
      "{V}.BeltPlaneZ2 - {V}.FlangeThk",
      "На сколько поднять правый мотор, чтобы его венец совпал с венцом "
@@ -532,7 +586,7 @@ def purge_orphans(doc):
                 owned.update(x.Name for x in o.Group)
         doomed = [o.Name for o in doc.Objects
                   if o.Name.startswith(("K_", "P_", "Q_", "S_", "T_",
-                                                   "Rod_", "RdC_")) and o.Name not in owned]
+                                                   "Rod_", "RdC_", "Tg_")) and o.Name not in owned]
         if not doomed:
             return
         for n in doomed:
@@ -835,7 +889,8 @@ def build_tube(doc):
          "Placement.Base.x": "{V}.ClampStartR - 1 mm",
          "Placement.Base.z": "{V}.TubeAxisZ"}, rot=ROT_X)
 
-    setx(part, "Placement.Base.y", "{V}.CenterDist")
+    setx(part, "Placement.Base.x", "{V}.PulleyAxisX")
+    setx(part, "Placement.Base.y", "{V}.ArmAxisY")
     setx(part, "Placement.Base.z", "{V}.BeltPlaneZ - {V}.FlangeThk")
     doc.recompute()
     show_tip(body)
@@ -1101,6 +1156,91 @@ def build_rod_joint(doc, part):
     setx(jcap, "Placement.Base.z", "{V}.Tube2Z")
     setx(jcap, "Placement.Rotation.Angle", "{V}.Tube2Angle")
     return j, jcap
+
+
+def build_rod(doc, part, vs):
+    """Тяга параллелограмма: планка между рычагом шкива 2 и шарниром на
+    конце предплечья, плюс два пальца M3.
+
+    Тело строится вдоль своего локального +X от первого пальца, а оба
+    конца находит само: `RodAX/RodAY` — отверстие рычага, `RodBX/RodBY` —
+    палец шарнира тяги, `RodLen` — расстояние между ними, `RodAngle` —
+    направление. Поэтому при повороте `LeverAngle` или `Tube2Angle` тяга
+    поворачивается и растягивается сама, оставаясь на своих пальцах.
+
+    Тяга идёт СНИЗУ: сверху и рычаг, и проушина закрыты (над рычагом
+    фланец шкива, над проушиной крышка хомута), а снизу свободно. Верх
+    тяги = низ рычага, то есть скользящий контакт — так плоские тяги и
+    работают.
+
+    Палец: винт M3 сверху через рычаг/проушину и тягу, гайка под тягой.
+    """
+    old = doc.getObject(ROD_NAME)
+    if old is not None:
+        wipe(doc, old)
+        doc.removeObject(old.Name)
+        doc.recompute()
+    for o in list(doc.Objects):
+        if o.Name.startswith("RD_"):
+            doc.removeObject(o.Name)
+    doc.recompute()
+    purge_orphans(doc)
+
+    b = doc.addObject("PartDesign::Body", ROD_NAME)
+    part.addObject(b)
+    b.Label = ROD_LABEL
+    add(doc, b, "AdditiveBox", "Tg_Bar",
+        {"Length": "{V}.RodLen", "Width": "2 * {V}.RodEyeR",
+         "Height": "{V}.RodThk", "Placement.Base.y": "-{V}.RodEyeR"})
+    add(doc, b, "AdditiveCylinder", "Tg_EyeA",
+        {"Radius": "{V}.RodEyeR", "Height": "{V}.RodThk"})
+    add(doc, b, "AdditiveCylinder", "Tg_EyeB",
+        {"Radius": "{V}.RodEyeR", "Height": "{V}.RodThk",
+         "Placement.Base.x": "{V}.RodLen"})
+    add(doc, b, "SubtractiveCylinder", "Tg_HoleA",
+        {"Radius": "{V}.LeverHoleD / 2", "Height": "{V}.RodThk + 2 mm",
+         "Placement.Base.z": "-1 mm"})
+    add(doc, b, "SubtractiveCylinder", "Tg_HoleB",
+        {"Radius": "{V}.LeverHoleD / 2", "Height": "{V}.RodThk + 2 mm",
+         "Placement.Base.x": "{V}.RodLen", "Placement.Base.z": "-1 mm"})
+    setx(b, "Placement.Base.x", "{V}.RodAX")
+    setx(b, "Placement.Base.y", "{V}.RodAY")
+    setx(b, "Placement.Base.z", "{V}.RodZ")
+    setx(b, "Placement.Rotation.Angle", "{V}.RodAngle")
+    doc.recompute()
+    show_tip(b)
+
+    # пальцы: головка сверху на рычаге/проушине, гайка под тягой
+    need = (vs.LeverThk.Value + vs.RodThk.Value + vs.NutThk.Value)
+    length = next((L for L in LIB_SCREW_LENGTHS if L >= need), LIB_SCREW_LENGTHS[-1])
+    screw = lib_shape(LIB_SCREWS % length)
+    nut = lib_shape(LIB_NUT)
+    made = 0
+    if screw is not None and nut is not None:
+        for tag, xe, ye in (("A", "{V}.RodAX", "{V}.RodAY"),
+                            ("B", "{V}.RodBX", "{V}.RodBY")):
+            for kind, shape, zexpr, color in (
+                    ("Vint", screw, "{V}.LeverZ + {V}.LeverThk",
+                     (0.30, 0.32, 0.35)),
+                    ("Gayka", nut, "{V}.RodZ - {V}.NutThk",
+                     (0.55, 0.56, 0.58))):
+                o = doc.addObject("Part::Feature", "RD_%s%s" % (kind, tag))
+                o.Shape = shape.copy()
+                o.Label = ("Палец_тяги_M3x%d_%s" % (length, tag)
+                           if kind == "Vint" else "Гайка_тяги_M3_%s" % tag)
+                part.addObject(o)
+                setx(o, "Placement.Base.x", xe)
+                setx(o, "Placement.Base.y", ye)
+                setx(o, "Placement.Base.z", zexpr)
+                if App.GuiUp:
+                    o.ViewObject.ShapeColor = color
+                    o.ViewObject.DiffuseColor = [color]
+                made += 1
+    else:
+        print("  тяга: библиотека деталей недоступна, пальцы пропускаю")
+        length = None
+    doc.recompute()
+    return b, length, made
 
 
 LIB_PIVOT_BRG = "Mechanical Parts/Bearings/623ZZ_Ball_Bearing.fcstd"
@@ -1456,11 +1596,15 @@ def main():
     pv_n, pv_len = build_pivot_hw(doc, doc.getObject(TUBE_PART), vs)
     joint, jcap = build_rod_joint(doc, doc.getObject(TUBE_PART))
     eh_len, eh_n = build_elbow_hw(doc, doc.getObject(TUBE_PART), vs)
+    rod, rod_len, rod_n = build_rod(doc, doc.getObject(TUBE_PART), vs)
     drv2 = build_motor2(doc)
 
-    # узел целиком отъезжает от вала мотора на межосевое расстояние
-    # и садится по высоте так, чтобы венцы ведущего и ведомого совпали
-    setx(part, "Placement.Base.y", "{V}.CenterDist")
+    # узел целиком отъезжает от вала левого мотора на межосевое
+    # расстояние — вперёд по X и в сторону на пол-шага моторов, так что
+    # рука выходит ровно между ними, а моторы остаются ПОЗАДИ неё — и
+    # садится по высоте так, чтобы венцы ведущего и ведомого совпали
+    setx(part, "Placement.Base.x", "{V}.PulleyAxisX")
+    setx(part, "Placement.Base.y", "{V}.ArmAxisY")
     setx(part, "Placement.Base.z", "{V}.BeltPlaneZ - {V}.FlangeThk")
     doc.recompute()
 
@@ -1483,8 +1627,9 @@ def main():
               "или уменьшите Ratio")
     elif vs.TeethInMesh < 6:
         print("  !! в зацеплении меньше 6 зубьев — ремень будет проскакивать")
-    print("  положение  узел на (0, %.3f, %.3f) от вала мотора"
-          % (part.Placement.Base.y, part.Placement.Base.z))
+    print("  положение  узел на (%.3f, %.3f, %.3f) от вала левого мотора"
+          % (part.Placement.Base.x, part.Placement.Base.y,
+             part.Placement.Base.z))
     z0 = part.Placement.Base.z + vs.FlangeThk.Value
     print("             венец ведомого z %.3f..%.3f, ведущего %.3f..%.3f"
           % (z0, z0 + vs.RimH.Value,
@@ -1525,10 +1670,10 @@ def main():
         print("  !! РЕМЕНЬ 2 КОРОТОК для этой передачи")
     elif vs.TeethInMesh2 < 6:
         print("  !! у второй ступени в зацеплении меньше 6 зубьев")
-    if vs.CenterDist2.Value < vs.Motor2X.Value:
-        print("  !! CenterDist2 (%.1f) меньше Motor2X (%.1f) — правый мотор так "
-              "не поставить, нужен ремень длиннее"
-              % (vs.CenterDist2, vs.Motor2X))
+    if min(vs.CenterDist.Value, vs.CenterDist2.Value) < vs.ArmAxisY.Value:
+        print("  !! межосевое меньше полушага моторов (%.1f) — так их не "
+              "расставить, нужен ремень длиннее или меньше MotorGap"
+              % vs.ArmAxisY)
     print("  шкив 2     без хомута | %.1f см3 (PLA ~%.0f г)" % (p2v, p2v * 1.24))
     print("             низ фланца z=%.1f, венец z=%.1f..%.1f от низа первого шкива"
           % (vs.Pulley2Z, vs.BeltPlaneZ2, vs.BeltPlaneZ2.Value + vs.RimH.Value))
@@ -1600,6 +1745,26 @@ def main():
         print("  крепёж локтя %d шт из библиотеки: ISO4762 M3x%d + гайка M3, "
               "по 4 винта на хомут 1, хомут 2 и хомут тяги"
               % (eh_n, eh_len))
+    rv = rod.Shape.Volume / 1000.0
+    print("  тяга       межцентровое %.2f мм, сечение %.1f x %.1f, угол %.1f° "
+          "| %.1f см3"
+          % (vs.RodLen, 2 * vs.RodEyeR.Value, vs.RodThk, vs.RodAngle, rv))
+    print("             идёт ПОД рычагом и проушиной, z %.1f..%.1f; "
+          "параллелограмм замкнут при RodLen == PivotX (%.2f)"
+          % (vs.RodZ, vs.RodZ.Value + vs.RodThk.Value, vs.PivotX))
+    if abs(vs.RodLen.Value - vs.PivotX.Value) > 0.01:
+        print("  !! тяга (%.2f) не равна плечу (%.2f) — параллелограмм "
+              "разомкнут: проверьте LeverAngle и Tube2Angle"
+              % (vs.RodLen, vs.PivotX))
+    if rod_len:
+        print("             пальцы %d шт: винт M3x%d сверху, гайка под тягой"
+              % (rod_n, rod_len))
+    print("  моторы     бок о бок ПОЗАДИ руки, шаг %.1f (корпус %.1f + зазор "
+          "%.1f), рука выходит между ними"
+          % (vs.MotorPitch, vs.MotorSize, vs.MotorGap))
+    print("             левый (0, 0, 0), ось шкивов (%.3f, %.3f) — рука "
+          "смотрит вдоль +X, от моторов"
+          % (vs.PulleyAxisX, vs.ArmAxisY))
     if drv2 is not None:
         print("  мотор 2    (x=%.1f, y=%.1f, z=+%.1f), межосевое %.3f, "
               "ведущий шкив — ссылка на «%s»"
