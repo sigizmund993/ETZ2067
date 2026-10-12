@@ -15,3 +15,5 @@ __pycache__/
 _backup_*.FCStd
 _*.png
 _slices.json
+_rename_map.json
+_varset_values.json
