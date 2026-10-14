@@ -1,0 +1,829 @@
+# -*- coding: utf-8 -*-
+# uzly_etz.FCMacro
+#
+# Всё, чего не хватало приводу руки до устройства по ЕТЗ 2026-27:
+#
+#   * СТАНИНА: основание на полигон, стенки, плита мотора 1 (она же опора
+#     вала), плита мотора 2, вал M8 со втулками — стопка внутренних колец
+#     608ZZ и проставки зажата болтом, шкивы крутятся только на наружных
+#     кольцах. Пазы натяжения ремней под винтами моторов.
+#   * РЕМНИ GT2 обеих ступеней (огибающая по шкивам) — чтобы проверять
+#     зазоры до них, а не на глаз.
+#   * РАБОЧИЙ УЗЕЛ на конце предплечья: кронштейн-хомут с T-направляющей,
+#     каретка Z на рейке (SG90 + шестерня z22, ход 34.6 мм за 180°),
+#     шпиндель на двух 624ZZ, электромагнит Ø20, поворот 0..360° через
+#     передачу 13 -> 26 от второго SG90 (180° серво = 360° магнита).
+#   * ПОЛИГОН-ссылка: зоны, лист поля и центры клеток в координатах робота
+#     — для проверки ТЗ прямо в этом документе.
+#
+# Размеры берутся из VarSet `Drive` (привод) и `Etz` (этот макрос) В МОМЕНТ
+# ЗАПУСКА: геометрия деталей — Part::Feature, её надо пересобрать этим
+# макросом после правки Drive. Положения, зависящие от позы (угол
+# предплечья, высота магнита), привязаны выражениями и меняются сами.
+#
+# Проверка всего этого — proverka_etz.FCMacro.
+#
+# Запуск: после shkiv_param.FCMacro, тем же exec(...).
+
+import math
+
+import FreeCAD as App
+import Part
+
+DOC_HINT = "ETZ_Robot"
+VS = "Drive"
+VE = "Etz"
+
+FRAME_PART = "Part_Frame"      # App::Part станины (глобальные координаты)
+EFF_PART = "Part_Eff"          # рабочий узел, внутри Part_Tube, крутится с предплечьем
+CARR_PART = "Part_Carr"        # каретка Z, внутри Part_Eff, едет по высоте
+POLY_GROUP = "Poly_Ref"        # полигон-ссылка
+
+# ---------------------------------------------------------------------------
+# Переменные этого макроса (VarSet Etz). Значения пользователя не затираются.
+# ---------------------------------------------------------------------------
+INPUTS = [
+    ("PolyShaftX", "App::PropertyLength", "1 Полигон", 300.0,
+     "X оси шкивов (плеча) в координатах ПОЛИГОНА (п. 2.1 ЕТЗ: 0 — левый "
+     "нижний угол). Зона 1 — x 0..350"),
+    ("PolyShaftY", "App::PropertyLength", "1 Полигон", 235.0,
+     "Y оси плеча на полигоне. Ниже середины поля (252.5) на 17.5 мм: так "
+     "рука паркуется над нижней полосой зоны 2 с запасом, а дальние клетки "
+     "у отбоя всё ещё в 60+ градусах от сингулярности"),
+    ("FloorZ", "App::PropertyDistance", "1 Полигон", -7.0,
+     "Поверхность полигона в координатах робота. Низ левого мотора — z 0, "
+     "под ним 1 мм зазора и основание 6 мм"),
+    ("MagnetZ", "App::PropertyLength", "2 Поза", 30.0,
+     "Высота рабочей грани электромагнита над полем. 5 = касается шашки, "
+     "лежащей на поле; 30 = стопка из 5 шашек"),
+    ("BaseT", "App::PropertyLength", "3 Станина", 6.0, "Толщина основания"),
+    ("WallT", "App::PropertyLength", "3 Станина", 10.0,
+     "Толщина стенок станины. 10 мм — чтобы гнездо гайки M3 помещалось "
+     "внутри стенки, а паз выходил наружу: гайку заводят снаружи"),
+    ("PlateAT", "App::PropertyLength", "3 Станина", 8.0,
+     "Толщина плиты мотора 1 — она же опора вала шкивов"),
+    ("PlateBT", "App::PropertyLength", "3 Станина", 6.0,
+     "Толщина плиты мотора 2 (ограничена снизу: над ней ходят рычаг и тяга)"),
+    ("BaseX0", "App::PropertyDistance", "3 Станина", -75.0,
+     "Задний край основания (x робота). Чем дальше назад — тем устойчивее"),
+    ("BaseX1", "App::PropertyDistance", "3 Станина", 130.0,
+     "Передний край основания. На полигоне не дальше x 350 (граница зоны 1)"),
+    ("BaseY0", "App::PropertyDistance", "3 Станина", -90.0, "Левый край основания"),
+    ("BaseY1", "App::PropertyDistance", "3 Станина", 135.0, "Правый край основания"),
+    ("TensionSlot", "App::PropertyLength", "3 Станина", 2.0,
+     "Ход натяжения ремня в каждую сторону (пазы под винты моторов)"),
+]
+
+
+def ensure_vs(doc):
+    vs = doc.getObject(VE)
+    if vs is None:
+        vs = doc.addObject("App::VarSet", VE)
+        vs.Label = "Etz"
+    for name, typ, grp, default, tip in INPUTS:
+        if not hasattr(vs, name):
+            vs.addProperty(typ, name, grp, tip)
+            setattr(vs, name, default)
+    return vs
+
+
+# ---------------------------------------------------------------------------
+# Константы покупных деталей (по стандарту / паспорту)
+# ---------------------------------------------------------------------------
+FACE1 = 40.0                 # верх корпуса левого NEMA17 (модель Body: z 0..40)
+NEMA_HALF = 21.15            # полугабарит корпуса 42.3
+NEMA_PCD = 31.0              # квадрат резьбовых отверстий M3
+NEMA_BOSS = 22.0             # центрирующий буртик Ø22 x 2
+
+M3 = dict(d=3.0, dk=5.5, k=3.0, s=2.5, nut_s=5.5, nut_m=2.4, hole=3.4)
+M4 = dict(d=4.0, dk=7.0, k=4.0, s=3.0, nut_s=7.0, nut_m=3.2, hole=4.4)
+M8 = dict(d=8.0, dk=13.0, k=8.0, s=6.0, nut_s=13.0, nut_m=6.8, hole=8.4)
+
+BRG624 = dict(d=4.0, D=13.0, B=5.0, d1=6.4)     # 624ZZ, d1 — Ø внутр. кольца
+BRG608_D1 = 12.1                                 # Ø внутреннего кольца 608ZZ
+
+MAG_D, MAG_H, MAG_THREAD = 20.0, 15.0, 6.0      # электромагнит KK-P20/15, M4 x 6
+
+# SG90 (модель из библиотеки): ось выхода (0, 16.6), торец шлица z 29.9,
+# лапки z 15.9..18.4, отверстия лапок y -2.35 и 24.85
+SG_AXIS_Y, SG_TAB_Z0, SG_TAB_Z1 = 16.6, 15.9, 18.4
+SG_HOLES_Y = (-2.35, 24.85)
+SG_GEAR_Z = 27.0             # низ шестерни, надетой на шлиц (над буртиком 26.7)
+
+# --- рабочий узел, фрейм предплечья (x от оси локтя, z — как в Part_Tube) ---
+CL_X0, CL_X1 = 94.0, 120.0   # хомут кронштейна на трубе 2 (труба кончается на 120)
+CL_SCREW_X = (100.0, 114.0)
+GP_X0, GP_X1, GP_HW = 120.0, 126.0, 16.0          # пластина направляющей
+RAIL_NECK = (126.0, 128.5, 3.0)                    # x0, x1, полуширина
+RAIL_HEAD = (128.5, 131.5, 6.0)
+SLIDE_GAP = 0.3                                    # зазор каретки на рельсе
+SP_X0, SP_X1, SP_HW = 126.3, 138.0, 12.0           # ползун каретки
+SP_Z0, SP_Z1 = 33.0, 78.0                          # ползун/рейка от грани магнита
+SPINDLE_X = 153.0                                  # ось шпинделя = вылет захвата
+HOUS_R, HOUS_Z0, HOUS_Z1 = 9.0, 33.0, 53.0         # корпус шпинделя
+EXT_H = 18.0                                       # удлинитель магнит -> подшипник
+GEAR_M = 1.0
+ZP_TEETH = 22                                      # шестерня оси Z (на SG90 №1)
+SPG_TEETH, SPG_SHIFT = 26, -0.3                    # шестерня шпинделя
+RTP_TEETH, RTP_SHIFT = 13, +0.3                    # шестерня SG90 №2 (поворот)
+GEAR_W = 5.0
+SERVO_FLANGE_X = 122.0       # опорная грань лапок SG90 №1 (выносит шестерню на рейку)
+Z_STROKE = math.pi * GEAR_M * ZP_TEETH / 2.0       # 180° серво: pi * r
+
+
+# ---------------------------------------------------------------------------
+# Геометрия-помощники
+# ---------------------------------------------------------------------------
+V = App.Vector
+
+
+def box(x0, x1, y0, y1, z0, z1):
+    return Part.makeBox(x1 - x0, y1 - y0, z1 - z0, V(x0, y0, z0))
+
+
+def cyl(r, z0, z1, x=0.0, y=0.0):
+    return Part.makeCylinder(r, z1 - z0, V(x, y, z0))
+
+
+def cyl_x(r, x0, x1, y=0.0, z=0.0):
+    return Part.makeCylinder(r, x1 - x0, V(x0, y, z), V(1, 0, 0))
+
+
+def tube(ro, ri, z0, z1, x=0.0, y=0.0):
+    return cyl(ro, z0, z1, x, y).cut(cyl(ri, z0 - 1, z1 + 1, x, y))
+
+
+def hexagon(s, z0, z1, x=0.0, y=0.0, rot=0.0):
+    """Шестигранник «под ключ s». rot=0: вершины на ±Y, грани ⟂ X —
+    так гайка скользит вдоль Y по пазу шириной s."""
+    rc = s / math.sqrt(3.0)
+    pts = [V(x + rc * math.cos(math.radians(90 + rot + 60 * i)),
+             y + rc * math.sin(math.radians(90 + rot + 60 * i)), z0) for i in range(7)]
+    return Part.Face(Part.makePolygon(pts)).extrude(V(0, 0, z1 - z0))
+
+
+def rounded_rect(x0, x1, y0, y1, z0, z1, r):
+    b = box(x0 + r, x1 - r, y0, y1, z0, z1).fuse(box(x0, x1, y0 + r, y1 - r, z0, z1))
+    for cx in (x0 + r, x1 - r):
+        for cy in (y0 + r, y1 - r):
+            b = b.fuse(cyl(r, z0, z1, cx, cy))
+    return b.removeSplitter()
+
+
+def hull_plate(circles, z0, z1, step=1.5):
+    """Плита по выпуклой оболочке окружностей [(x, y, r), ...] — гладкий
+    контур одной периодической B-сплайн кривой. Склейка прямоугольника,
+    многоугольника и круга даёт на стыках острые короткие рёбра, и на них
+    скругление кромок не встаёт ни на каком радиусе."""
+    pts = []
+    for cx, cy, r in circles:
+        for k in range(180):
+            a = 2 * math.pi * k / 180.0
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    pts = sorted(set(pts))
+    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for p_ in pts:
+        while len(lo) >= 2 and cross(lo[-2], lo[-1], p_) <= 0:
+            lo.pop()
+        lo.append(p_)
+    for p_ in reversed(pts):
+        while len(up) >= 2 and cross(up[-2], up[-1], p_) <= 0:
+            up.pop()
+        up.append(p_)
+    hull = lo[:-1] + up[:-1]
+    # равномерно по периметру — без этого сплайн волнится на длинных прямых
+    per = [V(x, y, z0) for x, y in hull]
+    per.append(per[0])
+    seg = [(per[i + 1] - per[i]).Length for i in range(len(per) - 1)]
+    total = sum(seg)
+    n = max(24, int(total / step))
+    res, i, acc = [], 0, 0.0
+    for k in range(n):
+        t = total * k / n
+        while acc + seg[i] < t:
+            acc += seg[i]
+            i += 1
+        f = (t - acc) / seg[i] if seg[i] > 0 else 0.0
+        res.append(per[i] + (per[i + 1] - per[i]) * f)
+    bs = Part.BSplineCurve()
+    bs.interpolate(res, PeriodicFlag=True)
+    face = Part.Face(Part.Wire([bs.toShape()]))
+    return face.extrude(V(0, 0, z1 - z0))
+
+
+def slot(r, z0, z1, p, u, half):
+    """Паз: окружность r, протянутая на ±half вдоль единичного u."""
+    a = V(p.x - u.x * half, p.y - u.y * half, 0)
+    b = V(p.x + u.x * half, p.y + u.y * half, 0)
+    s = cyl(r, z0, z1, a.x, a.y).fuse(cyl(r, z0, z1, b.x, b.y))
+    n = V(-u.y, u.x, 0)
+    pts = [a + n * r, b + n * r, b - n * r, a - n * r, a + n * r]
+    pts = [V(q.x, q.y, z0) for q in pts]
+    s = s.fuse(Part.Face(Part.makePolygon(pts)).extrude(V(0, 0, z1 - z0)))
+    return s.removeSplitter()
+
+
+def soften(shape, r, zs, name):
+    """Скруглить периметр детали на высотах zs (п. 3.2 ЕТЗ: кромки
+    скруглены). Берётся внешний контур верхних граней на высотах zs; если
+    ядро не справилось — деталь остаётся как есть и в отчёт идёт строка."""
+    edges = []
+    for f in shape.Faces:
+        if f.Surface.__class__.__name__ != "Plane":
+            continue
+        n = f.normalAt(0, 0)
+        c = f.CenterOfMass
+        if n.z > 0.99 and any(abs(c.z - z) < 1e-6 for z in zs):
+            edges += f.OuterWire.Edges
+    for rr in (r, r / 2.0, r / 4.0):      # на коротких рёбрах большой радиус не встаёт
+        try:
+            f = shape.makeFillet(rr, edges)
+            if f.isValid() and abs(f.Volume - shape.Volume) < 0.02 * shape.Volume:
+                return f
+        except Exception:
+            pass
+    print("  !! %s: скругление кромок не построилось, деталь без него" % name)
+    return shape
+
+
+def cap_screw(m, L):
+    """ISO 4762: опорная грань головки на z = 0, головка вверх, стержень вниз."""
+    head = cyl(m["dk"] / 2.0, 0.0, m["k"])
+    key = hexagon(m["s"], m["k"] - 0.6 * m["s"], m["k"] + 0.1)
+    return head.cut(key).fuse(cyl(m["d"] / 2.0, -L, 0.0)).removeSplitter()
+
+
+def nut(m, rot=0.0):
+    """ISO 4032: низ на z = 0. rot как у hexagon()."""
+    return hexagon(m["nut_s"], 0.0, m["nut_m"], rot=rot).cut(cyl(m["d"] / 2.0, -1, m["nut_m"] + 1))
+
+
+def nut_pocket(m, z0, x, y, slide, rot=0.0, depth=30.0):
+    """Гнездо гайки + боковой паз для заводки. slide — единичный вектор
+    наружу (куда открыт паз), паз шириной «под ключ» + 0.3."""
+    s = m["nut_s"] + 0.3
+    h = m["nut_m"] + 0.4
+    p = hexagon(s, z0, z0 + h, x, y, rot)
+    ang = math.degrees(math.atan2(slide.y, slide.x))
+    sl = box(0, depth, -s / 2.0, s / 2.0, z0, z0 + h)
+    sl.rotate(V(0, 0, 0), V(0, 0, 1), ang)
+    sl.translate(V(x, y, 0))
+    return p.fuse(sl)
+
+
+def involute_gear(m, z, w, bore=0.0, shift=0.0, backlash=0.12, z0=0.0, steps=6,
+                  plane="xy", phase=0.0):
+    """Прямозубое эвольвентное колесо, угол 20°, со смещением shift.
+
+    plane="xy": ось колеса Z, толщина z0..z0+w, зуб 0 смотрит по углу phase
+    от +X. plane="yz": ось колеса X, толщина x0..x0+w (x0 = z0), угол
+    phase отсчитывается от +Y к +Z. Ось сразу строится нужная: поворот,
+    сделанный rotate() у формы, живёт в её Placement и пропадает, как
+    только детали присваивают свой Placement.
+    """
+    a = math.radians(20.0)
+    rp = m * z / 2.0
+    rb = rp * math.cos(a)
+    ra = rp + m * (1.0 + shift)
+    rf = rp - m * (1.25 - shift)
+    inv = lambda t: math.tan(t) - t
+    s = m * (math.pi / 2.0 + 2.0 * shift * math.tan(a)) - backlash
+    half_p = s / (2.0 * rp)
+    r0 = max(rb, rf)
+    rs = [r0 + (ra - r0) * i / float(steps) for i in range(steps + 1)]
+    fl = [(r, half_p + inv(a) - inv(math.acos(min(1.0, rb / r)))) for r in rs]
+    th_base = fl[0][1]
+    pts = []
+    ph = math.radians(phase)
+    for i in range(z):
+        c = 2.0 * math.pi * i / z + ph
+        tooth = [(rf, c - th_base)] + [(r, c - t) for r, t in fl] + \
+                [(r, c + t) for r, t in reversed(fl)] + [(rf, c + th_base)]
+        if plane == "yz":
+            pts += [V(z0, r * math.cos(t), r * math.sin(t)) for r, t in tooth]
+        else:
+            pts += [V(r * math.cos(t), r * math.sin(t), z0) for r, t in tooth]
+    pts.append(pts[0])
+    if plane == "yz":
+        g = Part.Face(Part.makePolygon(pts)).extrude(V(w, 0, 0))
+        if bore > 0:
+            g = g.cut(cyl_x(bore / 2.0, z0 - 1, z0 + w + 1))
+    else:
+        g = Part.Face(Part.makePolygon(pts)).extrude(V(0, 0, w))
+        if bore > 0:
+            g = g.cut(cyl(bore / 2.0, z0 - 1, z0 + w + 1))
+    return g
+
+
+def rack(m, length, w, z0, back):
+    """Рейка вдоль Z: делительная прямая на y = 0, зубья в +y, основание
+    до y = -back. Толщина w по X от 0. Зубья трапецией 20° (эвольвента рейки)."""
+    p = math.pi * m
+    ha, hf = m, 1.25 * m
+    t = math.tan(math.radians(20.0))
+    n = int(length / p) + 1
+    prof = [V(0, -back, z0)]
+    for i in range(n):
+        zc = z0 + p * (i + 0.5)
+        # зуб: ширина p/2 на делительной прямой
+        prof += [V(0, -hf, zc - p / 4 - hf * t), V(0, ha, zc - p / 4 + ha * t),
+                 V(0, ha, zc + p / 4 - ha * t), V(0, -hf, zc + p / 4 + hf * t)]
+    prof += [V(0, -back, z0 + n * p), V(0, -back, z0)]
+    # подрезать до length
+    f = Part.Face(Part.makePolygon(prof)).extrude(V(w, 0, 0))
+    return f.common(box(-1, w + 1, -back - 1, ha + 1, z0, z0 + length))
+
+
+def lib_feature(rel):
+    """Деталь из parts_library как есть (форма + её Placement)."""
+    import os
+    path = os.path.join(App.getUserAppDataDir(), "Mod", "parts_library", rel)
+    if not os.path.exists(path):
+        return None
+    d = App.openDocument(path, True)
+    try:
+        best = None
+        for o in d.Objects:
+            sh = getattr(o, "Shape", None)
+            if sh is None or sh.isNull() or sh.Volume < 1e-9:
+                continue
+            best = o.Shape.copy()
+        return best
+    finally:
+        App.closeDocument(d.Name)
+
+
+def sg90():
+    sh = lib_feature("Electrical Parts/Servos/SG-90/Servo sg90.fcstd")
+    if sh is None:      # габаритная замена
+        sh = box(-5.9, 5.9, 0, 22.5, 0, 22.7).fuse(box(-5.9, 5.9, -4.7, 27.7, 15.9, 18.4))
+        sh = sh.fuse(cyl(2.4, 22.7, 29.9, 0, SG_AXIS_Y))
+    sh = sh.copy()
+    m = sh.Placement.toMatrix()
+    sh.Placement = App.Placement()
+    return sh.transformGeometry(m) if not m.isUnity() else sh
+
+
+# ---------------------------------------------------------------------------
+# Документ-помощники
+# ---------------------------------------------------------------------------
+def pick_doc():
+    act = App.ActiveDocument
+    if act is not None and act.getObject(VS) is not None:
+        return act
+    for d in App.listDocuments().values():
+        if d.getObject(VS) is not None:
+            return d
+    raise RuntimeError("не нашёл документ с VarSet " + VS)
+
+
+def purge(doc, prefixes):
+    for o in list(doc.Objects):
+        if o.Name.startswith(prefixes) and doc.getObject(o.Name) is not None:
+            doc.removeObject(o.Name)
+
+
+def feat(doc, part, name, label, shape, color, alpha=0):
+    o = doc.addObject("Part::Feature", name)
+    o.Shape = shape
+    o.Label = label
+    part.addObject(o)
+    if App.GuiUp:
+        o.ViewObject.ShapeColor = color
+        o.ViewObject.DiffuseColor = [color]
+        o.ViewObject.Transparency = alpha
+    return o
+
+
+def container(doc, name, label, parent=None):
+    p = doc.getObject(name)
+    if p is None:
+        p = doc.addObject("App::Part", name)
+        if parent is not None:
+            parent.addObject(p)
+    p.Label = label
+    return p
+
+
+PLA = (0.93, 0.55, 0.15)       # печатные детали станины
+PLA2 = (0.25, 0.55, 0.85)      # печатные детали рабочего узла
+STEEL = (0.62, 0.64, 0.67)
+DARK = (0.30, 0.32, 0.35)
+BELT = (0.12, 0.12, 0.12)
+SERVO = (0.15, 0.35, 0.80)
+
+
+# ---------------------------------------------------------------------------
+# Станина
+# ---------------------------------------------------------------------------
+def build_frame(doc, d, e):
+    """Основание, стенки, плиты моторов, вал шкивов. Глобальные координаты."""
+    purge(doc, ("FR_",))
+    part = container(doc, FRAME_PART, "Станина")
+
+    S = V(d.PulleyAxisX.Value, d.ArmAxisY.Value, 0)
+    Z0 = d.BeltPlaneZ.Value - d.FlangeThk.Value          # низ шкива 1
+    M1 = V(0, 0, 0)
+    M2 = V(d.Motor2X.Value, d.Motor2Y.Value, 0)
+    face2 = d.Motor2Lift.Value + FACE1
+    fl = e.FloorZ.Value
+    top = fl + e.BaseT.Value                               # верх основания
+    wt = e.WallT.Value
+    tA, tB = e.PlateAT.Value, e.PlateBT.Value
+    gap = 4.0                                              # мотор <-> стенка (ход натяжения)
+    xr1 = -NEMA_HALF - gap                                 # задняя стенка, внутр. грань
+    xr0 = xr1 - wt
+    yl1 = -NEMA_HALF - gap                                 # левая стенка
+    yl0 = yl1 - wt
+    yr0 = M2.y + NEMA_HALF + gap                           # правая стенка
+    yr1 = yr0 + wt
+    ymid = (M1.y + NEMA_HALF + M2.y - NEMA_HALF) / 2.0     # середина щели между моторами
+    u1 = (S - M1); u1.normalize()                          # направление натяжения ремня 1
+    u2 = (S - M2); u2.normalize()
+    slot_h = e.TensionSlot.Value
+
+    # --- основание + стенки + колонна вала (одна печатная деталь) ---
+    base = rounded_rect(e.BaseX0.Value, e.BaseX1.Value, e.BaseY0.Value, e.BaseY1.Value,
+                        fl, top, 8.0)
+    wall_rear_lo = box(xr0, xr1, yl0, ymid, top, FACE1)
+    wall_rear_hi = box(xr0, xr1, ymid, yr1, top, face2)
+    wall_left = box(xr0, NEMA_HALF + 5.0, yl0, yl1, top, FACE1)
+    wall_right = box(xr0, M2.x + NEMA_HALF, yr0, yr1, top, face2)
+    col_r = 12.0
+    column = cyl(col_r, top, FACE1, S.x, S.y)
+    # ребро от левой стенки к колонне — под «шеей» плиты A, держит её снизу
+    pa, pb = V(18.0, yl0 + wt / 2.0, 0), V(S.x, S.y, 0)
+    rl = (pb - pa).Length
+    rib = box(0, rl, -3.0, 3.0, top, FACE1)
+    rib.rotate(V(0, 0, 0), V(0, 0, 1), math.degrees(math.atan2(pb.y - pa.y, pb.x - pa.x)))
+    rib.translate(pa)
+    frame = base.fuse([wall_rear_lo, wall_rear_hi, wall_left, wall_right, column, rib])
+
+    # винты плит: по оси стенки, гайка в гнезде внутри стенки, паз — НАРУЖУ
+    xw, ylw, yrw = xr0 + wt / 2.0, yl0 + wt / 2.0, yr0 + wt / 2.0
+    padA = [(V(xw, ylw, 0), V(-1, 0, 0)), (V(xw, ymid - 10.0, 0), V(-1, 0, 0)),
+            (V(12.0, ylw, 0), V(0, -1, 0))]
+    padB = [(V(xw, ymid + 10.0, 0), V(-1, 0, 0)), (V(xw, yrw, 0), V(-1, 0, 0)),
+            (V(10.0, yrw, 0), V(0, 1, 0))]
+    L_plate = 16.0
+    holes = []
+    nuts_ = []
+    for pads, ztop, t in ((padA, FACE1, tA), (padB, face2, tB)):
+        for p, sl in pads:
+            rot = 90.0 if sl.x else 0.0
+            zn = ztop - (L_plate - t) + 1.5                 # конец винта на 1.5 ниже гайки
+            holes.append(cyl(M3["hole"] / 2.0, ztop - (L_plate - t) - 2, ztop + 1, p.x, p.y))
+            holes.append(nut_pocket(M3, zn, p.x, p.y, sl, rot=rot, depth=12))
+            nuts_.append((p, zn, ztop + t, rot))
+    # вал M8: отверстие в колонне + гнездо гайки, паз открыт вперёд (+X)
+    zb_head = Z0 + d.BrgZ2.Value + d.BrgW2.Value + 4.0       # низ головки болта
+    bolt_L = 65.0
+    z_nut = zb_head - bolt_L + 2.0
+    holes.append(cyl(M8["hole"] / 2.0, z_nut - 4, FACE1 + 1, S.x, S.y))
+    holes.append(nut_pocket(M8, z_nut, S.x, S.y, V(1, 0, 0), rot=90.0, depth=20))
+    frame = frame.cut(holes).removeSplitter()
+    frame = soften(frame, 1.5, (top,), "основание")
+    feat(doc, part, "FR_Base", "Основание_станины", frame, PLA)
+
+    # --- плита мотора 1 (z FACE1..FACE1+tA): мотор снизу, болт вала через неё ---
+    zA0, zA1 = FACE1, FACE1 + tA
+    # контур: гладкая оболочка углов и окружности у вала, минус выемка под
+    # мотор 2 (оболочка выпуклая и выемку сама не оставит) со скруглённым
+    # углом — острых коротких рёбер нет, и периметр скругляется
+    rc = 4.0
+    plA = hull_plate([(xr0 + rc, yl0 + rc, rc), (xr0 + rc, ymid - 0.5 - rc, rc),
+                      (NEMA_HALF + 5.0 - rc, yl0 + rc, rc), (NEMA_HALF + 5.0 - rc, ymid - 0.5 - rc, rc),
+                      (S.x, S.y, col_r + 2.0)], zA0, zA1)
+    nx1 = M2.x + NEMA_HALF + 2.0 * abs(u2.x) * slot_h + 2.0       # мотор 2 + ход натяжения + 2
+    notch = rounded_rect(xr0 - 20, nx1, ymid - 0.5, yr1 + 20, zA0 - 1, zA1 + 1, 4.0)
+    plA = plA.cut(notch)
+    cutsA = [cyl(M8["hole"] / 2.0, zA0 - 1, zA1 + 1, S.x, S.y),
+             slot((NEMA_BOSS + 1.0) / 2.0, zA0 - 1, zA0 + 2.5, M1, u1, slot_h),
+             slot(9.0, zA0 - 1, zA1 + 1, M1, u1, slot_h)]
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            c = V(M1.x + sx * NEMA_PCD / 2, M1.y + sy * NEMA_PCD / 2, 0)
+            cutsA.append(slot(M3["hole"] / 2.0, zA0 - 1, zA1 + 1, c, u1, slot_h))
+    for p, _ in padA:
+        cutsA.append(cyl(M3["hole"] / 2.0, zA0 - 1, zA1 + 1, p.x, p.y))
+    plA = soften(plA, 1.0, (zA1,), "плита 1").cut(cutsA)
+    feat(doc, part, "FR_PlateA", "Плита_мотора_1", plA, PLA)
+
+    # --- плита мотора 2 (z face2..face2+tB) ---
+    zB0, zB1 = face2, face2 + tB
+    xB1 = 22.0     # дальше вперёд нельзя: там ходит глаз тяги (R57.5 от оси шкивов)
+    plB = rounded_rect(xr0, xB1, ymid + 0.5, yr1, zB0, zB1, 4.0)
+    cutsB = [slot((NEMA_BOSS + 1.0) / 2.0, zB0 - 1, zB0 + 2.5, M2, u2, slot_h),
+             slot(9.0, zB0 - 1, zB1 + 1, M2, u2, slot_h)]
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            c = V(M2.x + sx * NEMA_PCD / 2, M2.y + sy * NEMA_PCD / 2, 0)
+            cutsB.append(slot(M3["hole"] / 2.0, zB0 - 1, zB1 + 1, c, u2, slot_h))
+    for p, _ in padB:
+        cutsB.append(cyl(M3["hole"] / 2.0, zB0 - 1, zB1 + 1, p.x, p.y))
+    plB = soften(plB, 1.0, (zB1,), "плита 2").cut(cutsB)
+    feat(doc, part, "FR_PlateB", "Плита_мотора_2", plB, PLA)
+
+    # --- крепёж плит и моторов ---
+    i = 0
+    for p, zn, zseat, rot in nuts_:
+        i += 1
+        o = feat(doc, part, "FR_PlScr%d" % i, "Винт_плиты_M3x%d_%d" % (L_plate, i),
+                 cap_screw(M3, L_plate), DARK)
+        o.Placement.Base = V(p.x, p.y, zseat)
+        o = feat(doc, part, "FR_PlNut%d" % i, "Гайка_плиты_M3_%d" % i, nut(M3, rot), STEEL)
+        o.Placement.Base = V(p.x, p.y, zn + 0.2)
+    for tag, M, zseat, L in (("A", M1, zA1, 12), ("B", M2, zB1, 10)):
+        for k, (sx, sy) in enumerate(((-1, -1), (-1, 1), (1, -1), (1, 1))):
+            o = feat(doc, part, "FR_MotScr%s%d" % (tag, k + 1),
+                     "Винт_мотора_%s_M3x%d_%d" % ("1" if tag == "A" else "2", L, k + 1),
+                     cap_screw(M3, L), DARK)
+            o.Placement.Base = V(M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2, zseat)
+
+    # --- вал: болт M8x65 сверху, втулки по внутренним кольцам, гайка в колонне ---
+    feat(doc, part, "FR_ShaftBushLo", "Втулка_вала_нижняя_Ø12/Ø8.2x%.1f" % (Z0 - zA1),
+         tube(6.0, 4.1, zA1, Z0, S.x, S.y), STEEL)
+    zt = Z0 + d.BrgZ2.Value + d.BrgW2.Value
+    feat(doc, part, "FR_ShaftBushHi", "Втулка_вала_верхняя_Ø12/Ø8.2x4",
+         tube(6.0, 4.1, zt, zt + 4.0, S.x, S.y), STEEL)
+    o = feat(doc, part, "FR_ShaftBolt", "Болт_вала_M8x65_ISO4762", cap_screw(M8, bolt_L), DARK)
+    o.Placement.Base = V(S.x, S.y, zb_head)
+    o = feat(doc, part, "FR_ShaftNut", "Гайка_вала_M8_ISO4032", nut(M8, 90.0), STEEL)
+    o.Placement.Base = V(S.x, S.y, z_nut + 0.2)
+
+    # --- ремни GT2: огибающая по делительным окружностям ---
+    def belt(c1, r1, c2, r2, z0, w):
+        def hull(dr):
+            a = Part.makeCircle(r1 + dr, V(c1.x, c1.y, z0))
+            b = Part.makeCircle(r2 + dr, V(c2.x, c2.y, z0))
+            # внешние касательные двух окружностей
+            dv = c2 - c1
+            L = dv.Length
+            ang = math.atan2(dv.y, dv.x)
+            phi = math.acos(((r1 + dr) - (r2 + dr)) / L)
+            pts = []
+            n = 48
+            for k in range(n + 1):     # дуга на c1
+                t = ang + phi + (2 * math.pi - 2 * phi) * k / n
+                pts.append(V(c1.x + (r1 + dr) * math.cos(t), c1.y + (r1 + dr) * math.sin(t), z0))
+            for k in range(n + 1):     # дуга на c2
+                t = ang - phi + 2 * phi * k / n
+                pts.append(V(c2.x + (r2 + dr) * math.cos(t), c2.y + (r2 + dr) * math.sin(t), z0))
+            pts.append(pts[0])
+            return Part.Face(Part.makePolygon(pts)).extrude(V(0, 0, w))
+        return hull(0.75).cut(hull(-0.63))
+    pd1 = d.PitchD1.Value / 2.0
+    zr1 = d.BeltPlaneZ.Value + (d.RimH.Value - d.BeltWidth.Value) / 2.0
+    feat(doc, part, "FR_Belt1", "Ремень_GT2-%.0f_ступень_1" % d.BeltLength.Value,
+         belt(S, d.PitchD2.Value / 2.0, M1, pd1, zr1, d.BeltWidth.Value), BELT)
+    zr2 = Z0 + d.BeltPlaneZ2.Value + (d.RimH2.Value - d.BeltWidth2.Value) / 2.0
+    feat(doc, part, "FR_Belt2", "Ремень_GT2-%.0f_ступень_2" % d.BeltLength2.Value,
+         belt(S, d.PitchDriven2.Value / 2.0, M2, d.PitchDriver2.Value / 2.0, zr2,
+              d.BeltWidth2.Value), BELT)
+    doc.recompute()
+    return part
+
+
+# ---------------------------------------------------------------------------
+# Рабочий узел
+# ---------------------------------------------------------------------------
+def build_effector(doc, d, e):
+    purge(doc, ("EF_", "CR_"))
+    tube_part = doc.getObject("Part_Tube")
+    eff = container(doc, EFF_PART, "Рабочий_узел", tube_part)
+    carr = container(doc, CARR_PART, "Каретка_Z", eff)
+    eff.setExpression("Placement.Base.x", "%s.PivotX" % VS)
+    eff.setExpression("Placement.Rotation.Angle", "%s.Tube2Angle" % VS)
+    # грань магнита: высота над полем -> z в Part_Tube
+    carr.setExpression("Placement.Base.z", "%s.FloorZ + %s.MagnetZ - (%s.BeltPlaneZ - %s.FlangeThk)"
+                       % (VE, VE, VS, VS))
+
+    tz = d.Tube2Z.Value               # ось трубы 2 во фрейме предплечья
+    r_t = d.TubeOD.Value / 2.0
+    hw = d.ElbowHalfW.Value
+    bot = d.ElbowBot.Value
+    capt = d.CapThk.Value
+    sy = d.ElbowScrewY.Value
+    zf_low = e.FloorZ.Value + 4.0 - (d.BeltPlaneZ.Value - d.FlangeThk.Value)   # грань магнита внизу
+    rail_z0 = zf_low + SP_Z0                                               # низ ползуна внизу
+    # высота оси шестерни Z: рейка в зацеплении на всём ходу (по 4 мм запаса)
+    zp_lo = zf_low + Z_STROKE + SP_Z0 + 4.0
+    zp_hi = zf_low + SP_Z1 - 4.0
+    zp = (zp_lo + zp_hi) / 2.0
+    r_zp = GEAR_M * ZP_TEETH / 2.0
+    y_pitch = SP_HW + 2.0                      # делительная прямая рейки
+    y_zp = y_pitch + r_zp                      # ось шестерни Z / SG90 №1
+
+    # --- кронштейн: хомут на трубе 2 + пластина направляющей + фланец серво ---
+    clamp = box(CL_X0, GP_X1, -hw, hw, tz - bot, tz)
+    plate = box(GP_X0, GP_X1, -GP_HW, GP_HW, rail_z0, tz + capt)
+    rib = Part.Face(Part.makePolygon([V(CL_X0 + 6, -2, tz - bot), V(GP_X0, -2, tz - bot),
+                                      V(GP_X0, -2, rail_z0 + 8), V(CL_X0 + 6, -2, tz - bot)])
+                    ).extrude(V(0, 4, 0))
+    # фланец SG90 №1: лапки ложатся на его заднюю грань x = SERVO_FLANGE_X
+    sv_z0 = zp - SG_AXIS_Y                     # где у серво y_s = 0
+    fl_y0, fl_y1 = GP_HW - 1.0, y_zp + 5.9 + 3.0
+    fl_z0, fl_z1 = sv_z0 - 4.7 - 1.5, sv_z0 + 27.7 + 1.5
+    flange = box(SERVO_FLANGE_X, GP_X1, fl_y0, fl_y1, fl_z0, fl_z1)
+    win = box(SERVO_FLANGE_X - 1, GP_X1 + 1, y_zp - 5.9 - 0.3, y_zp + 5.9 + 0.3,
+              sv_z0 - 0.3, sv_z0 + 22.5 + 0.3)
+    rail = box(RAIL_NECK[0], RAIL_NECK[1], -RAIL_NECK[2], RAIL_NECK[2], rail_z0, tz + capt) \
+        .fuse(box(RAIL_HEAD[0], RAIL_HEAD[1], -RAIL_HEAD[2], RAIL_HEAD[2], rail_z0, tz + capt))
+    br = clamp.fuse([plate, rib, flange.cut(win), rail]).removeSplitter()
+    cuts = [cyl_x(r_t, CL_X0 - 1, GP_X0, 0, tz)]
+    for xs in CL_SCREW_X:
+        for s_ in (1, -1):
+            cuts.append(cyl(M3["hole"] / 2.0, tz - bot - 1, tz + 1, xs, s_ * sy))
+            cuts.append(nut_pocket(M3, tz - bot, xs, s_ * sy, V(0, s_, 0), rot=0.0, depth=12))
+    for ys in SG_HOLES_Y:       # отверстия под саморезы M2 лапок SG90 №1 (Ø1.6)
+        cuts.append(cyl_x(0.8, SERVO_FLANGE_X - 1, GP_X1 + 1, y_zp, sv_z0 + ys))
+    br = br.cut(cuts)
+    feat(doc, eff, "EF_Bracket", "Кронштейн_Z", br, PLA2)
+    capb = box(CL_X0, GP_X0, -hw, hw, tz, tz + capt).cut(cyl_x(r_t, CL_X0 - 1, GP_X0 + 1, 0, tz))
+    for xs in CL_SCREW_X:
+        for s_ in (1, -1):
+            capb = capb.cut(cyl(M3["hole"] / 2.0, tz - 1, tz + capt + 1, xs, s_ * sy))
+            capb = capb.cut(cyl(M3["dk"] / 2.0 + 0.25, tz + capt - d.CapWall.Value, tz + capt + 1,
+                                xs, s_ * sy))
+    feat(doc, eff, "EF_BracketCap", "Кронштейн_Z_крышка", capb, PLA2)
+    k = 0
+    for xs in CL_SCREW_X:
+        for s_ in (1, -1):
+            k += 1
+            o = feat(doc, eff, "EF_ClScr%d" % k, "Винт_кронштейна_M3x16_%d" % k, cap_screw(M3, 16), DARK)
+            o.Placement.Base = V(xs, s_ * sy, tz + capt - d.CapWall.Value)
+            o = feat(doc, eff, "EF_ClNut%d" % k, "Гайка_кронштейна_M3_%d" % k, nut(M3, 0.0), STEEL)
+            o.Placement.Base = V(xs, s_ * sy, tz - bot + 0.2)
+
+    # --- SG90 №1: ось выхода вдоль +X, лапки на фланце ---
+    s1 = sg90()
+    # серво: z_s -> +X (лапки z_s 18.4 на x = SERVO_FLANGE_X), y_s -> +Z
+    pl = App.Placement(V(SERVO_FLANGE_X - SG_TAB_Z1, y_zp, sv_z0),
+                       App.Rotation(V(0, 1, 0), V(0, 0, 1), V(1, 0, 0), "ZXY"))
+    o = feat(doc, eff, "EF_ServoZ", "Серво_Z_SG90", s1, SERVO)
+    o.Placement = pl
+    gx0 = SERVO_FLANGE_X - SG_TAB_Z1 + SG_GEAR_Z
+    # шестерня Z: ось по X, при угле 0 зуб смотрит на рейку (-Y). Угол
+    # поворота привязан к высоте магнита — шестерня катится по рейке, и
+    # зубья в модели всегда в зацеплении, а не друг в друге.
+    gz = involute_gear(GEAR_M, ZP_TEETH, GEAR_W, bore=4.9, plane="yz", phase=180.0)
+    o = feat(doc, eff, "EF_GearZ", "Шестерня_Z_m1_z%d" % ZP_TEETH, gz, (0.95, 0.95, 0.95))
+    o.Placement = App.Placement(V(gx0, y_zp, zp), App.Rotation(V(1, 0, 0), 0.001))
+    z0f = d.BeltPlaneZ.Value - d.FlangeThk.Value
+    o.setExpression("Placement.Rotation.Angle",
+                    "(%.4f mm - %s.FloorZ - %s.MagnetZ) / %.4f mm * 180 deg / pi"
+                    % (zp - SP_Z0 + z0f, VE, VE, r_zp))
+    for j, ys in enumerate(SG_HOLES_Y):
+        sc = cyl(1.0, -6.0, 0.0).fuse(cyl(2.0, 0.0, 1.4))      # саморез 2x6 из комплекта SG90
+        sc.Placement = App.Placement(V(SERVO_FLANGE_X - SG_TAB_Z1 + SG_TAB_Z0, y_zp, sv_z0 + ys),
+                                     App.Rotation(V(0, 1, 0), -90))
+        feat(doc, eff, "EF_SvScrZ%d" % (j + 1), "Саморез_SG90_2x6_Z_%d" % (j + 1), sc, DARK)
+
+    # --- каретка (всё дальше — в координатах «грань магнита = z 0») ---
+    xs_ = SPINDLE_X
+    spine = box(SP_X0, SP_X1, -SP_HW, SP_HW, SP_Z0, SP_Z1)
+    slot_ = box(SP_X0 - 1, RAIL_NECK[1] + SLIDE_GAP / 2, -(RAIL_NECK[2] + SLIDE_GAP),
+                RAIL_NECK[2] + SLIDE_GAP, SP_Z0 - 1, SP_Z1 + 1) \
+        .fuse(box(RAIL_HEAD[0] - SLIDE_GAP, RAIL_HEAD[1] + SLIDE_GAP, -(RAIL_HEAD[2] + SLIDE_GAP),
+                  RAIL_HEAD[2] + SLIDE_GAP, SP_Z0 - 1, SP_Z1 + 1))
+    # рейка на +Y грани ползуна, ширина по X = под шестерню Z с запасом
+    rk = rack(GEAR_M, SP_Z1 - SP_Z0, GEAR_W + 1.0, SP_Z0, 2.0)
+    rk.translate(V(gx0 - 0.5, y_pitch, 0))
+    hous = cyl(HOUS_R, HOUS_Z0, HOUS_Z1, xs_, 0)
+    web = box(SP_X1 - 1, xs_, -10.0, 10.0, HOUS_Z0, HOUS_Z1)
+    # SG90 №2: ось на (xs, -a), корпус вдоль +X, лапки на приливах
+    a_w = GEAR_M * (SPG_TEETH + RTP_TEETH) / 2.0              # межосевое 19.5
+    rt_y = -a_w
+    sv2_z0 = HOUS_Z1 + 1.0 - SG_GEAR_Z                        # шестерня 2 на уровне шестерни шпинделя
+    tab_z = sv2_z0 + SG_TAB_Z0
+    # x вдоль корпуса: x = xs + (16.6 - y_s)
+    xs_of = lambda ys: xs_ + (SG_AXIS_Y - ys)
+    lug1 = box(xs_of(27.7) - 0.5, xs_of(22.5) + 0.0, rt_y - 5.9 - 0.5, -9.0, tab_z - 5.0, tab_z)
+    lug2 = box(xs_of(0.0), xs_of(-4.7) + 0.5, rt_y - 5.9 - 0.5, rt_y + 5.9 + 0.5, tab_z - 5.0, tab_z)
+    arm2 = box(xs_ + 4.0, xs_of(-4.7) + 0.5, rt_y + 5.9 + 0.3, -6.0, tab_z - 5.0, tab_z)
+    web2 = box(SP_X1 - 1, xs_of(22.5), rt_y - 5.9 - 0.5, -9.0, HOUS_Z0, tab_z)
+    car = spine.fuse([rk, hous, web, lug1, lug2, arm2, web2]).removeSplitter().cut(slot_)
+    # гнёзда 624ZZ снизу и сверху, просвет между ними
+    car = car.cut([cyl(BRG624["D"] / 2.0, HOUS_Z0 - 1, HOUS_Z0 + BRG624["B"], xs_, 0),
+                   cyl(BRG624["D"] / 2.0, HOUS_Z1 - BRG624["B"], HOUS_Z1 + 1, xs_, 0),
+                   cyl(3.75, HOUS_Z0, HOUS_Z1, xs_, 0)])
+    for ys in SG_HOLES_Y:
+        car = car.cut(cyl(0.8, tab_z - 6, tab_z + 1, xs_of(ys), rt_y))
+    feat(doc, carr, "CR_Carriage", "Каретка_Z_ползун_шпиндель", car, PLA2)
+
+    # подшипники и стопка внутренних колец шпинделя
+    for nm, z0 in (("CR_Brg1", HOUS_Z0), ("CR_Brg2", HOUS_Z1 - BRG624["B"])):
+        feat(doc, carr, nm, "Подшипник_шпинделя_624ZZ_%s" % nm[-1],
+             tube(BRG624["D"] / 2.0, BRG624["d"] / 2.0, z0, z0 + BRG624["B"], xs_, 0), STEEL)
+    feat(doc, carr, "CR_InnerSp", "Втулка_шпинделя_Ø6/Ø4.2x%.0f" % (HOUS_Z1 - HOUS_Z0 - 2 * BRG624["B"]),
+         tube(3.0, 2.1, HOUS_Z0 + BRG624["B"], HOUS_Z1 - BRG624["B"], xs_, 0), STEEL)
+    feat(doc, carr, "CR_Ext", "Удлинитель_магнита_Ø6/Ø4.2x%.0f" % EXT_H,
+         tube(3.0, 2.1, MAG_H, MAG_H + EXT_H, xs_, 0), STEEL)
+    mag = cyl(MAG_D / 2.0, 0.0, MAG_H, xs_, 0).cut(cyl(2.0, MAG_H - MAG_THREAD, MAG_H + 1, xs_, 0))
+    feat(doc, carr, "CR_Magnet", "Электромагнит_KK-P20-15_12В", mag, (0.75, 0.15, 0.15))
+    g_sp = involute_gear(GEAR_M, SPG_TEETH, GEAR_W, bore=4.3, shift=SPG_SHIFT, z0=HOUS_Z1 + 1.0)
+    g_sp = g_sp.fuse(tube(3.0, 2.15, HOUS_Z1, HOUS_Z1 + 1.0)).removeSplitter()   # бобышка по внутр. кольцу
+    g_sp.translate(V(xs_, 0, 0))
+    feat(doc, carr, "CR_GearSp", "Шестерня_шпинделя_m1_z%d" % SPG_TEETH, g_sp, (0.95, 0.95, 0.95))
+    zh = HOUS_Z1 + 1.0 + GEAR_W
+    L4 = zh - (MAG_H - MAG_THREAD)
+    o = feat(doc, carr, "CR_Screw", "Винт_шпинделя_M4x%.0f_ISO4762" % L4, cap_screw(M4, L4), DARK)
+    o.Placement.Base = V(xs_, 0, zh)
+    s2 = sg90()
+    o = feat(doc, carr, "CR_ServoR", "Серво_поворота_SG90", s2, SERVO)
+    # y_s -> -X (корпус уходит вперёд), x_s -> Y, z_s -> Z
+    o.Placement = App.Placement(V(xs_ + SG_AXIS_Y, rt_y, sv2_z0),
+                                App.Rotation(V(0, 0, 1), 90))
+    g_rt = involute_gear(GEAR_M, RTP_TEETH, GEAR_W, bore=4.9, shift=RTP_SHIFT, z0=HOUS_Z1 + 1.0)
+    g_rt.rotate(V(0, 0, 0), V(0, 0, 1), 90.0 % (360.0 / RTP_TEETH))   # зуб к шпинделю
+    g_rt.translate(V(xs_, rt_y, 0))
+    feat(doc, carr, "CR_GearRt", "Шестерня_поворота_m1_z%d" % RTP_TEETH, g_rt, (0.95, 0.95, 0.95))
+    for j, ys in enumerate(SG_HOLES_Y):
+        sc = cyl(1.0, -6.0, 0.0).fuse(cyl(2.0, 0.0, 1.4))
+        sc.translate(V(xs_of(ys), rt_y, tab_z + 2.5))
+        feat(doc, carr, "CR_SvScr%d" % (j + 1), "Саморез_SG90_2x6_пов_%d" % (j + 1), sc, DARK)
+    doc.recompute()
+    return eff, carr, dict(zp=zp, y_zp=y_zp, zf_low=zf_low, rail_z0=rail_z0)
+
+
+# ---------------------------------------------------------------------------
+# Полигон-ссылка (по ETZ_poligon.FCMacro и п. 2.1-2.2 ЕТЗ)
+# ---------------------------------------------------------------------------
+def poly_to_robot(d, e, px, py):
+    return V(px - e.PolyShaftX.Value + d.PulleyAxisX.Value,
+             py - e.PolyShaftY.Value + d.ArmAxisY.Value, e.FloorZ.Value)
+
+
+def cell_centers():
+    """Центры клеток и отбоя в координатах полигона: (имя, x, y)."""
+    O_GX, O_GY = 370.0 + 193.0, (85.0 + (330.0 + 297.0) / 2.0) - 272.0   # метка id 27
+    out = []
+    for k, row in enumerate("АБВГДЕ"):
+        for n in range(9):
+            out.append(("%s%d" % (row, n), O_GX - 28.0 * (k + 1), O_GY + 28.0 * n))
+    for k in range(1, 6):
+        out.append(("Отбой%d" % k, O_GX - 28.0 * k, O_GY + 252.0))
+    return out
+
+
+def build_polygon(doc, d, e):
+    purge(doc, ("PG_",))
+    g = doc.getObject(POLY_GROUP)
+    if g is None:
+        g = doc.addObject("App::DocumentObjectGroup", POLY_GROUP)
+    g.Label = "Полигон_ЕТЗ_ссылка"
+    o0 = poly_to_robot(d, e, 0, 0)
+    zones = [("PG_Zone1", "Зона_1_350x500", (0, 350, 0, 500), (0.92, 0.92, 0.92)),
+             ("PG_Zone2a", "Зона_2_низ", (350, 600, 0, 80), (0.80, 0.80, 0.80)),
+             ("PG_Zone2b", "Зона_2_верх", (350, 600, 420, 500), (0.80, 0.80, 0.80)),
+             ("PG_Field", "Область_поля_250x330", (350, 600, 85, 415), (0.62, 0.62, 0.62))]
+    for name, label, (x0, x1, y0, y1), col in zones:
+        s = box(o0.x + x0, o0.x + x1, o0.y + y0, o0.y + y1, o0.z - 0.4, o0.z - 0.2)
+        o = doc.addObject("Part::Feature", name)
+        o.Shape = s
+        o.Label = label
+        g.addObject(o)
+        if App.GuiUp:
+            o.ViewObject.ShapeColor = col
+    sheet = box(o0.x + 370, o0.x + 580, o0.y + 101.5, o0.y + 398.5, o0.z - 0.2, o0.z - 0.1)
+    o = doc.addObject("Part::Feature", "PG_Sheet")
+    o.Shape = sheet
+    o.Label = "Лист_А4_поля"
+    g.addObject(o)
+    marks = []
+    for nm, px, py in cell_centers():
+        p = poly_to_robot(d, e, px, py)
+        marks.append(Part.makeCylinder(3.0, 0.1, V(p.x, p.y, p.z - 0.1)))
+    o = doc.addObject("Part::Feature", "PG_Cells")
+    o.Shape = Part.makeCompound(marks)
+    o.Label = "Центры_клеток_и_отбоя"
+    g.addObject(o)
+    if App.GuiUp:
+        o.ViewObject.ShapeColor = (0.0, 0.0, 0.0)
+    doc.recompute()
+    return g
+
+
+def main():
+    doc = pick_doc()
+    d = doc.getObject(VS)
+    e = ensure_vs(doc)
+    doc.recompute()
+    build_frame(doc, d, e)
+    eff, carr, info = build_effector(doc, d, e)
+    build_polygon(doc, d, e)
+    doc.recompute()
+    print("станина, ремни, рабочий узел, полигон — построены")
+    print("  ход Z %.1f мм за 180° SG90 (шестерня m1 z%d), магнит от поля +4 до +%.1f"
+          % (Z_STROKE, ZP_TEETH, 4.0 + Z_STROKE))
+    print("  поворот: z%d -> z%d, i = %.1f: 180° серво = %.0f° магнита"
+          % (RTP_TEETH, SPG_TEETH, SPG_TEETH / float(RTP_TEETH), 180.0 * SPG_TEETH / RTP_TEETH))
+    print("  вылет захвата от оси локтя %.1f мм" % SPINDLE_X)
+    bad = [(o.Name, o.State) for o in doc.Objects if "Invalid" in o.State]
+    if bad:
+        print("  !! невалидные объекты:", bad)
+
+
+if __name__ == "__main__":
+    main()

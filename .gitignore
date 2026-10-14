@@ -17,3 +17,4 @@ _*.png
 _slices.json
 _rename_map.json
 _varset_values.json
+.proverka*.txt

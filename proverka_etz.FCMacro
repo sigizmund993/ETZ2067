@@ -1,0 +1,949 @@
+# -*- coding: utf-8 -*-
+# proverka_etz.FCMacro
+#
+# Проверка устройства на соответствие ЕТЗ 2026-27 и на собираемость.
+# Ничего в документе не меняет (кроме временной высоты магнита Etz.MagnetZ,
+# которая возвращается назад).
+#
+#   static()   — пересечения всех деталей в текущей позе (все пары)
+#   sweep()    — пересечения подвижных звеньев со всем остальным по сетке
+#                углов суставов, покрывающей рабочую зону, и в позах над
+#                каждой клеткой (с захватом внизу)
+#   tz()       — требования ЕТЗ: зоны, досягаемость клеток с допусками
+#                листа, ход Z над стопками, парковка, скорость
+#   bearings() — все вращательные пары и на чём они вращаются
+#   screws()   — доступ ключа к каждому винту с учётом порядка сборки
+#   nuts()     — гайки: не проворачиваются в гнезде и заводятся по пазу;
+#                открытые гайки — есть место под рожковый ключ
+#   mass()     — масса и запас устойчивости от опрокидывания
+#   run_all()  — всё подряд, итог в конце
+#
+# Каждая функция возвращает список замечаний; пустой список — всё в порядке.
+
+import math
+
+import FreeCAD as App
+import Part
+
+V = App.Vector
+DOCN = "ETZ_Robot"
+TOL = 0.05          # мм3: объём пересечения меньше — считаем касанием
+
+
+def D():
+    return App.getDocument(DOCN)
+
+
+# ---------------------------------------------------------------------------
+# Сбор деталей в глобальных координатах
+# ---------------------------------------------------------------------------
+def global_shape(o):
+    sh = Part.getShape(o, "", needSubElement=False, refine=False, transform=True)
+    pl = App.Placement()
+    g = o.getParentGeoFeatureGroup()
+    while g is not None:
+        pl = g.Placement.multiply(pl)
+        g = g.getParentGeoFeatureGroup()
+    sh = sh.copy()
+    sh.Placement = pl.multiply(sh.Placement)
+    return sh
+
+
+def parts():
+    """Все детали устройства: тела PartDesign, Part::Feature вне тел, ссылки."""
+    doc = D()
+    out = {}
+    for o in doc.Objects:
+        if o.Name.startswith("PG_"):
+            continue
+        if o.TypeId == "PartDesign::Body":
+            pass
+        elif o.TypeId == "App::Link":
+            pass
+        elif o.TypeId == "Part::Feature":
+            if any(p.TypeId == "PartDesign::Body" for p in o.InList):
+                continue
+        else:
+            continue
+        try:
+            sh = global_shape(o)
+        except Exception:
+            continue
+        if sh.isNull() or sh.Volume < 1e-3:
+            continue
+        out[o.Name] = sh
+    return out
+
+
+def label(n):
+    o = D().getObject(n)
+    return "%s (%s)" % (o.Label, n) if o is not None else n
+
+
+# ---------------------------------------------------------------------------
+# Что с чем пересекаться ВПРАВЕ (по конструкции)
+# ---------------------------------------------------------------------------
+# резьба в моторе не смоделирована — винты моторов входят в корпус;
+# вал мотора сидит в ступице ведущего шкива; ремень лежит на зубьях;
+# шлиц серво — в шестерне; зубья в зацеплении — по проверке зацепления.
+ALLOWED = [
+    ("FR_MotScrA", "Body"), ("FR_MotScrB", "Body001"),
+    ("Body", "Pulley"), ("Body001", "Driver2"),
+    ("FR_Belt1", "Pulley"), ("FR_Belt1", "Body003"),
+    ("FR_Belt2", "Driver2"), ("FR_Belt2", "Body_Pulley2"),
+    ("EF_ServoZ", "EF_GearZ"), ("CR_ServoR", "CR_GearRt"),
+    ("EF_GearZ", "CR_Carriage"), ("CR_GearSp", "CR_GearRt"),
+    # саморезы SG90 нарезают резьбу в пластике сами
+    ("EF_SvScrZ", "EF_Bracket"), ("CR_SvScr", "CR_Carriage"),
+]
+
+
+def allowed(a, b):
+    for p, q in ALLOWED:
+        if (a.startswith(p) and b.startswith(q)) or (a.startswith(q) and b.startswith(p)):
+            # "Body" не должен ловить Body_*: точное совпадение для коротких имён
+            if (p in ("Body", "Body001") and p not in (a, b)) or \
+               (q in ("Body", "Body001") and q not in (a, b)):
+                continue
+            return True
+    return False
+
+
+def bb_hit(a, b, gap=0.0):
+    A, B = a.BoundBox, b.BoundBox
+    return not (A.XMax + gap < B.XMin or B.XMax + gap < A.XMin or
+                A.YMax + gap < B.YMin or B.YMax + gap < A.YMin or
+                A.ZMax + gap < B.ZMin or B.ZMax + gap < A.ZMin)
+
+
+def overlap(a, b):
+    if not bb_hit(a, b):
+        return 0.0
+    try:
+        return a.common(b).Volume
+    except Exception:
+        return -1.0
+
+
+def collide(sa, sb, skip_allowed=True):
+    """Пары с пересечением объёмом > TOL между словарями sa и sb."""
+    bad = []
+    for na, a in sa.items():
+        for nb, b in sb.items():
+            if na >= nb and sa is sb:
+                continue
+            if na == nb:
+                continue
+            if skip_allowed and allowed(na, nb):
+                continue
+            v = overlap(a, b)
+            if v > TOL or v < 0:
+                bad.append((na, nb, v))
+    return bad
+
+
+# ---------------------------------------------------------------------------
+# Кинематика
+# ---------------------------------------------------------------------------
+# (точные имена тел, префиксы деталей)
+GROUPS = {
+    "shoulder": ({"Body003", "Body_Cap", "Body_Tube", "Body_Elbow", "Body_ElbowCap"},
+                 ("HW_", "PV_", "EH_Vint_E1", "EH_Gayka_E1")),
+    "lever": ({"Body_Pulley2"}, ("RD_VintA", "RD_VtulA", "RD_BrgA", "RD_ShaybaA", "RD_GaykaA")),
+    "forearm": ({"Body_Elbow2", "Body_Elbow2Cap", "Body_Tube2", "Body_RodJoint", "Body_RodJointCap"},
+                ("EH_Vint_E2", "EH_Gayka_E2", "EH_Vint_RJ", "EH_Gayka_RJ", "RD_VintB", "RD_VtulB",
+                 "RD_BrgB", "RD_ShaybaB", "RD_GaykaB", "EF_", "CR_")),
+    "rod": ({"Body_Rod"}, ()),
+}
+
+
+def group_of(n):
+    for g, (exact, pref) in GROUPS.items():
+        if n in exact or n.startswith(pref):
+            return g
+    return "static"
+
+
+def geom():
+    d = D().getObject("Drive")
+    S = V(d.PulleyAxisX.Value, d.ArmAxisY.Value, 0)
+    L1 = d.PivotX.Value
+    lev = d.LeverLen.Value
+    return dict(S=S, L1=L1, lev=lev, t1_0=0.0, t2_0=d.Tube2Angle.Value, lv_0=d.LeverAngle.Value,
+                Le=153.0)
+
+
+def rz(shape, c, ang):
+    s = shape.copy()
+    if abs(ang) > 1e-9:
+        s.rotate(V(c.x, c.y, 0), V(0, 0, 1), ang)
+    return s
+
+
+def pose(base, g, t1, t2):
+    """Детали в позе (t1 — угол плеча, t2 — абсолютный угол предплечья, град)."""
+    S = g["S"]
+    P0 = S + V(g["L1"], 0, 0)
+    P1 = S + V(g["L1"] * math.cos(math.radians(t1)), g["L1"] * math.sin(math.radians(t1)), 0)
+    A0 = S + V(g["lev"] * math.cos(math.radians(g["lv_0"])), g["lev"] * math.sin(math.radians(g["lv_0"])), 0)
+    lv = t2 + 180.0
+    A1 = S + V(g["lev"] * math.cos(math.radians(lv)), g["lev"] * math.sin(math.radians(lv)), 0)
+    out = {}
+    for n, sh in base.items():
+        gr = group_of(n)
+        if gr == "static":
+            out[n] = sh
+        elif gr == "shoulder":
+            out[n] = rz(sh, S, t1 - g["t1_0"])
+        elif gr == "lever":
+            out[n] = rz(sh, S, t2 - g["t2_0"])
+        elif gr == "forearm":
+            s = rz(sh, P0, t2 - g["t2_0"])
+            s.translate(P1 - P0)
+            out[n] = s
+        elif gr == "rod":
+            s = rz(sh, A0, t1 - g["t1_0"])
+            s.translate(A1 - A0)
+            out[n] = s
+    return out
+
+
+def ik(g, x, y, sign=1):
+    """Глобальная точка захвата (x, y) -> (t1, t2) или None."""
+    S = g["S"]
+    dx, dy = x - S.x, y - S.y
+    r = math.hypot(dx, dy)
+    L1, Le = g["L1"], g["Le"]
+    c = (r * r - L1 * L1 - Le * Le) / (2 * L1 * Le)
+    if abs(c) > 1:
+        return None
+    q2 = sign * math.acos(c)
+    t1 = math.atan2(dy, dx) - math.atan2(Le * math.sin(q2), L1 + Le * math.cos(q2))
+    return math.degrees(t1), math.degrees(t1 + q2)
+
+
+def set_magnet(z):
+    e = D().getObject("Etz")
+    old = e.MagnetZ.Value
+    e.MagnetZ = z
+    D().recompute()
+    return old
+
+
+# ---------------------------------------------------------------------------
+# Полигон
+# ---------------------------------------------------------------------------
+def poly_xy(p):
+    """Глобальная точка робота -> координаты полигона."""
+    d, e = D().getObject("Drive"), D().getObject("Etz")
+    return (p.x - d.PulleyAxisX.Value + e.PolyShaftX.Value,
+            p.y - d.ArmAxisY.Value + e.PolyShaftY.Value)
+
+
+def robot_xy(px, py):
+    d, e = D().getObject("Drive"), D().getObject("Etz")
+    return V(px - e.PolyShaftX.Value + d.PulleyAxisX.Value,
+             py - e.PolyShaftY.Value + d.ArmAxisY.Value, 0)
+
+
+def cells(dx=0.0, dy=0.0, rot=0.0):
+    """Центры клеток и отбоя (полигон), лист сдвинут на dx,dy и повёрнут на rot."""
+    O = (563.0, 126.5)
+    c = (475.0, 250.0)          # центр листа А4
+    out = []
+    pts = []
+    for k, row in enumerate("АБВГДЕ"):
+        for n in range(9):
+            pts.append(("%s%d" % (row, n), O[0] - 28.0 * (k + 1), O[1] + 28.0 * n))
+    for k in range(1, 6):
+        pts.append(("Отбой%d" % k, O[0] - 28.0 * k, O[1] + 252.0))
+    a = math.radians(rot)
+    for nm, x, y in pts:
+        xr = c[0] + (x - c[0]) * math.cos(a) - (y - c[1]) * math.sin(a) + dx
+        yr = c[1] + (x - c[0]) * math.sin(a) + (y - c[1]) * math.cos(a) + dy
+        out.append((nm, xr, yr))
+    return out
+
+
+def zone_forbidden(fz, h=400.0):
+    """Объём над полигоном, где устройство НЕ может быть до/после работы:
+    всё, кроме зон 1 и 2 (область поля, зазоры и вне полигона)."""
+    o = robot_xy(0, 0)
+    big = Part.makeBox(2000, 2000, h, V(o.x - 700, o.y - 700, fz - 1))
+    ok = [Part.makeBox(350, 500, h + 2, V(o.x, o.y, fz - 2)),
+          Part.makeBox(250, 80, h + 2, V(o.x + 350, o.y, fz - 2)),
+          Part.makeBox(250, 80, h + 2, V(o.x + 350, o.y + 420, fz - 2))]
+    return big.cut(ok)
+
+
+# ---------------------------------------------------------------------------
+# Проверки
+# ---------------------------------------------------------------------------
+def static(report=True):
+    issues = []
+    for mz in (38.6, 4.0):
+        old = set_magnet(mz)
+        P = parts()
+        bad = collide(P, P)
+        set_magnet(old)
+        for a, b, v in bad:
+            issues.append("пересечение (магнит +%.1f): %s <-> %s, %.2f мм3" % (mz, label(a), label(b), v))
+    if report:
+        print("STATIC: деталей %d, замечаний %d" % (len(P), len(issues)))
+        for i in issues:
+            print("  ", i)
+    return issues
+
+
+# от каких углов зависит взаимное положение пары групп: пару, уже
+# проверенную при тех же значениях, второй раз не считаем
+PAIR_KEY = {
+    ("shoulder", "static"): ("t1",), ("lever", "static"): ("t2",),
+    ("forearm", "static"): ("t1", "t2"), ("rod", "static"): ("t1", "t2"),
+    ("lever", "shoulder"): ("q2",), ("forearm", "shoulder"): ("q2",),
+    ("rod", "shoulder"): ("q2",), ("forearm", "lever"): ("t1", "t2"),
+    ("lever", "rod"): ("q2",), ("forearm", "rod"): ("q2",),
+}
+
+
+def _cross(Pp, groups_moving, angles=None, cache=None):
+    """Пересечения между разными группами (внутри группы — проверено static)."""
+    by = {}
+    for n, s in Pp.items():
+        by.setdefault(group_of(n), {})[n] = s
+    bad = []
+    names = sorted(by.keys())
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            ga, gb = names[i], names[j]
+            if ga not in groups_moving and gb not in groups_moving:
+                continue
+            if angles is not None and cache is not None:
+                deps = PAIR_KEY.get((ga, gb)) or PAIR_KEY.get((gb, ga))
+                if deps:
+                    key = (ga, gb) + tuple(round(angles[k], 3) for k in deps)
+                    if key in cache:
+                        continue
+                    cache.add(key)
+            bad += collide(by[ga], by[gb])
+    return bad
+
+
+def sweep(t1_rng=(-110, 10, 10), q2_rng=(56, 156, 8), report=True):
+    """Сетка (t1, q2): плечо и относительный угол локтя. Захват поднят."""
+    g = geom()
+    old = set_magnet(38.6)
+    base = parts()
+    issues = []
+    seen = set()
+    cache = set()
+    n = 0
+    t1 = t1_rng[0]
+    while t1 <= t1_rng[1] + 1e-9:
+        q2 = q2_rng[0]
+        while q2 <= q2_rng[1] + 1e-9:
+            Pp = pose(base, g, t1, t1 + q2)
+            for a, b, v in _cross(Pp, ("shoulder", "lever", "forearm", "rod"),
+                                  dict(t1=t1, t2=t1 + q2, q2=q2), cache):
+                key = (a, b)
+                if key not in seen:
+                    seen.add(key)
+                    issues.append("поза t1=%+.0f q2=%.0f: %s <-> %s, %.1f мм3"
+                                  % (t1, q2, label(a), label(b), v))
+            n += 1
+            q2 += q2_rng[2]
+        t1 += t1_rng[2]
+    set_magnet(old)
+    if report:
+        print("SWEEP: поз %d, t1 %s, q2 %s; замечаний %d" % (n, t1_rng[:2], q2_rng[:2], len(issues)))
+        for i in issues:
+            print("  ", i)
+    return issues
+
+
+def sweep_cells(report=True):
+    """Захват опущен на шашку (магнит +5) над каждой клеткой: ничего,
+    кроме магнита, не ниже верха стопки из 5 шашек в соседних клетках,
+    и устройство не задевает себя и станину."""
+    g = geom()
+    e = D().getObject("Etz")
+    fz = e.FloorZ.Value
+    old = set_magnet(5.0)
+    base = parts()
+    low_ok = ("CR_Magnet", "CR_Ext", "CR_Screw")
+    issues = []
+    worst = 1e9
+    for nm, px, py in cells():
+        p = robot_xy(px, py)
+        sol = ik(g, p.x, p.y)
+        if sol is None:
+            issues.append("клетка %s недостижима" % nm)
+            continue
+        Pp = pose(base, g, *sol)
+        for a, b, v in _cross(Pp, ("shoulder", "lever", "forearm", "rod")):
+            issues.append("клетка %s: %s <-> %s, %.1f мм3" % (nm, label(a), label(b), v))
+        for n_, s in Pp.items():
+            if group_of(n_) == "forearm" and not n_.startswith(low_ok):
+                worst = min(worst, s.BoundBox.ZMin - (fz + 25.0))
+    set_magnet(old)
+    if worst < 2.0:
+        issues.append("при захвате с поля детали узла всего на %.1f мм выше стопки из 5 шашек" % worst)
+    if report:
+        print("CELLS: над каждой клеткой с магнитом на шашке; запас над стопкой 5 шт: %.1f мм; замечаний %d"
+              % (worst, len(issues)))
+        for i in issues:
+            print("  ", i)
+    return issues
+
+
+def tz(report=True):
+    doc = D()
+    d, e = doc.getObject("Drive"), doc.getObject("Etz")
+    g = geom()
+    fz = e.FloorZ.Value
+    issues = []
+    lines = []
+    P = parts()
+
+    # 1. опора: только основание касается поля, и оно целиком в зоне 1
+    base = P["FR_Base"]
+    bb = base.BoundBox
+    x0, y0 = poly_xy(V(bb.XMin, bb.YMin, 0))
+    x1, y1 = poly_xy(V(bb.XMax, bb.YMax, 0))
+    lines.append("основание на полигоне: x %.1f..%.1f, y %.1f..%.1f (зона 1: x 0..350, y 0..500)"
+                 % (x0, x1, y0, y1))
+    if x0 < 0 or x1 > 350 or y0 < 0 or y1 > 500:
+        issues.append("основание выходит за зону 1")
+    if x1 > 347:
+        issues.append("основание ближе 3 мм к границе зоны 1 (допуск зон ±3 мм)")
+    low = [n for n, s in P.items() if s.BoundBox.ZMin < fz + 0.5 and n != "FR_Base"]
+    if low:
+        issues.append("кроме основания до поля достают: %s" % ", ".join(low))
+    if abs(bb.ZMin - fz) > 1e-6:
+        issues.append("основание не стоит на поле (z %.2f, поле %.2f)" % (bb.ZMin, fz))
+
+    # 2. парковка: всё устройство над зонами 1 и 2 (до старта и после финиша).
+    #    Ищем позу перебором; берём ту, что с наибольшим запасом до запретной
+    #    области. Её же печатаем — это поза, в которую программа паркует руку.
+    forb = zone_forbidden(fz)
+    old = set_magnet(38.6)
+    base_p = parts()
+    set_magnet(old)
+    moving = {n: s for n, s in base_p.items() if group_of(n) != "static"}
+    static_out = [n for n, s in base_p.items() if group_of(n) == "static" and bb_hit(s, forb)
+                  and s.common(forb).Volume > TOL]
+    if static_out:
+        issues.append("неподвижные детали над запретной областью: %s" % ", ".join(static_out))
+    best = None
+    for t1 in range(-115, -49, 5):
+        for q2 in range(60, 157, 6):
+            Pp = pose(moving, g, t1, t1 + q2)
+            vol = 0.0
+            for n, s in Pp.items():
+                if bb_hit(s, forb):
+                    vol += s.common(forb).Volume
+                    if vol > TOL:
+                        break
+            if vol > TOL:
+                continue
+            # запас: расстояние от подвижных деталей до запретной области
+            dmin = min(s.distToShape(forb)[0] for s in Pp.values() if bb_hit(s, forb, 15.0)) \
+                if any(bb_hit(s, forb, 15.0) for s in Pp.values()) else 15.0
+            if best is None or dmin > best[0]:
+                best = (dmin, t1, q2)
+    if best is None:
+        issues.append("не найдено позы парковки, в которой устройство целиком над зонами 1-2")
+    else:
+        park = (best[1], best[1] + best[2])
+        Pp = pose(base_p, g, *park)
+        bad = _cross(Pp, ("shoulder", "lever", "forearm", "rod"))
+        for a, b, v in bad:
+            issues.append("парковка: %s <-> %s" % (label(a), label(b)))
+        lines.append("парковка: t1=%.0f°, q2=%.0f° — всё над зонами 1-2, запас до границы %.1f мм"
+                     % (best[1], best[2], best[0]))
+        if best[0] < 3.0:
+            issues.append("в позе парковки запас до границы зон меньше допуска 3 мм")
+
+    # 3. досягаемость клеток с допусками листа: сдвиг 5 мм, поворот 3°
+    qs, t1s = [], []
+    for dx in (-5, 0, 5):
+        for dy in (-5, 0, 5):
+            for rot in (-3, 0, 3):
+                for nm, px, py in cells(dx, dy, rot):
+                    p = robot_xy(px, py)
+                    sol = ik(g, p.x, p.y)
+                    if sol is None:
+                        issues.append("недостижима клетка %s (лист %+d,%+d,%+d°)" % (nm, dx, dy, rot))
+                        continue
+                    t1s.append(sol[0])
+                    qs.append(sol[1] - sol[0])
+    lines.append("все 59 позиций (54 клетки + 5 отбоя) с допусками листа: t1 %.0f..%.0f°, угол в локте "
+                 "q2 %.0f..%.0f° (сингулярности параллелограмма — 0 и 180)"
+                 % (min(t1s), max(t1s), min(qs), max(qs)))
+    if min(qs) < 25 or max(qs) > 160:
+        issues.append("рабочая зона подходит к сингулярности параллелограмма ближе 20°")
+
+    # 4. вертикаль: ход магнита и высоты стопок
+    import importlib
+    zs = math.pi * 1.0 * 22 / 2.0
+    zmin, zmax = 4.0, 4.0 + zs
+    lines.append("магнит: от поля +%.1f до +%.1f мм (ход %.1f за 180° SG90)" % (zmin, zmax, zs))
+    if zmin > 5.0:
+        issues.append("магнит не опускается до шашки на поле (+5)")
+    if zmax - 5.0 < 25.0 + 3.0:
+        issues.append("с шашкой в захвате не пройти над стопкой из 5 шашек с запасом 3 мм")
+    else:
+        lines.append("  шашка в захвате проходит над стопкой из 5 шт с запасом %.1f мм" % (zmax - 5.0 - 25.0))
+    lines.append("  берёт верхнюю шашку стопки 1..5 (магнит +5..+25), ставит на стопку до 4 шт")
+
+    # 5. поворот шашки 0..360 (11 кл., ЗЭ)
+    lines.append("поворот захвата: SG90 0..180° через z13 -> z26 = 0..360°")
+
+    # 6. скорость: шаговик 1 об/с (консервативно), передача 4
+    w = 2 * math.pi * 1.0 / d.RatioActual
+    rmax = g["L1"] + g["Le"]
+    lines.append("скорость: при 1 об/с мотора угловая %.2f рад/с, захват до %.0f мм/с (ТЗ: >= 100)"
+                 % (w, w * 150.0))
+    if w * 150.0 < 100:
+        issues.append("скорость манипулятора < 100 мм/с при 1 об/с мотора")
+
+    # 7. касаться поля может только захват: при работе ниже стопки только магнит
+    if report:
+        print("TZ:")
+        for l in lines:
+            print("  ", l)
+        print("   замечаний %d" % len(issues))
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+def bearings(report=True):
+    """Таблица вращательных пар — по построению модели."""
+    doc = D()
+    d = doc.getObject("Drive")
+    rows = [
+        ("плечо (шкив 1 на валу)", "608ZZ x1 (BRG_1)", "вал M8 неподвижен, внутренние кольца зажаты стопкой"),
+        ("шкив 2 / рычаг на валу", "608ZZ x1 (BRG_2)", "то же"),
+        ("локоть", "623ZZ (PV_Brg)", "наружное кольцо в хомуте 2, внутреннее под винтом"),
+        ("тяга — рычаг (A)", "623ZZ (RD_BrgA)", "в глазу тяги; втулка+шайба по внутр. кольцу"),
+        ("тяга — шарнир тяги (B)", "623ZZ (RD_BrgB)", "то же"),
+        ("шпиндель магнита", "624ZZ x2 (CR_Brg1/2)", "стопка внутр. колец стянута винтом M4"),
+        ("каретка Z", "линейная T-направляющая", "поступательная пара, зазор %.1f" % 0.3),
+    ]
+    issues = []
+    # вращающиеся детали касаются только наружных колец: размеры
+    if d.SpacerOD.Value > 12.1 + 1e-6:
+        issues.append("проставка шире внутреннего кольца 608ZZ")
+    if min(d.ShaftHoleD.Value, d.ShaftHoleD2.Value) < d.SpacerOD.Value + 1.0:
+        issues.append("упор шкива ближе 0.5 мм к проставке/втулке")
+    for n in ("BRG_1", "BRG_2", "PV_Brg", "RD_BrgA", "RD_BrgB", "CR_Brg1", "CR_Brg2"):
+        if doc.getObject(n) is None:
+            issues.append("нет подшипника %s" % n)
+    if report:
+        print("BEARINGS:")
+        for r in rows:
+            print("   %-26s %-26s %s" % r)
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+# порядок сборки: шаг -> префиксы. Ключ проверяется против деталей
+# с шагом <= шага винта (собранных к этому моменту).
+STEPS = [
+    (10, ("FR_Base", "FR_PlNut", "FR_ShaftNut")),
+    (20, ("FR_PlateA", "Body", "FR_MotScrA")),            # мотор 1 к плите на столе
+    (21, ("FR_PlateB", "Body001", "FR_MotScrB")),
+    (30, ("Pulley", "Driver2")),
+    (40, ("FR_PlScr1", "FR_PlScr2", "FR_PlScr3")),
+    (41, ("FR_PlScr4", "FR_PlScr5", "FR_PlScr6")),
+    (50, ("FR_ShaftBushLo", "Body003", "BRG_1", "FR_Belt1", "Body_Tube", "Body_Cap", "HW_")),
+    (60, ("Body_Elbow", "Body_ElbowCap", "EH_Vint_E1", "EH_Gayka_E1")),
+    (61, ("PV_Brg", "Body_Elbow2", "PV_Nut", "PV_Screw")),
+    (62, ("Body_Tube2", "Body_Elbow2Cap", "EH_Vint_E2", "EH_Gayka_E2")),
+    (63, ("Body_RodJoint", "Body_RodJointCap", "EH_Vint_RJ", "EH_Gayka_RJ")),
+    (64, ("EF_Bracket", "EF_BracketCap", "EF_ClNut", "EF_ClScr")),
+    (65, ("EF_ServoZ", "EF_SvScrZ")),
+    (70, ("CR_Carriage", "CR_Brg", "CR_InnerSp", "CR_Ext", "CR_Magnet", "CR_GearSp", "CR_Screw",
+          "CR_ServoR", "CR_SvScr")),
+    (71, ("CR_GearRt",)),
+    (75, ("EF_GearZ",)),
+    (80, ("Body_Prost", "Body_Pulley2", "BRG_2", "FR_Belt2", "FR_ShaftBushHi", "FR_ShaftBolt")),
+    (90, ("Body_Rod", "RD_")),
+]
+
+
+def step_of(n):
+    best = None
+    for st, pref in STEPS:
+        for p in pref:
+            if n == p or (n.startswith(p) and p not in ("Body", "Body001", "Body_Elbow", "Body_Tube",
+                                                        "Pulley")):
+                if best is None or len(p) > best[1]:
+                    best = (st, len(p))
+    return best[0] if best else 999
+
+
+# винты: (префикс, R ключа, R головки, головка заходит снаружи по оси).
+# Ключи: M3 — шестигранник 2.5 (R1.5 по углам), M4 — 3, M8 — 6;
+# саморезы SG90 — крестовая отвёртка Ø3. Винт шарнира локтя ставится
+# головкой в карман хомута 2 СНИЗУ, до запрессовки подшипника, — для него
+# проверяется только проход ключа через технологическое отверстие.
+SCREWS = [
+    ("FR_MotScr", 1.5, 2.75, True), ("FR_PlScr", 1.5, 2.75, True),
+    ("FR_ShaftBolt", 3.5, 6.5, True),
+    ("HW_Vint", 1.5, 2.75, True), ("EH_Vint", 1.5, 2.75, True),
+    ("PV_Screw", 1.5, 2.75, False), ("RD_Vint", 1.1, 3.4, True),
+    ("EF_ClScr", 1.5, 2.75, True), ("CR_Screw", 1.75, 3.5, True),
+    ("EF_SvScrZ", 1.5, 2.0, True), ("CR_SvScr", 1.5, 2.0, True),
+]
+
+
+def _screw_axis(sh):
+    """Ось винта (наружу, в сторону ключа) и точка торца головки, глобально.
+    sh — форма винта ИЗ ТОГО ЖЕ набора, что и остальные детали (одна поза)."""
+    # у всех винтов ось — локальная Z фигуры, головка — в +Z
+    pl = sh.Placement
+    ax = pl.Rotation.multVec(V(0, 0, 1))
+    # головка: самая дальняя вдоль оси точка
+    vs = [v.Point for v in sh.Vertexes]
+    top = max(vs, key=lambda p: p.dot(ax))
+    # точка на оси: Placement.Base всех винтов стоит на их оси. Центр
+    # BoundBox для этого не годится: у библиотечных винтов (B-сплайны после
+    # transformGeometry) коробка считается по контрольным точкам и раздута
+    c = pl.Base
+    hp = c + ax * ((top - c).dot(ax))
+    return ax, hp, sh
+
+
+def screws(report=True):
+    old = set_magnet(38.6)
+    P = parts()
+    set_magnet(old)
+    issues = []
+    rows = []
+    for n, sh in sorted(P.items()):
+        spec = next((s for s in SCREWS if n.startswith(s[0])), None)
+        if spec is None:
+            continue
+        ax, hp, s = _screw_axis(sh)
+        st = step_of(n)
+        before = {m: x for m, x in P.items() if step_of(m) <= st and m != n}
+        # 1) путь головки: цилиндр R головки от торца наружу 12 мм
+        head = Part.makeCylinder(spec[2] + 0.1, 12.0, hp + ax * 0.05, ax)
+        # 2) ключ: цилиндр R ключа ещё на 60 мм
+        key = Part.makeCylinder(spec[1], 60.0, hp + ax * 0.05, ax)
+        hit_h = [m for m, x in before.items() if spec[3] and bb_hit(x, head)
+                 and x.common(head).Volume > TOL]
+        hit_k = [m for m, x in before.items() if bb_hit(x, key) and x.common(key).Volume > TOL]
+        ok = not hit_h and not hit_k
+        rows.append((n, st, ok, hit_h, hit_k))
+        if not ok:
+            issues.append("винт %s (шаг сборки %d): %s%s" % (
+                label(n), st,
+                ("головка упирается в " + ", ".join(hit_h) + "; ") if hit_h else "",
+                ("ключ упирается в " + ", ".join(hit_k)) if hit_k else ""))
+    if report:
+        print("SCREWS: винтов %d, без доступа %d" % (len(rows), len(issues)))
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+NUTS_CAPTIVE = ("FR_PlNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut")
+NUTS_OPEN = ("RD_Gayka",)
+
+
+def _holder(P, n, sh):
+    best, bv = None, 0
+    big = sh.copy()
+    big.scale(1.3, sh.BoundBox.Center)
+    for m, x in P.items():
+        if m == n or m.startswith(("FR_PlScr", "FR_ShaftBolt", "HW_Vint", "EH_Vint", "PV_Screw",
+                                    "EF_ClScr")):
+            continue
+        if not bb_hit(x, big):
+            continue
+        v = x.common(big).Volume
+        if v > bv:
+            best, bv = m, v
+    return best
+
+
+def nuts(report=True):
+    old = set_magnet(38.6)
+    P = parts()
+    set_magnet(old)
+    issues = []
+    cnt = 0
+    for n, sh in sorted(P.items()):
+        if n.startswith(NUTS_CAPTIVE):
+            cnt += 1
+            h = _holder(P, n, sh)
+            if h is None:
+                issues.append("гайка %s ни в чём не сидит" % label(n))
+                continue
+            hs = P[h]
+            ax = global_shape(D().getObject(n)).Placement.Rotation.multVec(V(0, 0, 1))
+            c = sh.BoundBox.Center
+            # 1) в гнезде без натяга
+            v0 = hs.common(sh).Volume
+            if v0 > TOL:
+                issues.append("гайка %s: натяг в гнезде %s %.2f мм3" % (label(n), h, v0))
+            # 2) не проворачивается: поворот на 20° даёт пересечение с держателем
+            r = sh.copy()
+            r.rotate(c, ax, 20.0)
+            if hs.common(r).Volume < 0.5:
+                issues.append("гайка %s проворачивается в %s — нет шестигранного гнезда" % (label(n), h))
+            # 3) заводится: есть направление в плоскости гнезда, по которому
+            #    гайка выходит наружу, ничего не задевая
+            u = V(1, 0, 0) if abs(ax.x) < 0.9 else V(0, 1, 0)
+            e1 = ax.cross(u); e1.normalize()
+            e2 = ax.cross(e1)
+            ok = False
+            for k in range(24):
+                a = math.radians(15 * k)
+                dv = e1 * math.cos(a) + e2 * math.sin(a)
+                free = True
+                for step in [0.5 * i for i in range(1, 41)]:
+                    m = sh.copy()
+                    m.translate(dv * step)
+                    if hs.common(m).Volume > TOL:
+                        free = False
+                        break
+                    if not bb_hit(m, hs):
+                        break
+                if free:
+                    ok = True
+                    break
+            if not ok:
+                for dv in (ax, ax * -1):         # гнездо, открытое вдоль оси
+                    free = True
+                    for step in [0.5 * i for i in range(1, 41)]:
+                        m = sh.copy(); m.translate(dv * step)
+                        if hs.common(m).Volume > TOL:
+                            free = False; break
+                        if not bb_hit(m, hs):
+                            break
+                    if free:
+                        ok = True; break
+            if not ok:
+                issues.append("гайку %s не завести в гнездо %s" % (label(n), h))
+        elif n.startswith(NUTS_OPEN):
+            cnt += 1
+            # рожковый ключ 5.5: «губки» — коробка 10 x 30 в плоскости гайки,
+            # в одном из 12 направлений свободна от всего, кроме своих деталей
+            c = sh.BoundBox.Center
+            zb, zt = sh.BoundBox.ZMin, sh.BoundBox.ZMax
+            ok = False
+            for k in range(12):
+                a = 30.0 * k
+                w = Part.makeBox(30.0, 10.0, zt - zb, V(0, -5.0, zb))
+                w.rotate(V(0, 0, 0), V(0, 0, 1), a)
+                w.translate(V(c.x, c.y, 0))
+                w = w.cut(Part.makeCylinder(4.0, zt - zb + 2, V(c.x, c.y, zb - 1)))
+                hit = [m for m, x in P.items() if m != n and bb_hit(x, w) and x.common(w).Volume > TOL]
+                if not hit:
+                    ok = True
+                    break
+            if not ok:
+                issues.append("к гайке %s не подлезть рожковым ключом" % label(n))
+    if report:
+        print("NUTS: гаек %d, замечаний %d" % (cnt, len(issues)))
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+# ---------------------------------------------------------------------------
+# Вращающиеся друг относительно друга детали не должны касаться ничем,
+# кроме подшипника: (ротор, [статоры]). Пересечение тут не поймать —
+# касание даёт нулевой объём, поэтому меряем расстояние.
+RUB_GAP = 0.2
+RUB_PAIRS = [
+    ("Body003", ["FR_ShaftBushLo", "FR_PlateA", "Body_Prost", "FR_ShaftBolt"]),
+    ("Body_Pulley2", ["Body_Prost", "FR_ShaftBushHi", "FR_ShaftBolt", "Body003", "Body_Cap"]),
+    ("Body_Elbow2", ["Body_Elbow", "Body_ElbowCap", "PV_Screw", "PV_Nut"]),
+    ("Body_Elbow2Cap", ["Body_ElbowCap", "Body_Elbow"]),
+    ("Body_Rod", ["RD_VtulA", "RD_VtulB", "RD_ShaybaA", "RD_ShaybaB", "RD_GaykaA", "RD_GaykaB",
+                  "RD_VintA", "RD_VintB", "Body_Pulley2", "Body_RodJoint", "Body_Cap",
+                  "Body_ElbowCap", "Body_Elbow2"]),
+    ("CR_GearSp", ["CR_Carriage"]), ("CR_Ext", ["CR_Carriage"]), ("CR_Magnet", ["CR_Carriage"]),
+    ("CR_InnerSp", ["CR_Carriage"]), ("CR_Screw", ["CR_Carriage"]),
+    ("CR_Carriage", ["EF_Bracket", "EF_ServoZ"]),
+]
+
+
+def rubbing(report=True):
+    P = parts()
+    issues = []
+    rows = []
+    for rot, stators in RUB_PAIRS:
+        if rot not in P:
+            issues.append("нет детали %s" % rot)
+            continue
+        for st in stators:
+            if st not in P:
+                continue
+            if not bb_hit(P[rot], P[st], 3.0):
+                continue
+            dmin = P[rot].distToShape(P[st])[0]
+            rows.append((rot, st, dmin))
+            if dmin < RUB_GAP:
+                issues.append("%s касается %s (зазор %.2f мм) — трение мимо подшипника"
+                              % (label(rot), label(st), dmin))
+    if report:
+        print("RUBBING: пар %d, касаний %d" % (len(rows), len(issues)))
+        for r in rows:
+            print("   %-16s - %-16s %.2f мм" % r)
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+def gears(report=True):
+    """Зацепление: межосевое по расчёту, зубья не входят друг в друга
+    (с учётом бокового зазора) в нескольких положениях каретки."""
+    issues = []
+    lines = []
+    for mz in (4.0, 13.0, 21.7, 30.0, 38.6):
+        old = set_magnet(mz)
+        P = parts()
+        set_magnet(old)
+        v1 = P["EF_GearZ"].common(P["CR_Carriage"]).Volume
+        v2 = P["CR_GearSp"].common(P["CR_GearRt"]).Volume
+        d1 = P["EF_GearZ"].distToShape(P["CR_Carriage"])[0]
+        lines.append("магнит +%.1f: рейка/шестерня Z %.3f мм3 (зазор %.2f), шпиндель %.3f мм3"
+                     % (mz, v1, d1, v2))
+        if v1 > TOL:
+            issues.append("шестерня Z врезается в рейку при магните +%.1f (%.2f мм3)" % (mz, v1))
+        if v2 > TOL:
+            issues.append("шестерни поворота врезаются друг в друга (%.2f мм3)" % v2)
+        if d1 > 0.5:
+            issues.append("шестерня Z не касается рейки при магните +%.1f (зазор %.2f)" % (mz, d1))
+    if report:
+        print("GEARS:")
+        for l in lines:
+            print("  ", l)
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+# ---------------------------------------------------------------------------
+MASS_FIXED = {"Body": 280.0, "Body001": 280.0, "EF_ServoZ": 9.0, "CR_ServoR": 9.0,
+              "CR_Magnet": 30.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
+RHO = [(("FR_Base", "FR_Plate", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
+         "Body_Cap", "Body_Elbow", "Body_RodJoint", "Body_Rod", "EF_BracketCap", "CR_Gear",
+         "EF_Gear", "Body_Prost"), 1.24 * 0.6),       # печать, заполнение ~60 %
+       (("Body_Tube",), 2.7)]                          # алюминиевые трубы
+
+
+def mass(report=True):
+    g = geom()
+    e = D().getObject("Etz")
+    old = set_magnet(38.6)
+    P = parts()
+    set_magnet(old)
+    fz = e.FloorZ.Value
+    base_bb = P["FR_Base"].BoundBox
+
+    def m_of(n, s):
+        if n in MASS_FIXED:
+            return MASS_FIXED[n]
+        for pref, rho in RHO:
+            if n.startswith(pref):
+                return s.Volume / 1000.0 * rho
+        if n == "Pulley" or n == "Driver2":
+            return 8.0
+        return s.Volume / 1000.0 * 7.85          # крепёж, подшипники — сталь
+
+    issues = []
+    worst = (1e9, None)
+    total = sum(m_of(n, s) for n, s in P.items())
+    # перебор поз по всей рабочей зоне + шашка 7 г в захвате + запас
+    # на разгон: горизонтальная сила 0.3 g на подвижные массы на высоте их ЦМ
+    for t1 in range(-110, 11, 10):
+        for q2 in range(60, 157, 8):
+            Pp = pose(P, g, t1, t1 + q2)
+            ms = [(m_of(n, P[n]), s.BoundBox.Center if s.BoundBox.isValid() else V(), group_of(n) != "static")
+                  for n, s in Pp.items()]
+            Le_pt = None
+            cm = V(0, 0, 0)
+            M = 0.0
+            for m, c, _ in ms:
+                cm += c * m
+                M += m
+            # шашка
+            S = g["S"]
+            ex = S + V(g["L1"] * math.cos(math.radians(t1)) + g["Le"] * math.cos(math.radians(t1 + q2)),
+                       g["L1"] * math.sin(math.radians(t1)) + g["Le"] * math.sin(math.radians(t1 + q2)), 0)
+            cm += ex * 7.0
+            M += 7.0
+            cm = cm * (1.0 / M)
+            # запас до каждого края основания с учётом разгона
+            mov = sum(m for m, c, mv in ms if mv) + 7.0
+            hz = 60.0                               # высота ЦМ подвижных частей над полем, ~
+            dyn = 0.3 * mov * hz / M                # смещение ЦМ, эквивалентное разгону
+            for edge, dist in (("перед", base_bb.XMax - cm.x), ("зад", cm.x - base_bb.XMin),
+                               ("лево", cm.y - base_bb.YMin), ("право", base_bb.YMax - cm.y)):
+                if dist - dyn < worst[0]:
+                    worst = (dist - dyn, (edge, t1, q2, cm.x, cm.y))
+    if worst[0] < 10.0:
+        issues.append("запас устойчивости %.1f мм (край %s, поза t1=%d q2=%d) — мало"
+                      % (worst[0], worst[1][0], worst[1][1], worst[1][2]))
+    if report:
+        print("MASS: всего ~%.0f г (без электроники и аккумулятора)" % total)
+        print("   худший запас ЦМ до края основания с учётом разгона 0.3g: %.1f мм (%s, t1=%d, q2=%d)"
+              % (worst[0], worst[1][0], worst[1][1], worst[1][2]))
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+LOG = None      # путь к файлу отчёта; None — только в консоль
+
+
+def run(names=None, log=None):
+    """Запустить проверки по именам (по умолчанию все) с выводом в файл.
+
+    Через MCP длинный прогон не укладывается в таймаут запроса — поэтому
+    отчёт пишется в файл построчно, и его можно читать, пока идёт расчёт.
+    """
+    import sys, time
+    funcs = [static, bearings, rubbing, gears, tz, sweep, sweep_cells, screws, nuts, mass]
+    if names:
+        funcs = [f for f in funcs if f.__name__ in names]
+    old = sys.stdout
+    fh = open(log, "w", encoding="utf-8", buffering=1) if log else None
+    if fh:
+        sys.stdout = fh
+    res = {}
+    try:
+        for f in funcs:
+            t = time.time()
+            try:
+                res[f.__name__] = f()
+            except Exception:
+                import traceback
+                traceback.print_exc(file=sys.stdout)
+                res[f.__name__] = ["ОШИБКА выполнения"]
+            print("   (%s: %.0f с)" % (f.__name__, time.time() - t))
+        print("")
+        print("ИТОГ:", ", ".join("%s %s" % (k, "OK" if not v else "%d замеч." % len(v))
+                                for k, v in res.items()))
+        print("ГОТОВО")
+    finally:
+        sys.stdout = old
+        if fh:
+            fh.close()
+    return res
+
+
+def run_all():
+    return run()
+
+
+if __name__ == "__main__":
+    run_all()
