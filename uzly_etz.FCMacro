@@ -66,8 +66,9 @@ INPUTS = [
      "Толщина плиты мотора 2 (ограничена снизу: над ней ходят рычаг и тяга)"),
     ("BaseX0", "App::PropertyDistance", "3 Станина", -75.0,
      "Задний край основания (x робота). Чем дальше назад — тем устойчивее"),
-    ("BaseX1", "App::PropertyDistance", "3 Станина", 130.0,
-     "Передний край основания. На полигоне не дальше x 350 (граница зоны 1)"),
+    ("BaseFront", "App::PropertyLength", "3 Станина", 45.0,
+     "Передний край основания — на столько впереди оси шкивов. Ось на "
+     "полигоне x = PolyShaftX (300), граница зоны 1 — x 350"),
     ("BaseY0", "App::PropertyDistance", "3 Станина", -90.0, "Левый край основания"),
     ("BaseY1", "App::PropertyDistance", "3 Станина", 135.0, "Правый край основания"),
     ("TensionSlot", "App::PropertyLength", "3 Станина", 2.0,
@@ -90,7 +91,6 @@ def ensure_vs(doc):
 # ---------------------------------------------------------------------------
 # Константы покупных деталей (по стандарту / паспорту)
 # ---------------------------------------------------------------------------
-FACE1 = 40.0                 # верх корпуса левого NEMA17 (модель Body: z 0..40)
 NEMA_HALF = 21.15            # полугабарит корпуса 42.3
 NEMA_PCD = 31.0              # квадрат резьбовых отверстий M3
 NEMA_BOSS = 22.0             # центрирующий буртик Ø22 x 2
@@ -168,48 +168,6 @@ def rounded_rect(x0, x1, y0, y1, z0, z1, r):
         for cy in (y0 + r, y1 - r):
             b = b.fuse(cyl(r, z0, z1, cx, cy))
     return b.removeSplitter()
-
-
-def hull_plate(circles, z0, z1, step=1.5):
-    """Плита по выпуклой оболочке окружностей [(x, y, r), ...] — гладкий
-    контур одной периодической B-сплайн кривой. Склейка прямоугольника,
-    многоугольника и круга даёт на стыках острые короткие рёбра, и на них
-    скругление кромок не встаёт ни на каком радиусе."""
-    pts = []
-    for cx, cy, r in circles:
-        for k in range(180):
-            a = 2 * math.pi * k / 180.0
-            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
-    pts = sorted(set(pts))
-    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-    lo, up = [], []
-    for p_ in pts:
-        while len(lo) >= 2 and cross(lo[-2], lo[-1], p_) <= 0:
-            lo.pop()
-        lo.append(p_)
-    for p_ in reversed(pts):
-        while len(up) >= 2 and cross(up[-2], up[-1], p_) <= 0:
-            up.pop()
-        up.append(p_)
-    hull = lo[:-1] + up[:-1]
-    # равномерно по периметру — без этого сплайн волнится на длинных прямых
-    per = [V(x, y, z0) for x, y in hull]
-    per.append(per[0])
-    seg = [(per[i + 1] - per[i]).Length for i in range(len(per) - 1)]
-    total = sum(seg)
-    n = max(24, int(total / step))
-    res, i, acc = [], 0, 0.0
-    for k in range(n):
-        t = total * k / n
-        while acc + seg[i] < t:
-            acc += seg[i]
-            i += 1
-        f = (t - acc) / seg[i] if seg[i] > 0 else 0.0
-        res.append(per[i] + (per[i + 1] - per[i]) * f)
-    bs = Part.BSplineCurve()
-    bs.interpolate(res, PeriodicFlag=True)
-    face = Part.Face(Part.Wire([bs.toShape()]))
-    return face.extrude(V(0, 0, z1 - z0))
 
 
 def slot(r, z0, z1, p, u, half):
@@ -418,7 +376,13 @@ SERVO = (0.15, 0.35, 0.80)
 # Станина
 # ---------------------------------------------------------------------------
 def build_frame(doc, d, e):
-    """Основание, стенки, плиты моторов, вал шкивов. Глобальные координаты."""
+    """Основание, стенки, плиты моторов, вал шкивов. Глобальные координаты.
+
+    Моторы ПЕРЕВЁРНУТЫ: стоят фланцем вниз на плитах, валы смотрят вниз,
+    ведущие шкивы — под плитами, на уровне венцов ведомых. Так вся стопка
+    шкивов и рука опущены к основанию (Drive.BeltPlaneZ), а корпуса
+    моторов торчат вверх, позади руки.
+    """
     purge(doc, ("FR_",))
     part = container(doc, FRAME_PART, "Станина")
 
@@ -426,11 +390,13 @@ def build_frame(doc, d, e):
     Z0 = d.BeltPlaneZ.Value - d.FlangeThk.Value          # низ шкива 1
     M1 = V(0, 0, 0)
     M2 = V(d.Motor2X.Value, d.Motor2Y.Value, 0)
-    face2 = d.Motor2Lift.Value + FACE1
+    face1, face2 = d.Motor1FaceZ.Value, d.Motor2FaceZ.Value
     fl = e.FloorZ.Value
     top = fl + e.BaseT.Value                               # верх основания
     wt = e.WallT.Value
     tA, tB = e.PlateAT.Value, e.PlateBT.Value
+    zA0, zA1 = face1 - tA, face1                           # плита 1 под фланцем мотора 1
+    zB0, zB1 = face2 - tB, face2
     gap = 4.0                                              # мотор <-> стенка (ход натяжения)
     xr1 = -NEMA_HALF - gap                                 # задняя стенка, внутр. грань
     xr0 = xr1 - wt
@@ -442,20 +408,24 @@ def build_frame(doc, d, e):
     u1 = (S - M1); u1.normalize()                          # направление натяжения ремня 1
     u2 = (S - M2); u2.normalize()
     slot_h = e.TensionSlot.Value
+    bush_lo = 2.5
+    col_top = Z0 - bush_lo                                 # колонна вала: до нижней втулки
+    # над плитами ходит глаз тяги: R57.5 от оси шкивов + 4 мм + ход натяжения
+    rod_keep = 61.5 + slot_h
 
     # --- основание + стенки + колонна вала (одна печатная деталь) ---
-    base = rounded_rect(e.BaseX0.Value, e.BaseX1.Value, e.BaseY0.Value, e.BaseY1.Value,
+    base = rounded_rect(e.BaseX0.Value, S.x + e.BaseFront.Value, e.BaseY0.Value, e.BaseY1.Value,
                         fl, top, 8.0)
-    wall_rear_lo = box(xr0, xr1, yl0, ymid, top, FACE1)
-    wall_rear_hi = box(xr0, xr1, ymid, yr1, top, face2)
-    wall_left = box(xr0, NEMA_HALF + 5.0, yl0, yl1, top, FACE1)
-    wall_right = box(xr0, M2.x + NEMA_HALF, yr0, yr1, top, face2)
+    wall_rear_lo = box(xr0, xr1, yl0, ymid, top, zA0)
+    wall_rear_hi = box(xr0, xr1, ymid, yr1, top, zB0)
+    wall_left = box(xr0, NEMA_HALF + 5.0, yl0, yl1, top, zA0)
+    wall_right = box(xr0, M2.x + NEMA_HALF, yr0, yr1, top, zB0)
     col_r = 12.0
-    column = cyl(col_r, top, FACE1, S.x, S.y)
-    # ребро от левой стенки к колонне — под «шеей» плиты A, держит её снизу
+    column = cyl(col_r, top, col_top, S.x, S.y)
+    # ребро от левой стенки к колонне: под шкивом 1 и ремнём 1, ниже их
     pa, pb = V(18.0, yl0 + wt / 2.0, 0), V(S.x, S.y, 0)
     rl = (pb - pa).Length
-    rib = box(0, rl, -3.0, 3.0, top, FACE1)
+    rib = box(0, rl, -3.0, 3.0, top, col_top)
     rib.rotate(V(0, 0, 0), V(0, 0, 1), math.degrees(math.atan2(pb.y - pa.y, pb.x - pa.x)))
     rib.translate(pa)
     frame = base.fuse([wall_rear_lo, wall_rear_hi, wall_left, wall_right, column, rib])
@@ -469,61 +439,60 @@ def build_frame(doc, d, e):
     L_plate = 16.0
     holes = []
     nuts_ = []
-    for pads, ztop, t in ((padA, FACE1, tA), (padB, face2, tB)):
+    for pads, ztop, t in ((padA, zA0, tA), (padB, zB0, tB)):
         for p, sl in pads:
             rot = 90.0 if sl.x else 0.0
             zn = ztop - (L_plate - t) + 1.5                 # конец винта на 1.5 ниже гайки
             holes.append(cyl(M3["hole"] / 2.0, ztop - (L_plate - t) - 2, ztop + 1, p.x, p.y))
             holes.append(nut_pocket(M3, zn, p.x, p.y, sl, rot=rot, depth=12))
             nuts_.append((p, zn, ztop + t, rot))
-    # вал M8: отверстие в колонне + гнездо гайки, паз открыт вперёд (+X)
+    # вал M8: болт сверху, гайка в гнезде колонны (паз открыт вперёд, +X).
+    # Длина — самая короткая стандартная, при которой над гайкой остаётся
+    # >= 4 мм пластика колонны: за этот «потолок» гайка тянет всю стопку
     zb_head = Z0 + d.BrgZ2.Value + d.BrgW2.Value + 4.0       # низ головки болта
-    bolt_L = 65.0
+    bolt_L = None
+    for L in (40, 45, 50, 55, 60, 65, 70, 75, 80):
+        zn = zb_head - L + 2.0
+        if zn + M8["nut_m"] + 0.4 <= col_top - 4.0 and zb_head - L >= fl + 1.0:
+            bolt_L = L
+            break
+    if bolt_L is None:
+        raise RuntimeError("вал M8: колонна %.1f мм — гайка не помещается" % (col_top - top))
     z_nut = zb_head - bolt_L + 2.0
-    holes.append(cyl(M8["hole"] / 2.0, z_nut - 4, FACE1 + 1, S.x, S.y))
+    holes.append(cyl(M8["hole"] / 2.0, z_nut - 4, col_top + 1, S.x, S.y))
     holes.append(nut_pocket(M8, z_nut, S.x, S.y, V(1, 0, 0), rot=90.0, depth=20))
     frame = frame.cut(holes).removeSplitter()
     frame = soften(frame, 1.5, (top,), "основание")
     feat(doc, part, "FR_Base", "Основание_станины", frame, PLA)
 
-    # --- плита мотора 1 (z FACE1..FACE1+tA): мотор снизу, болт вала через неё ---
-    zA0, zA1 = FACE1, FACE1 + tA
-    # контур: гладкая оболочка углов и окружности у вала, минус выемка под
-    # мотор 2 (оболочка выпуклая и выемку сама не оставит) со скруглённым
-    # углом — острых коротких рёбер нет, и периметр скругляется
-    rc = 4.0
-    plA = hull_plate([(xr0 + rc, yl0 + rc, rc), (xr0 + rc, ymid - 0.5 - rc, rc),
-                      (NEMA_HALF + 5.0 - rc, yl0 + rc, rc), (NEMA_HALF + 5.0 - rc, ymid - 0.5 - rc, rc),
-                      (S.x, S.y, col_r + 2.0)], zA0, zA1)
-    nx1 = M2.x + NEMA_HALF + 2.0 * abs(u2.x) * slot_h + 2.0       # мотор 2 + ход натяжения + 2
-    notch = rounded_rect(xr0 - 20, nx1, ymid - 0.5, yr1 + 20, zA0 - 1, zA1 + 1, 4.0)
-    plA = plA.cut(notch)
-    cutsA = [cyl(M8["hole"] / 2.0, zA0 - 1, zA1 + 1, S.x, S.y),
-             slot((NEMA_BOSS + 1.0) / 2.0, zA0 - 1, zA0 + 2.5, M1, u1, slot_h),
-             slot(9.0, zA0 - 1, zA1 + 1, M1, u1, slot_h)]
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            c = V(M1.x + sx * NEMA_PCD / 2, M1.y + sy * NEMA_PCD / 2, 0)
-            cutsA.append(slot(M3["hole"] / 2.0, zA0 - 1, zA1 + 1, c, u1, slot_h))
-    for p, _ in padA:
-        cutsA.append(cyl(M3["hole"] / 2.0, zA0 - 1, zA1 + 1, p.x, p.y))
-    plA = soften(plA, 1.0, (zA1,), "плита 1").cut(cutsA)
-    feat(doc, part, "FR_PlateA", "Плита_мотора_1", plA, PLA)
+    # --- плиты моторов: мотор стоит на плите фланцем вниз, вал и ступица
+    #     шкива проходят сквозь неё, буртик Ø22 — в выборке сверху.
+    #     НАТЯЖЕНИЕ РЕМНЯ — сдвигом всей плиты с мотором вдоль ремня: пазы
+    #     ±TensionSlot под винтами плиты к стенкам (их крутят сверху).
+    #     Винты мотора к плите — простые отверстия: мотор крепят на столе
+    #     до ремня. Под ближним к центру винтом мотора проходит ветвь
+    #     ремня, на собранном роботе к нему не подлезть — поэтому
+    #     натягивать сдвигом мотора по плите нельзя.
+    def motor_plate(outline, z0, z1, M, u, pads, name):
+        cuts = [cyl((NEMA_BOSS + 1.0) / 2.0, z1 - 2.5, z1 + 1, M.x, M.y),
+                cyl(9.0, z0 - 1, z1 + 1, M.x, M.y)]
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                cuts.append(cyl(M3["hole"] / 2.0, z0 - 1, z1 + 1,
+                                M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2))
+        for p, _ in pads:
+            cuts.append(slot(M3["hole"] / 2.0, z0 - 1, z1 + 1, p, u, slot_h))
+        return soften(outline, 1.0, (z1,), name).cut(cuts)
 
-    # --- плита мотора 2 (z face2..face2+tB) ---
-    zB0, zB1 = face2, face2 + tB
-    xB1 = 22.0     # дальше вперёд нельзя: там ходит глаз тяги (R57.5 от оси шкивов)
+    plA = rounded_rect(xr0, NEMA_HALF + 5.0, yl0, ymid - 0.5, zA0, zA1, 4.0)
+    plA = plA.cut(cyl(rod_keep, zA0 - 1, zA1 + 1, S.x, S.y))
+    feat(doc, part, "FR_PlateA", "Плита_мотора_1",
+         motor_plate(plA, zA0, zA1, M1, u1, padA, "плита 1"), PLA)
+    xB1 = 22.0     # как у плиты 1: не ближе rod_keep к оси шкивов
     plB = rounded_rect(xr0, xB1, ymid + 0.5, yr1, zB0, zB1, 4.0)
-    cutsB = [slot((NEMA_BOSS + 1.0) / 2.0, zB0 - 1, zB0 + 2.5, M2, u2, slot_h),
-             slot(9.0, zB0 - 1, zB1 + 1, M2, u2, slot_h)]
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            c = V(M2.x + sx * NEMA_PCD / 2, M2.y + sy * NEMA_PCD / 2, 0)
-            cutsB.append(slot(M3["hole"] / 2.0, zB0 - 1, zB1 + 1, c, u2, slot_h))
-    for p, _ in padB:
-        cutsB.append(cyl(M3["hole"] / 2.0, zB0 - 1, zB1 + 1, p.x, p.y))
-    plB = soften(plB, 1.0, (zB1,), "плита 2").cut(cutsB)
-    feat(doc, part, "FR_PlateB", "Плита_мотора_2", plB, PLA)
+    plB = plB.cut(cyl(rod_keep, zB0 - 1, zB1 + 1, S.x, S.y))
+    feat(doc, part, "FR_PlateB", "Плита_мотора_2",
+         motor_plate(plB, zB0, zB1, M2, u2, padB, "плита 2"), PLA)
 
     # --- крепёж плит и моторов ---
     i = 0
@@ -534,20 +503,23 @@ def build_frame(doc, d, e):
         o.Placement.Base = V(p.x, p.y, zseat)
         o = feat(doc, part, "FR_PlNut%d" % i, "Гайка_плиты_M3_%d" % i, nut(M3, rot), STEEL)
         o.Placement.Base = V(p.x, p.y, zn + 0.2)
-    for tag, M, zseat, L in (("A", M1, zA1, 12), ("B", M2, zB1, 10)):
+    # винты моторов — СНИЗУ сквозь плиту в резьбу фланца (головка под плитой)
+    down = App.Rotation(V(1, 0, 0), 180)
+    for tag, M, zseat, L in (("A", M1, zA0, int(tA + 4)), ("B", M2, zB0, int(tB + 4))):
         for k, (sx, sy) in enumerate(((-1, -1), (-1, 1), (1, -1), (1, 1))):
             o = feat(doc, part, "FR_MotScr%s%d" % (tag, k + 1),
                      "Винт_мотора_%s_M3x%d_%d" % ("1" if tag == "A" else "2", L, k + 1),
                      cap_screw(M3, L), DARK)
-            o.Placement.Base = V(M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2, zseat)
+            o.Placement = App.Placement(V(M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2, zseat),
+                                        down)
 
-    # --- вал: болт M8x65 сверху, втулки по внутренним кольцам, гайка в колонне ---
-    feat(doc, part, "FR_ShaftBushLo", "Втулка_вала_нижняя_Ø12/Ø8.2x%.1f" % (Z0 - zA1),
-         tube(6.0, 4.1, zA1, Z0, S.x, S.y), STEEL)
+    # --- вал: болт M8 сверху, втулки по внутренним кольцам, гайка в колонне ---
+    feat(doc, part, "FR_ShaftBushLo", "Втулка_вала_нижняя_Ø12/Ø8.2x%.1f" % bush_lo,
+         tube(6.0, 4.1, col_top, Z0, S.x, S.y), STEEL)
     zt = Z0 + d.BrgZ2.Value + d.BrgW2.Value
     feat(doc, part, "FR_ShaftBushHi", "Втулка_вала_верхняя_Ø12/Ø8.2x4",
          tube(6.0, 4.1, zt, zt + 4.0, S.x, S.y), STEEL)
-    o = feat(doc, part, "FR_ShaftBolt", "Болт_вала_M8x65_ISO4762", cap_screw(M8, bolt_L), DARK)
+    o = feat(doc, part, "FR_ShaftBolt", "Болт_вала_M8x%d_ISO4762" % bolt_L, cap_screw(M8, bolt_L), DARK)
     o.Placement.Base = V(S.x, S.y, zb_head)
     o = feat(doc, part, "FR_ShaftNut", "Гайка_вала_M8_ISO4032", nut(M8, 90.0), STEEL)
     o.Placement.Base = V(S.x, S.y, z_nut + 0.2)
@@ -616,11 +588,24 @@ def build_effector(doc, d, e):
     y_zp = y_pitch + r_zp                      # ось шестерни Z / SG90 №1
 
     # --- кронштейн: хомут на трубе 2 + пластина направляющей + фланец серво ---
+    # рельс по высоте: снизу — где ползун при магните на поле, сверху — где
+    # он при магните вверху. От высоты руки это не зависит: рука может
+    # стоять низко, а каретка всё равно ходит от поля +4 до +38.6
+    rail_z1 = max(tz + capt, zf_low + Z_STROKE + SP_Z1)
     clamp = box(CL_X0, GP_X1, -hw, hw, tz - bot, tz)
-    plate = box(GP_X0, GP_X1, -GP_HW, GP_HW, rail_z0, tz + capt)
-    rib = Part.Face(Part.makePolygon([V(CL_X0 + 6, -2, tz - bot), V(GP_X0, -2, tz - bot),
-                                      V(GP_X0, -2, rail_z0 + 8), V(CL_X0 + 6, -2, tz - bot)])
-                    ).extrude(V(0, 4, 0))
+    plate = box(GP_X0, GP_X1, -GP_HW, GP_HW, rail_z0, rail_z1)
+    ribs = []
+    if rail_z0 + 8 < tz - bot:      # пластина ниже хомута: косынка снизу по оси
+        ribs.append(Part.Face(Part.makePolygon(
+            [V(CL_X0 + 6, -2, tz - bot), V(GP_X0, -2, tz - bot),
+             V(GP_X0, -2, rail_z0 + 8), V(CL_X0 + 6, -2, tz - bot)])).extrude(V(0, 4, 0)))
+    # боковые косынки за пластиной на всю её высоту — снаружи хомута (|y| > hw),
+    # мимо винтов крышки и SG90 №1
+    for y0 in (GP_HW - 4.0, -GP_HW):
+        ribs.append(Part.Face(Part.makePolygon(
+            [V(GP_X0 - 10, y0, tz - bot), V(GP_X0, y0, rail_z0 + 4), V(GP_X0, y0, rail_z1 - 4),
+             V(GP_X0 - 10, y0, tz + capt), V(GP_X0 - 10, y0, tz - bot)])).extrude(V(0, 4, 0)))
+    rib = ribs[0].fuse(ribs[1:]) if len(ribs) > 1 else ribs[0]
     # фланец SG90 №1: лапки ложатся на его заднюю грань x = SERVO_FLANGE_X
     sv_z0 = zp - SG_AXIS_Y                     # где у серво y_s = 0
     fl_y0, fl_y1 = GP_HW - 1.0, y_zp + 5.9 + 3.0
@@ -628,8 +613,8 @@ def build_effector(doc, d, e):
     flange = box(SERVO_FLANGE_X, GP_X1, fl_y0, fl_y1, fl_z0, fl_z1)
     win = box(SERVO_FLANGE_X - 1, GP_X1 + 1, y_zp - 5.9 - 0.3, y_zp + 5.9 + 0.3,
               sv_z0 - 0.3, sv_z0 + 22.5 + 0.3)
-    rail = box(RAIL_NECK[0], RAIL_NECK[1], -RAIL_NECK[2], RAIL_NECK[2], rail_z0, tz + capt) \
-        .fuse(box(RAIL_HEAD[0], RAIL_HEAD[1], -RAIL_HEAD[2], RAIL_HEAD[2], rail_z0, tz + capt))
+    rail = box(RAIL_NECK[0], RAIL_NECK[1], -RAIL_NECK[2], RAIL_NECK[2], rail_z0, rail_z1) \
+        .fuse(box(RAIL_HEAD[0], RAIL_HEAD[1], -RAIL_HEAD[2], RAIL_HEAD[2], rail_z0, rail_z1))
     br = clamp.fuse([plate, rib, flange.cut(win), rail]).removeSplitter()
     cuts = [cyl_x(r_t, CL_X0 - 1, GP_X0, 0, tz)]
     for xs in CL_SCREW_X:

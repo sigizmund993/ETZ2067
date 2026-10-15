@@ -329,8 +329,30 @@ def _cross(Pp, groups_moving, angles=None, cache=None):
     return bad
 
 
+# Рабочая зона захвата: перед зоной 1 — над полем, зоной 2 и по пути к
+# парковке (x полигона >= WORK_X0). Позы сетки, где захват левее или
+# далеко за полигоном, программе не нужны и не проверяются: туда рука
+# не должна ходить (например, при t1 = -110 и почти прямом локте тяга
+# проходит над левым мотором).
+WORK_X0 = 340.0
+WORK_Y = (15.0, 485.0)       # центр захвата не за краем полигона
+
+
+def eff_poly(g, t1, q2):
+    S = g["S"]
+    x = S.x + g["L1"] * math.cos(math.radians(t1)) + g["Le"] * math.cos(math.radians(t1 + q2))
+    y = S.y + g["L1"] * math.sin(math.radians(t1)) + g["Le"] * math.sin(math.radians(t1 + q2))
+    return poly_xy(V(x, y, 0))
+
+
+def in_work(g, t1, q2):
+    px, py = eff_poly(g, t1, q2)
+    return px >= WORK_X0 and WORK_Y[0] <= py <= WORK_Y[1]
+
+
 def sweep(t1_rng=(-110, 10, 10), q2_rng=(56, 156, 8), report=True):
-    """Сетка (t1, q2): плечо и относительный угол локтя. Захват поднят."""
+    """Сетка (t1, q2): плечо и относительный угол локтя, захват поднят.
+    Проверяются позы, где захват в рабочей зоне (in_work)."""
     g = geom()
     old = set_magnet(38.6)
     base = parts()
@@ -338,10 +360,15 @@ def sweep(t1_rng=(-110, 10, 10), q2_rng=(56, 156, 8), report=True):
     seen = set()
     cache = set()
     n = 0
+    skipped = 0
     t1 = t1_rng[0]
     while t1 <= t1_rng[1] + 1e-9:
         q2 = q2_rng[0]
         while q2 <= q2_rng[1] + 1e-9:
+            if not in_work(g, t1, q2):
+                skipped += 1
+                q2 += q2_rng[2]
+                continue
             Pp = pose(base, g, t1, t1 + q2)
             for a, b, v in _cross(Pp, ("shoulder", "lever", "forearm", "rod"),
                                   dict(t1=t1, t2=t1 + q2, q2=q2), cache):
@@ -355,7 +382,8 @@ def sweep(t1_rng=(-110, 10, 10), q2_rng=(56, 156, 8), report=True):
         t1 += t1_rng[2]
     set_magnet(old)
     if report:
-        print("SWEEP: поз %d, t1 %s, q2 %s; замечаний %d" % (n, t1_rng[:2], q2_rng[:2], len(issues)))
+        print("SWEEP: поз %d (ещё %d вне рабочей зоны захвата, x полигона < %.0f), t1 %s, q2 %s; "
+              "замечаний %d" % (n, skipped, WORK_X0, t1_rng[:2], q2_rng[:2], len(issues)))
         for i in issues:
             print("  ", i)
     return issues
@@ -373,6 +401,7 @@ def sweep_cells(report=True):
     low_ok = ("CR_Magnet", "CR_Ext", "CR_Screw")
     issues = []
     worst = 1e9
+    worst_n = None
     for nm, px, py in cells():
         p = robot_xy(px, py)
         sol = ik(g, p.x, p.y)
@@ -382,15 +411,24 @@ def sweep_cells(report=True):
         Pp = pose(base, g, *sol)
         for a, b, v in _cross(Pp, ("shoulder", "lever", "forearm", "rod")):
             issues.append("клетка %s: %s <-> %s, %.1f мм3" % (nm, label(a), label(b), v))
+        # всё подвижное, что оказалось над областью поля (x полигона > 350),
+        # кроме магнита и его удлинителя, должно идти выше стопки из 5 шашек
         for n_, s in Pp.items():
-            if group_of(n_) == "forearm" and not n_.startswith(low_ok):
-                worst = min(worst, s.BoundBox.ZMin - (fz + 25.0))
+            if group_of(n_) == "static" or n_.startswith(low_ok):
+                continue
+            if poly_xy(V(s.BoundBox.XMax, 0, 0))[0] <= 350.0:
+                continue
+            h = s.BoundBox.ZMin - (fz + 25.0)
+            if h < worst:
+                worst, worst_n = h, (n_, nm)
     set_magnet(old)
     if worst < 2.0:
-        issues.append("при захвате с поля детали узла всего на %.1f мм выше стопки из 5 шашек" % worst)
+        issues.append("при захвате с поля %s (клетка %s) всего на %.1f мм выше стопки из 5 шашек"
+                      % (label(worst_n[0]), worst_n[1], worst))
     if report:
-        print("CELLS: над каждой клеткой с магнитом на шашке; запас над стопкой 5 шт: %.1f мм; замечаний %d"
-              % (worst, len(issues)))
+        print("CELLS: над каждой клеткой с магнитом на шашке; ниже всех над полем — %s (клетка %s), "
+              "запас над стопкой 5 шт: %.1f мм; замечаний %d"
+              % (label(worst_n[0]) if worst_n else "-", worst_n[1] if worst_n else "-", worst, len(issues)))
         for i in issues:
             print("  ", i)
     return issues
@@ -437,6 +475,8 @@ def tz(report=True):
     best = None
     for t1 in range(-115, -49, 5):
         for q2 in range(60, 157, 6):
+            if not in_work(g, t1, q2):
+                continue
             Pp = pose(moving, g, t1, t1 + q2)
             vol = 0.0
             for n, s in Pp.items():
@@ -552,10 +592,10 @@ def bearings(report=True):
 # порядок сборки: шаг -> префиксы. Ключ проверяется против деталей
 # с шагом <= шага винта (собранных к этому моменту).
 STEPS = [
-    (10, ("FR_Base", "FR_PlNut", "FR_ShaftNut")),
     (20, ("FR_PlateA", "Body", "FR_MotScrA")),            # мотор 1 к плите на столе
     (21, ("FR_PlateB", "Body001", "FR_MotScrB")),
     (30, ("Pulley", "Driver2")),
+    (35, ("FR_Base", "FR_PlNut", "FR_ShaftNut")),         # основание с гайками
     (40, ("FR_PlScr1", "FR_PlScr2", "FR_PlScr3")),
     (41, ("FR_PlScr4", "FR_PlScr5", "FR_PlScr6")),
     (50, ("FR_ShaftBushLo", "Body003", "BRG_1", "FR_Belt1", "Body_Tube", "Body_Cap", "HW_")),
@@ -629,7 +669,12 @@ def screws(report=True):
             continue
         ax, hp, s = _screw_axis(sh)
         st = step_of(n)
-        before = {m: x for m, x in P.items() if step_of(m) <= st and m != n}
+        if n.startswith(SCREWS_SERVICE):
+            # винт обслуживают на СОБРАННОМ роботе (натяжение ремня):
+            # мешает всё, что есть
+            before = {m: x for m, x in P.items() if m != n}
+        else:
+            before = {m: x for m, x in P.items() if step_of(m) <= st and m != n}
         # 1) путь головки: цилиндр R головки от торца наружу 12 мм
         head = Part.makeCylinder(spec[2] + 0.1, 12.0, hp + ax * 0.05, ax)
         # 2) ключ: цилиндр R ключа ещё на 60 мм
@@ -637,6 +682,28 @@ def screws(report=True):
         hit_h = [m for m, x in before.items() if spec[3] and bb_hit(x, head)
                  and x.common(head).Volume > TOL]
         hit_k = [m for m, x in before.items() if bb_hit(x, key) and x.common(key).Volume > TOL]
+        if hit_k and n.startswith(SCREWS_SERVICE):
+            # Г-образный ключ: короткое плечо 15 мм по оси, длинное 50 мм
+            # вбок — годится, если вбок свободно хотя бы в одну из 12 сторон
+            leg = Part.makeCylinder(spec[1], 15.0, hp + ax * 0.05, ax)
+            hit_leg = [m for m, x in before.items() if bb_hit(x, leg) and x.common(leg).Volume > TOL]
+            e1 = ax.cross(V(1, 0, 0) if abs(ax.x) < 0.9 else V(0, 1, 0)); e1.normalize()
+            e2 = ax.cross(e1)
+            end = hp + ax * 15.0
+            free_dir = None
+            if not hit_leg:
+                for k in range(12):
+                    a = math.radians(30 * k)
+                    dv = e1 * math.cos(a) + e2 * math.sin(a)
+                    arm = Part.makeCylinder(spec[1], 50.0, end - ax * spec[1], dv)
+                    if not [m for m, x in before.items() if bb_hit(x, arm)
+                            and x.common(arm).Volume > TOL]:
+                        free_dir = 30 * k
+                        break
+            if free_dir is not None:
+                hit_k = []
+            else:
+                hit_k = hit_leg or hit_k
         ok = not hit_h and not hit_k
         rows.append((n, st, ok, hit_h, hit_k))
         if not ok:
@@ -649,6 +716,11 @@ def screws(report=True):
         for i in issues:
             print("   !!", i)
     return issues
+
+
+# винты, которые крутят на собранном роботе: натяжение ремней — сдвигом
+# плиты с мотором по пазам, винты плит к стенкам
+SCREWS_SERVICE = ("FR_PlScr",)
 
 
 NUTS_CAPTIVE = ("FR_PlNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut")

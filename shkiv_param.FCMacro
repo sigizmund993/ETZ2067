@@ -75,21 +75,30 @@ INPUTS = [
      "Зубьев на ведущем шкиве (на валу мотора)"),
     ("Ratio",     "App::PropertyFloat",   "1 Передача", 4.0,
      "Передаточное число. Зубья ведомого = round(DriverTeeth * Ratio)"),
-    ("BeltLength",   "App::PropertyLength",  "1 Передача", 280.0,
-     "Длина ремня по каталогу, мм (GT2-280 = 140 зубьев). 280, а не 260: "
-     "с 260 моторы стоят так близко, что глаз тяги на рычаге задевает угол "
-     "правого мотора"),
+    ("BeltLength",   "App::PropertyLength",  "1 Передача", 300.0,
+     "Длина ремня по каталогу, мм (GT2-300 = 150 зубьев). Задаёт, насколько "
+     "моторы позади оси руки. Моторы перевёрнуты и их корпуса на высоте "
+     "тяги: с 280 при t1 = -110 планка тяги задевала левый мотор"),
     ("BeltPitch",    "App::PropertyLength",  "1 Передача", 2.0,
      "Шаг ремня: GT2 = 2 мм"),
     ("BeltWidth", "App::PropertyLength",  "1 Передача", 6.0,
      "Ширина ремня, мм"),
-    ("BeltPlaneZ",        "App::PropertyLength",  "1 Передача", 52.0,
-     "Z нижней кромки венца ВЕДУЩЕГО шкива. Измерено по модели: венец 20T "
-     "занимает z 52.000..59.000. Ведомый подгоняется под эту отметку"),
+    ("BeltPlaneZ",        "App::PropertyLength",  "1 Передача", 17.5,
+     "Z нижней кромки венца первой ступени (глобально, низ левого мотора "
+     "был z 0). Задаёт высоту ВСЕЙ руки: шкивы, плечо, локоть. 17.5 — "
+     "ниже нельзя: винт шарнира локтя опускается до поле+30, а над полем "
+     "стоят стопки по 25 мм. Моторы висят над венцом валом вниз"),
+    ("DrvGap",            "App::PropertyLength",  "1 Передача", 3.0,
+     "Зазор от фланца мотора до ступицы ведущего шкива 20T. Венец шкива "
+     "лежит на DrvGap + 8..15 мм ниже фланца (ступица 7, буртик 1, зубья 7). "
+     "Меньше 2.5 нельзя — ступица упрётся в буртик мотора. Задаёт и высоту "
+     "плиты мотора 1, над которой ходит тяга"),
+    ("MotorLen",          "App::PropertyLength",  "7 Моторы", 40.0,
+     "Длина корпуса NEMA17 (модель Body: корпус 40, буртик 2, вал 24)"),
 
     ("DriverTeeth2",       "App::PropertyInteger", "1 Передача 2", 20,
      "Зубьев на ведущем шкиве ВТОРОЙ ступени (на своём мотоpе)"),
-    ("BeltLength2",   "App::PropertyLength",  "1 Передача 2", 280.0,
+    ("BeltLength2",   "App::PropertyLength",  "1 Передача 2", 300.0,
      "Длина ремня второй ступени. Из неё считается своё межосевое и "
      "положение правого мотора по Y"),
     ("Ratio2",    "App::PropertyFloat",   "1 Передача 2", 4.0,
@@ -190,6 +199,11 @@ INPUTS = [
      "Высота буртика Ø5.5 на проушине хомута 1 под ВНУТРЕННИМ кольцом "
      "623ZZ. Без него наружное кольцо (крутится с хомутом 2) лежит на "
      "хомуте 1 и трётся о него"),
+    ("ClampNutLift",  "App::PropertyLength",  "3 Локоть", 1.2,
+     "На сколько гнёзда гаек хомутов локтя (и шарнира) подняты над нижней "
+     "гранью. Пол 1.2 мм держит гайку, а винт берётся M3x12 вместо M3x16 — "
+     "кончик не торчит под хомутом: там ходит тяга, а под рукой стопки "
+     "шашек"),
     ("PivotGap",      "App::PropertyLength",  "3 Локоть", 1.0,
      "Зазор между торцом первой трубы и проушиной шарнира"),
     ("ElbowLift",     "App::PropertyLength",  "3 Локоть", 3.0,
@@ -206,10 +220,11 @@ INPUTS = [
      "Материал глаза тяги вокруг гнезда подшипника"),
     ("RodBarW",       "App::PropertyLength",  "4 Тяга", 8.0,
      "Ширина планки тяги между глазами"),
-    ("RodStandoff",   "App::PropertyLength",  "4 Тяга", 5.0,
+    ("RodStandoff",   "App::PropertyLength",  "4 Тяга", 3.0,
      "Высота втулки между рычагом (проушиной) и внутренним кольцом "
-     "подшипника тяги. Опускает тягу ниже хомутов предплечья, иначе при "
-     "углах в локте не 90 градусов тяга въезжает в хомут шарнира тяги"),
+     "подшипника тяги. Опускает тягу ниже хомута шарнира тяги (иначе при "
+     "углах в локте не 90 градусов тяга въезжает в него), но не ниже, чем "
+     "надо: под тягой плита мотора 1. Сейчас 2 мм до хомута и 2.5 до плиты"),
 
     ("JointGrip",     "App::PropertyLength",  "4 Тяга", 20.0,
      "На сколько хомут шарнира тяги садится на конец трубы 2"),
@@ -495,8 +510,14 @@ DERIVED = [
      "Y правого мотора: шаг от левого. Ось руки проходит посередине"),
     ("Motor2Lift",   "App::PropertyLength", "6 Производные",
      "{V}.BeltPlaneZ2 - {V}.FlangeThk",
-     "На сколько поднять правый мотор, чтобы его венец совпал с венцом "
+     "На сколько правый мотор выше левого, чтобы его венец совпал с венцом "
      "второго ведомого шкива"),
+    ("Motor1FaceZ",  "App::PropertyLength", "7 Моторы",
+     "{V}.BeltPlaneZ + {V}.DrvGap + 15 mm",
+     "Фланец левого мотора. Моторы ПЕРЕВЁРНУТЫ: стоят фланцем вниз на "
+     "плите, вал вниз, ведущий шкив под плитой на уровне венца ведомого"),
+    ("Motor2FaceZ",  "App::PropertyLength", "7 Моторы",
+     "{V}.Motor1FaceZ + {V}.Motor2Lift", "Фланец правого мотора"),
     ("NutCircumR",       "App::PropertyLength", "6 Производные",
      "{V}.NutAF / sqrt(3)", "Радиус описанной окружности шестигранника"),
     ("NutZ",       "App::PropertyLength", "6 Производные",
@@ -945,7 +966,7 @@ def _clamp_screws(doc, body, xs, zbot, through_h, pfx=None):
             add(doc, body, "SubtractivePrism", "%s_Nut%s" % (pfx, tag),
                 {"Circumradius": "{V}.NutCircumR", "Height": "{V}.NutThk",
                  "Placement.Base.x": xe, "Placement.Base.y": ey,
-                 "Placement.Base.z": zbot},
+                 "Placement.Base.z": zbot + " + {V}.ClampNutLift"},
                 rot=App.Rotation(App.Vector(0, 0, 1), 30), Polygon=6)
             ybase = (ey if sy == "+" else "-({V}.ElbowHalfW + 1 mm)")
             add(doc, body, "SubtractiveBox", "%s_Slot%s" % (pfx, tag),
@@ -954,7 +975,7 @@ def _clamp_screws(doc, body, xs, zbot, through_h, pfx=None):
                  "Height": "{V}.NutThk",
                  "Placement.Base.x": xe + " - {V}.NutAF / 2",
                  "Placement.Base.y": ybase,
-                 "Placement.Base.z": zbot})
+                 "Placement.Base.z": zbot + " + {V}.ClampNutLift"})
 
 
 def _clamp_cap(doc, part, name, label, x0, length, like, pfx=None):
@@ -1043,13 +1064,13 @@ def build_elbow(doc, part):
          "Placement.Base.z": "-{V}.ElbowBot - 1 mm"})
     add(doc, a, "SubtractivePrism", "Elb_PivotNut",
         {"Circumradius": "{V}.NutCircumR", "Height": "{V}.NutThk",
-         "Placement.Base.z": "-{V}.ElbowBot"},
+         "Placement.Base.z": "-{V}.ElbowBot + {V}.ClampNutLift"},
         rot=App.Rotation(App.Vector(0, 0, 1), 30), Polygon=6)
     add(doc, a, "SubtractiveBox", "Elb_PivotSlot",
         {"Length": "{V}.NutAF", "Width": "{V}.ElbowHalfW + 1 mm",
          "Height": "{V}.NutThk",
          "Placement.Base.x": "-{V}.NutAF / 2",
-         "Placement.Base.z": "-{V}.ElbowBot"})
+         "Placement.Base.z": "-{V}.ElbowBot + {V}.ClampNutLift"})
     _clamp_screws(doc, a, ["-{V}.ElbowScrewX1", "-{V}.ElbowScrewX2"],
                   "-{V}.ElbowBot", "{V}.ElbowBot + 2 mm")
     setx(a, "Placement.Base.x", "{V}.PivotX")
@@ -1348,7 +1369,8 @@ def build_pivot_hw(doc, part, vs):
         # нужно для вертикального шарнира
         brg = brg.copy()
         brg.Placement = App.Placement()
-    need = (vs.PivotBrgW.Value + vs.PivotBoss.Value + vs.ElbowBot.Value)
+    need = (vs.PivotBrgW.Value + vs.PivotBoss.Value + vs.ElbowBot.Value
+            - vs.ClampNutLift.Value)
     length = next((L for L in LIB_SCREW_LENGTHS if L >= need), LIB_SCREW_LENGTHS[-1])
     screw = lib_shape(LIB_SCREWS % length)
     nut = lib_shape(LIB_NUT)
@@ -1359,7 +1381,7 @@ def build_pivot_hw(doc, part, vs):
             ("PV_Screw", "Винт_шарнира_M3x%d" % length, screw,
              "{V}.TubeAxisZ + {V}.PivotBoss + {V}.PivotBrgW", (0.30, 0.32, 0.35)),
             ("PV_Nut", "Гайка_шарнира_M3", nut,
-             "{V}.TubeAxisZ - {V}.ElbowBot", (0.55, 0.56, 0.58))):
+             "{V}.TubeAxisZ - {V}.ElbowBot + {V}.ClampNutLift", (0.55, 0.56, 0.58))):
         if shape is None:
             print("  шарнир: нет детали для %s, пропускаю" % label)
             continue
@@ -1410,9 +1432,10 @@ def build_elbow_hw(doc, part, vs):
             doc.removeObject(o.Name)
     doc.recompute()
 
-    # длина: от дна зенковки до низа хомута, чтобы резьба прошла гайку
-    # насквозь (гайка стоит на самом низу, высотой NutThk)
-    need = vs.CapThk.Value - vs.CapWall.Value + vs.ElbowBot.Value
+    # длина: от дна зенковки до низа гнезда гайки, чтобы резьба прошла
+    # гайку насквозь, но не вышла под хомут (гнездо поднято на ClampNutLift)
+    need = (vs.CapThk.Value - vs.CapWall.Value + vs.ElbowBot.Value
+            - vs.ClampNutLift.Value)
     length = next((L for L in LIB_SCREW_LENGTHS if L >= need), LIB_SCREW_LENGTHS[-1])
     screw = lib_shape(LIB_SCREWS % length)
     nut = lib_shape(LIB_NUT)
@@ -1432,7 +1455,7 @@ def build_elbow_hw(doc, part, vs):
                         ("Vint", screw,
                          "%s + {V}.CapThk - {V}.CapWall" % zbase,
                          (0.30, 0.32, 0.35)),
-                        ("Gayka", nut, "%s - {V}.ElbowBot" % zbase,
+                        ("Gayka", nut, "%s - {V}.ElbowBot + {V}.ClampNutLift" % zbase,
                          (0.55, 0.56, 0.58))):
                     o = doc.addObject("Part::Feature",
                                       "EH_%s_%s%d%s" % (kind, tag, i + 1, sy))
@@ -1469,9 +1492,22 @@ def build_motor2(doc):
     if motor is None or drv is None:
         print("  моторы: не нашёл %s / %s, пропускаю" % (MOTOR2_NAME, DRIVER_NAME))
         return None
+    # моторы перевёрнуты валом вниз: поворот 180° вокруг X, корпус над
+    # фланцем. Клон правого мотора берёт геометрию левого БЕЗ его
+    # Placement, поворот задаётся каждому отдельно
+    flip = App.Rotation(App.Vector(1, 0, 0), 180)
+    m1 = doc.getObject("Body")
+    for o, zexpr in ((m1, "{V}.Motor1FaceZ + {V}.MotorLen"),
+                     (motor, "{V}.Motor2FaceZ + {V}.MotorLen"),
+                     (drv, "{V}.Motor1FaceZ - {V}.DrvGap")):
+        if o is None:
+            continue
+        pl = o.Placement
+        pl.Rotation = flip
+        o.Placement = pl
+        setx(o, "Placement.Base.z", zexpr)
     setx(motor, "Placement.Base.x", "{V}.Motor2X")
     setx(motor, "Placement.Base.y", "{V}.Motor2Y")
-    setx(motor, "Placement.Base.z", "{V}.Motor2Lift")
 
     link = doc.getObject(DRV2_NAME)
     if link is None:
