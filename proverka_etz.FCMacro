@@ -169,8 +169,10 @@ def geom():
     S = V(d.PulleyAxisX.Value, d.ArmAxisY.Value, 0)
     L1 = d.PivotX.Value
     lev = d.LeverLen.Value
+    # вылет захвата — ось магнита в фрейме предплечья (от оси локтя)
+    Le = D().getObject("CR_Magnet").Shape.BoundBox.Center.x
     return dict(S=S, L1=L1, lev=lev, t1_0=0.0, t2_0=d.Tube2Angle.Value, lv_0=d.LeverAngle.Value,
-                Le=153.0)
+                Le=Le)
 
 
 def rz(shape, c, ang):
@@ -569,7 +571,7 @@ def bearings(report=True):
         ("тяга — рычаг (A)", "623ZZ (RD_BrgA)", "в глазу тяги; втулка+шайба по внутр. кольцу"),
         ("тяга — шарнир тяги (B)", "623ZZ (RD_BrgB)", "то же"),
         ("шпиндель магнита", "624ZZ x2 (CR_Brg1/2)", "стопка внутр. колец стянута винтом M4"),
-        ("каретка Z", "линейная T-направляющая", "поступательная пара, зазор %.1f" % 0.3),
+        ("каретка Z", "MGN9H на рельсе MGN9", "покупная шариковая линейная направляющая"),
     ]
     issues = []
     # вращающиеся детали касаются только наружных колец: размеры
@@ -603,11 +605,14 @@ STEPS = [
     (61, ("PV_Brg", "Body_Elbow2", "PV_Nut", "PV_Screw")),
     (62, ("Body_Tube2", "Body_Elbow2Cap", "EH_Vint_E2", "EH_Gayka_E2")),
     (63, ("Body_RodJoint", "Body_RodJointCap", "EH_Vint_RJ", "EH_Gayka_RJ")),
-    (64, ("EF_Bracket", "EF_BracketCap", "EF_ClNut", "EF_ClScr")),
+    (64, ("EF_Bracket", "EF_BracketCap", "EF_ClNut", "EF_ClScr", "EF_Insert", "EF_Rail",
+          "EF_RailScr")),
     (65, ("EF_ServoZ", "EF_SvScrZ")),
+    (66, ("CR_Block",)),                                  # каретка MGN9H на рельсе
     (70, ("CR_Carriage", "CR_Brg", "CR_InnerSp", "CR_Ext", "CR_Magnet", "CR_GearSp", "CR_Screw",
           "CR_ServoR", "CR_SvScr")),
     (71, ("CR_GearRt",)),
+    (72, ("CR_BlkScr",)),                                 # плита каретки к MGN9H спереди
     (75, ("EF_GearZ",)),
     (80, ("Body_Prost", "Body_Pulley2", "BRG_2", "FR_Belt2", "FR_ShaftBushHi", "FR_ShaftBolt")),
     (90, ("Body_Rod", "RD_")),
@@ -637,6 +642,7 @@ SCREWS = [
     ("PV_Screw", 1.5, 2.75, False), ("RD_Vint", 1.1, 3.4, True),
     ("EF_ClScr", 1.5, 2.75, True), ("CR_Screw", 1.75, 3.5, True),
     ("EF_SvScrZ", 1.5, 2.0, True), ("CR_SvScr", 1.5, 2.0, True),
+    ("EF_RailScr", 1.5, 2.75, True), ("CR_BlkScr", 1.5, 2.75, True),
 ]
 
 
@@ -843,7 +849,8 @@ RUB_PAIRS = [
                   "Body_ElbowCap", "Body_Elbow2"]),
     ("CR_GearSp", ["CR_Carriage"]), ("CR_Ext", ["CR_Carriage"]), ("CR_Magnet", ["CR_Carriage"]),
     ("CR_InnerSp", ["CR_Carriage"]), ("CR_Screw", ["CR_Carriage"]),
-    ("CR_Carriage", ["EF_Bracket", "EF_ServoZ"]),
+    ("CR_Carriage", ["EF_Bracket", "EF_ServoZ", "EF_Rail", "EF_RailScr"]),
+    ("CR_Block", ["EF_Bracket", "EF_RailScr"]),
 ]
 
 

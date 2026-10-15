@@ -114,12 +114,23 @@ SG_GEAR_Z = 27.0             # низ шестерни, надетой на шл
 CL_X0, CL_X1 = 94.0, 120.0   # хомут кронштейна на трубе 2 (труба кончается на 120)
 CL_SCREW_X = (100.0, 114.0)
 GP_X0, GP_X1, GP_HW = 120.0, 126.0, 16.0          # пластина направляющей
-RAIL_NECK = (126.0, 128.5, 3.0)                    # x0, x1, полуширина
-RAIL_HEAD = (128.5, 131.5, 6.0)
-SLIDE_GAP = 0.3                                    # зазор каретки на рельсе
-SP_X0, SP_X1, SP_HW = 126.3, 138.0, 12.0           # ползун каретки
-SP_Z0, SP_Z1 = 33.0, 78.0                          # ползун/рейка от грани магнита
-SPINDLE_X = 153.0                                  # ось шпинделя = вылет захвата
+# --- покупная линейная направляющая MGN9 (рельс) + MGN9H (каретка) ---
+# размеры по каталогу HIWIN / совместимых (KGT и т. п.):
+# рельс 9 x 6.5, отверстия под M3 с цековкой Ø6 x 3.5, шаг 20, от торца 10;
+# каретка H = 10 (от низа рельса до опорной грани), H1 = 2.2, W = 20,
+# L = 39.9 (с уплотнениями), крепёж 4 x M3 x 3 по 15 (поперёк) x 16 (вдоль)
+RAIL_W, RAIL_H, RAIL_L, RAIL_P, RAIL_E = 9.0, 6.5, 100.0, 20.0, 10.0
+RAIL_CB_D, RAIL_CB_H, RAIL_HOLE = 6.0, 3.5, 3.5
+BLK_H, BLK_H1, BLK_W, BLK_L, BLK_B, BLK_C = 10.0, 2.2, 20.0, 39.9, 15.0, 16.0
+RAIL_X0 = GP_X1                                    # рельс лежит на пластине
+BLK_FACE = RAIL_X0 + BLK_H                         # опорная грань каретки MGN9H
+INSERT_D, INSERT_L = 4.6, 5.0                      # резьбовая вставка M3 в пластике
+SP_X0, SP_X1, SP_HW = BLK_FACE, BLK_FACE + 5.0, 12.0   # печатная плита каретки Z
+SP_Z0, SP_Z1 = 33.0, 78.0                          # рейка от грани магнита
+BLK_ZC = 70.0      # центр каретки MGN9H от грани магнита: её винты выше корпуса
+                   # шпинделя и шестерни, иначе к ним спереди не подлезть
+SP_TOP = BLK_ZC + BLK_L / 2.0 + 2.0                # верх плиты каретки
+SPINDLE_X = 156.0                                  # ось шпинделя = вылет захвата
 HOUS_R, HOUS_Z0, HOUS_Z1 = 9.0, 33.0, 53.0         # корпус шпинделя
 EXT_H = 18.0                                       # удлинитель магнит -> подшипник
 GEAR_M = 1.0
@@ -127,7 +138,8 @@ ZP_TEETH = 22                                      # шестерня оси Z (
 SPG_TEETH, SPG_SHIFT = 26, -0.3                    # шестерня шпинделя
 RTP_TEETH, RTP_SHIFT = 13, +0.3                    # шестерня SG90 №2 (поворот)
 GEAR_W = 5.0
-SERVO_FLANGE_X = 122.0       # опорная грань лапок SG90 №1 (выносит шестерню на рейку)
+SERVO_FLANGE_X = SP_X0 + 18.4 - 27.0   # опорная грань лапок SG90 №1: шестерня Z
+                                       # встаёт ровно в полосу рейки на плите каретки
 Z_STROKE = math.pi * GEAR_M * ZP_TEETH / 2.0       # 180° серво: pi * r
 
 
@@ -488,7 +500,7 @@ def build_frame(doc, d, e):
     plA = plA.cut(cyl(rod_keep, zA0 - 1, zA1 + 1, S.x, S.y))
     feat(doc, part, "FR_PlateA", "Плита_мотора_1",
          motor_plate(plA, zA0, zA1, M1, u1, padA, "плита 1"), PLA)
-    xB1 = 22.0     # как у плиты 1: не ближе rod_keep к оси шкивов
+    xB1 = M2.x + NEMA_HALF + 5.0    # по мотору 2; к оси шкивов не ближе rod_keep (вырез ниже)
     plB = rounded_rect(xr0, xB1, ymid + 0.5, yr1, zB0, zB1, 4.0)
     plB = plB.cut(cyl(rod_keep, zB0 - 1, zB1 + 1, S.x, S.y))
     feat(doc, part, "FR_PlateB", "Плита_мотора_2",
@@ -578,7 +590,13 @@ def build_effector(doc, d, e):
     capt = d.CapThk.Value
     sy = d.ElbowScrewY.Value
     zf_low = e.FloorZ.Value + 4.0 - (d.BeltPlaneZ.Value - d.FlangeThk.Value)   # грань магнита внизу
-    rail_z0 = zf_low + SP_Z0                                               # низ ползуна внизу
+    # рельс: каретка MGN9H ходит от (магнит внизу) до (магнит вверху);
+    # 100-мм рельс ставится по центру этого хода
+    blk_lo = zf_low + BLK_ZC - BLK_L / 2.0
+    blk_hi = zf_low + Z_STROKE + BLK_ZC + BLK_L / 2.0
+    rz0 = (blk_lo + blk_hi) / 2.0 - RAIL_L / 2.0
+    rz1 = rz0 + RAIL_L
+    rail_z0 = min(zf_low + SP_Z0, rz0)                                     # низ пластины
     # высота оси шестерни Z: рейка в зацеплении на всём ходу (по 4 мм запаса)
     zp_lo = zf_low + Z_STROKE + SP_Z0 + 4.0
     zp_hi = zf_low + SP_Z1 - 4.0
@@ -591,7 +609,7 @@ def build_effector(doc, d, e):
     # рельс по высоте: снизу — где ползун при магните на поле, сверху — где
     # он при магните вверху. От высоты руки это не зависит: рука может
     # стоять низко, а каретка всё равно ходит от поля +4 до +38.6
-    rail_z1 = max(tz + capt, zf_low + Z_STROKE + SP_Z1)
+    rail_z1 = max(tz + capt, rz1)
     clamp = box(CL_X0, GP_X1, -hw, hw, tz - bot, tz)
     plate = box(GP_X0, GP_X1, -GP_HW, GP_HW, rail_z0, rail_z1)
     ribs = []
@@ -610,21 +628,41 @@ def build_effector(doc, d, e):
     sv_z0 = zp - SG_AXIS_Y                     # где у серво y_s = 0
     fl_y0, fl_y1 = GP_HW - 1.0, y_zp + 5.9 + 3.0
     fl_z0, fl_z1 = sv_z0 - 4.7 - 1.5, sv_z0 + 27.7 + 1.5
-    flange = box(SERVO_FLANGE_X, GP_X1, fl_y0, fl_y1, fl_z0, fl_z1)
-    win = box(SERVO_FLANGE_X - 1, GP_X1 + 1, y_zp - 5.9 - 0.3, y_zp + 5.9 + 0.3,
+    # фланец вынесен вперёд пластины (шестерня Z должна попасть на рейку
+    # каретки, а та теперь стоит на MGN9H); за его передней стенкой —
+    # карман под лапки, сзади открыт: туда заходит отвёртка
+    flange = box(GP_X0, SERVO_FLANGE_X + 4.0, fl_y0, fl_y1, fl_z0, fl_z1)
+    win = box(GP_X0 - 1, SERVO_FLANGE_X + 5.0, y_zp - 5.9 - 0.3, y_zp + 5.9 + 0.3,
               sv_z0 - 0.3, sv_z0 + 22.5 + 0.3)
-    rail = box(RAIL_NECK[0], RAIL_NECK[1], -RAIL_NECK[2], RAIL_NECK[2], rail_z0, rail_z1) \
-        .fuse(box(RAIL_HEAD[0], RAIL_HEAD[1], -RAIL_HEAD[2], RAIL_HEAD[2], rail_z0, rail_z1))
-    br = clamp.fuse([plate, rib, flange.cut(win), rail]).removeSplitter()
+    tabs = box(GP_X0 - 1, SERVO_FLANGE_X, y_zp - 6.2, y_zp + 6.2, sv_z0 - 5.5, sv_z0 + 28.5)
+    br = clamp.fuse([plate, rib, flange.cut(win).cut(tabs)]).removeSplitter()
     cuts = [cyl_x(r_t, CL_X0 - 1, GP_X0, 0, tz)]
     for xs in CL_SCREW_X:
         for s_ in (1, -1):
             cuts.append(cyl(M3["hole"] / 2.0, tz - bot - 1, tz + 1, xs, s_ * sy))
             cuts.append(nut_pocket(M3, tz - bot, xs, s_ * sy, V(0, s_, 0), rot=0.0, depth=12))
     for ys in SG_HOLES_Y:       # отверстия под саморезы M2 лапок SG90 №1 (Ø1.6)
-        cuts.append(cyl_x(0.8, SERVO_FLANGE_X - 1, GP_X1 + 1, y_zp, sv_z0 + ys))
+        cuts.append(cyl_x(0.8, SERVO_FLANGE_X - 1, SERVO_FLANGE_X + 5, y_zp, sv_z0 + ys))
+    rail_holes = [rz0 + RAIL_E + RAIL_P * i for i in range(int((RAIL_L - 2 * RAIL_E) / RAIL_P) + 1)]
+    for zh_ in rail_holes:      # гнёзда резьбовых вставок M3 под винты рельса
+        cuts.append(cyl_x(INSERT_D / 2.0, RAIL_X0 - INSERT_L, RAIL_X0 + 0.1, 0, zh_))
     br = br.cut(cuts)
     feat(doc, eff, "EF_Bracket", "Кронштейн_Z", br, PLA2)
+
+    # --- рельс MGN9 100 мм на пластине: 5 винтов M3x8 во вставки ---
+    rl = box(RAIL_X0, RAIL_X0 + RAIL_H, -RAIL_W / 2.0, RAIL_W / 2.0, rz0, rz1)
+    for zh_ in rail_holes:
+        rl = rl.cut(cyl_x(RAIL_HOLE / 2.0, RAIL_X0 - 1, RAIL_X0 + RAIL_H + 1, 0, zh_))
+        rl = rl.cut(cyl_x(RAIL_CB_D / 2.0, RAIL_X0 + RAIL_H - RAIL_CB_H, RAIL_X0 + RAIL_H + 1, 0, zh_))
+    feat(doc, eff, "EF_Rail", "Рельс_MGN9_100мм", rl, STEEL)
+    to_x = App.Rotation(V(0, 1, 0), 90)       # ось винта Z -> +X (головкой наружу)
+    for i, zh_ in enumerate(rail_holes):
+        feat(doc, eff, "EF_Insert%d" % (i + 1), "Вставка_резьбовая_M3x5_%d" % (i + 1),
+             tube(INSERT_D / 2.0, 1.5, 0, INSERT_L), (0.80, 0.62, 0.20)).Placement = \
+            App.Placement(V(RAIL_X0 - INSERT_L, 0, zh_), to_x)
+        o = feat(doc, eff, "EF_RailScr%d" % (i + 1), "Винт_рельса_M3x8_%d" % (i + 1),
+                 cap_screw(M3, 8), DARK)
+        o.Placement = App.Placement(V(RAIL_X0 + RAIL_H - RAIL_CB_H, 0, zh_), to_x)
     capb = box(CL_X0, GP_X0, -hw, hw, tz, tz + capt).cut(cyl_x(r_t, CL_X0 - 1, GP_X0 + 1, 0, tz))
     for xs in CL_SCREW_X:
         for s_ in (1, -1):
@@ -667,11 +705,7 @@ def build_effector(doc, d, e):
 
     # --- каретка (всё дальше — в координатах «грань магнита = z 0») ---
     xs_ = SPINDLE_X
-    spine = box(SP_X0, SP_X1, -SP_HW, SP_HW, SP_Z0, SP_Z1)
-    slot_ = box(SP_X0 - 1, RAIL_NECK[1] + SLIDE_GAP / 2, -(RAIL_NECK[2] + SLIDE_GAP),
-                RAIL_NECK[2] + SLIDE_GAP, SP_Z0 - 1, SP_Z1 + 1) \
-        .fuse(box(RAIL_HEAD[0] - SLIDE_GAP, RAIL_HEAD[1] + SLIDE_GAP, -(RAIL_HEAD[2] + SLIDE_GAP),
-                  RAIL_HEAD[2] + SLIDE_GAP, SP_Z0 - 1, SP_Z1 + 1))
+    spine = box(SP_X0, SP_X1, -SP_HW, SP_HW, SP_Z0, SP_TOP)
     # рейка на +Y грани ползуна, ширина по X = под шестерню Z с запасом
     rk = rack(GEAR_M, SP_Z1 - SP_Z0, GEAR_W + 1.0, SP_Z0, 2.0)
     rk.translate(V(gx0 - 0.5, y_pitch, 0))
@@ -688,14 +722,30 @@ def build_effector(doc, d, e):
     lug2 = box(xs_of(0.0), xs_of(-4.7) + 0.5, rt_y - 5.9 - 0.5, rt_y + 5.9 + 0.5, tab_z - 5.0, tab_z)
     arm2 = box(xs_ + 4.0, xs_of(-4.7) + 0.5, rt_y + 5.9 + 0.3, -6.0, tab_z - 5.0, tab_z)
     web2 = box(SP_X1 - 1, xs_of(22.5), rt_y - 5.9 - 0.5, -9.0, HOUS_Z0, tab_z)
-    car = spine.fuse([rk, hous, web, lug1, lug2, arm2, web2]).removeSplitter().cut(slot_)
+    car = spine.fuse([rk, hous, web, lug1, lug2, arm2, web2]).removeSplitter()
+    blk_holes = [(sy_ * BLK_B / 2.0, BLK_ZC + sz_ * BLK_C / 2.0) for sy_ in (-1, 1) for sz_ in (-1, 1)]
+    for yy, zz in blk_holes:    # винты каретки MGN9H — спереди сквозь плиту
+        car = car.cut(cyl_x(M3["hole"] / 2.0, SP_X0 - 1, SP_X1 + 1, yy, zz))
     # гнёзда 624ZZ снизу и сверху, просвет между ними
     car = car.cut([cyl(BRG624["D"] / 2.0, HOUS_Z0 - 1, HOUS_Z0 + BRG624["B"], xs_, 0),
                    cyl(BRG624["D"] / 2.0, HOUS_Z1 - BRG624["B"], HOUS_Z1 + 1, xs_, 0),
                    cyl(3.75, HOUS_Z0, HOUS_Z1, xs_, 0)])
     for ys in SG_HOLES_Y:
         car = car.cut(cyl(0.8, tab_z - 6, tab_z + 1, xs_of(ys), rt_y))
-    feat(doc, carr, "CR_Carriage", "Каретка_Z_ползун_шпиндель", car, PLA2)
+    feat(doc, carr, "CR_Carriage", "Каретка_Z_плита_шпиндель", car, PLA2)
+
+    # каретка MGN9H: стальной корпус с каналом под рельс (шарики не моделируем)
+    blk = box(RAIL_X0 + BLK_H1, BLK_FACE, -BLK_W / 2.0, BLK_W / 2.0,
+              BLK_ZC - BLK_L / 2.0, BLK_ZC + BLK_L / 2.0)
+    blk = blk.cut(box(RAIL_X0 - 1, RAIL_X0 + RAIL_H + 0.3, -RAIL_W / 2.0 - 0.3, RAIL_W / 2.0 + 0.3,
+                      BLK_ZC - BLK_L, BLK_ZC + BLK_L))
+    for yy, zz in blk_holes:
+        blk = blk.cut(cyl_x(1.5, BLK_FACE - 3.0, BLK_FACE + 1, yy, zz))
+    feat(doc, carr, "CR_Block", "Каретка_MGN9H", blk, STEEL)
+    for k, (yy, zz) in enumerate(blk_holes):
+        o = feat(doc, carr, "CR_BlkScr%d" % (k + 1), "Винт_каретки_M3x8_%d" % (k + 1),
+                 cap_screw(M3, 8), DARK)
+        o.Placement = App.Placement(V(SP_X1, yy, zz), App.Rotation(V(0, 1, 0), 90))
 
     # подшипники и стопка внутренних колец шпинделя
     for nm, z0 in (("CR_Brg1", HOUS_Z0), ("CR_Brg2", HOUS_Z1 - BRG624["B"])):
