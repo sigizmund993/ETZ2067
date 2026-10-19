@@ -583,19 +583,12 @@ def tz(report=True):
     if static_out:
         issues.append("неподвижные детали над запретной областью: %s" % ", ".join(static_out))
     best = None
-    for t1 in range(-115, -49, 5):
-        for q2 in range(60, 157, 6):
-            if not in_work(g, t1, q2):
-                continue
-            Pp = pose(moving, g, t1, t1 + q2)
-            if forb_volume(list(Pp.values()), forb, stop=TOL) > TOL:
-                continue
-            # запас: расстояние от подвижных деталей до запретной области
-            dmin = forb_dist(list(Pp.values()), forb)
-            if best is None or dmin > best[0]:
-                best = (dmin, t1, q2)
+    t1, q2 = PARK                  # поза парковки; подробно — в park()
+    Pp = pose(moving, g, t1, t1 + q2)
+    if forb_volume(list(Pp.values()), forb, stop=TOL) <= TOL:
+        best = (forb_dist(list(Pp.values()), forb), t1, q2)
     if best is None:
-        issues.append("не найдено позы парковки, в которой устройство целиком над зонами 1-2")
+        issues.append("в позе парковки PARK устройство выходит за зоны 1-2")
     else:
         park = (best[1], best[1] + best[2])
         Pp = pose(base_p, g, *park)
@@ -653,6 +646,129 @@ def tz(report=True):
     # 7. касаться поля может только захват: при работе ниже стопки только магнит
     if report:
         print("TZ:")
+        for l in lines:
+            print("  ", l)
+        print("   замечаний %d" % len(issues))
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
+# Поза парковки — в ней робот ставят на полигон до старта и в неё же
+# программа возвращает руку после финиша (п. 3.1 ЕТЗ, 10-11 кл.).
+PARK = (136.0, 100.0)          # t1 (плечо), q2 (угол в локте), град: рука сложена
+                               # позади-слева от оси, захват — за фанерой над полигоном.
+                               # Прежняя поза (-100, 90) держала узел над полосой
+                               # зоны 2 (80 мм на узел ~70) — запас 5 мм, при
+                               # ошибке 2° узел выходил за полигон
+PARK_T1_FROM = 10.0            # переезд: из рабочей зоны (t1 <= 10, sweep) при q2 = PARK
+PARK_TOL = 2.0                 # погрешность шаговиков/руки при выставлении, град
+ZONE_TOL = 3.0                 # допуск размеров зон полигона
+
+
+def park(report=True):
+    """До начала и после окончания работы: проекция устройства только в
+    зонах 1 и 2, опора только на зону 1, в позе парковки ничто ни с чем
+    не пересекается. Поза PARK ± PARK_TOL, магнит вверху и внизу."""
+    e = D().getObject("Etz")
+    g = geom()
+    fz = e.FloorZ.Value
+    forb = zone_forbidden_boxes(fz)
+    names = ("слева от полигона (x < 0)", "справа от полигона (x > 600)",
+             "снизу от полигона (y < 0)", "сверху от полигона (y > 500)",
+             "операционное поле (x 350..600, y 80..420)")
+    # дополнительно: целиком ли над зоной 1 (за x 350 — уже зона 2)
+    o = robot_xy(0, 0)
+    z1x = Part.makeBox(1000, 2000, 400.0, V(o.x + 350.0, o.y - 700.0, fz - 1))
+    issues, lines = [], []
+    worst = {}
+    t1p, q2p = PARK
+    for mz in (38.6, 4.0):
+        old = set_magnet(mz)
+        P = parts()
+        set_magnet(old)
+        # опора: до поля достаёт только фанера, и она — в зоне 1
+        low = [n for n, s_ in P.items() if s_.BoundBox.ZMin < fz + 0.5 and n != "FR_Base"]
+        if low:
+            issues.append("магнит +%.1f: кроме основания до поля достают %s" % (mz, ", ".join(low)))
+        for dt in (-PARK_TOL, 0.0, PARK_TOL):
+            for dq in (-PARK_TOL, 0.0, PARK_TOL):
+                t1, q2 = t1p + dt, q2p + dq
+                Pp = pose(P, g, t1, t1 + q2)
+                shapes = list(Pp.items())
+                for k, (bx, nm) in enumerate(zip(forb, names)):
+                    v = forb_volume([s_ for _, s_ in shapes], [bx], stop=TOL)
+                    if v > TOL:
+                        issues.append("t1=%.0f q2=%.0f магнит +%.1f: детали над «%s»" % (t1, q2, mz, nm))
+                        continue
+                    B = bx.BoundBox
+                    cand = sorted((box_dist(s_.BoundBox, B), n) for n, s_ in shapes)
+                    best = (1e9, None)
+                    for lb, n in cand:
+                        if lb >= best[0]:
+                            break
+                        dd = Pp[n].distToShape(bx)[0]
+                        if dd < best[0]:
+                            best = (dd, n)
+                    if nm not in worst or best[0] < worst[nm][0]:
+                        worst[nm] = (best[0], best[1], t1, q2, mz)
+                mv = [s_ for n, s_ in shapes if group_of(n) != "static"]
+                if forb_volume(mv, [z1x], stop=TOL) <= TOL:
+                    d1 = forb_dist(mv, [z1x])
+                    if "z1" not in worst or d1 < worst["z1"][0]:
+                        worst["z1"] = (d1, t1, q2)
+                else:
+                    worst["z1"] = (-1.0, t1, q2)
+                bad = _cross(Pp, ("shoulder", "lever", "forearm", "rod"))
+                if bad:
+                    for a, b, v in bad:
+                        issues.append("парковка t1=%.0f q2=%.0f, магнит +%.1f: %s <-> %s"
+                                      % (t1, q2, mz, label(a), label(b)))
+        # переезд из рабочей зоны: q2 = PARK, плечо от PARK_T1_FROM до PARK шагом 2°
+        # (при q2 ± PARK_TOL); во время работы выходить за полигон можно, нельзя
+        # только задевать
+        if mz == 38.6:
+            npath = 0
+            t = PARK_T1_FROM
+            while t <= t1p + PARK_TOL + 1e-6:
+                for dq in (-PARK_TOL, 0.0, PARK_TOL):
+                    npath += 1
+                    Pp = pose(P, g, t, t + q2p + dq)
+                    for a, b, v in _cross(Pp, ("shoulder", "lever", "forearm", "rod")):
+                        issues.append("переезд на парковку t1=%.0f q2=%.0f: %s <-> %s"
+                                      % (t, q2p + dq, label(a), label(b)))
+                t += 2.0
+            lines.append("переезд из рабочей зоны: q2 = %.0f°, плечо %.0f -> %.0f°, поз %d"
+                         % (q2p, PARK_T1_FROM, t1p + PARK_TOL, npath))
+    # габарит проекции в координатах полигона (по коробкам — с запасом)
+    old = set_magnet(38.6)
+    Pp = pose(parts(), g, t1p, t1p + q2p)
+    set_magnet(old)
+    xs, ys = [], []
+    for s_ in Pp.values():
+        bb = s_.BoundBox
+        for x_, y_ in ((bb.XMin, bb.YMin), (bb.XMax, bb.YMax)):
+            px, py = poly_xy(V(x_, y_, 0))
+            xs.append(px)
+            ys.append(py)
+    lines.append("поза парковки t1=%.0f°, q2=%.0f° (±%.0f°), магнит вверху и внизу"
+                 % (t1p, q2p, PARK_TOL))
+    lines.append("габарит проекции на полигоне: x %.1f..%.1f, y %.1f..%.1f" % (min(xs), max(xs), min(ys), max(ys)))
+    if "z1" in worst:
+        if worst["z1"][0] < 0:
+            lines.append("  подвижные части выходят за зону 1 (над зоной 2) при t1=%.0f q2=%.0f — по ЕТЗ можно"
+                         % worst["z1"][1:])
+        else:
+            lines.append("  всё устройство над ЗОНОЙ 1, запас подвижных частей до x 350: %.1f мм (t1=%.0f, q2=%.0f)"
+                         % worst["z1"])
+    for nm in names:
+        if nm in worst:
+            dd, n, t1, q2, mz = worst[nm]
+            lines.append("  до «%s»: %.1f мм — %s (t1=%.0f, q2=%.0f)" % (nm, dd, label(n), t1, q2))
+            if dd < ZONE_TOL:
+                issues.append("до «%s» меньше допуска зон %.0f мм: %.1f" % (nm, ZONE_TOL, dd))
+    if report:
+        print("PARK (начало и конец работы):")
         for l in lines:
             print("  ", l)
         print("   замечаний %d" % len(issues))
@@ -1047,8 +1163,9 @@ def mass(report=True):
     total = sum(M_.values())
     # перебор поз по всей рабочей зоне + шашка 7 г в захвате + запас
     # на разгон: горизонтальная сила 0.3 g на подвижные массы на высоте их ЦМ
-    for t1 in range(-110, 11, 10):
-        for q2 in range(60, 157, 8):
+    poses_ = [(t1, q2) for t1 in range(-110, 11, 10) for q2 in range(60, 157, 8)] + [PARK]
+    for t1, q2 in poses_:
+        if True:
             Pp = pose(P, g, t1, t1 + q2)
             ms = [(M_[n], s.BoundBox.Center if s.BoundBox.isValid() else V(), group_of(n) != "static")
                   for n, s in Pp.items()]
@@ -1095,7 +1212,7 @@ def run(names=None, log=None):
     отчёт пишется в файл построчно, и его можно читать, пока идёт расчёт.
     """
     import sys, time
-    funcs = [static, bearings, rubbing, gears, tz, sweep, sweep_cells, screws, nuts, mass]
+    funcs = [static, bearings, rubbing, gears, tz, park, sweep, sweep_cells, screws, nuts, mass]
     if names:
         funcs = [f for f in funcs if f.__name__ in names]
     old = sys.stdout
