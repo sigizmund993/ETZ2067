@@ -3,15 +3,16 @@
 #
 # Всё, чего не хватало приводу руки до устройства по ЕТЗ 2026-27:
 #
-#   * СТАНИНА: основание на полигон, стенки, плита мотора 1 (она же опора
-#     вала), плита мотора 2, вал M8 со втулками — стопка внутренних колец
+#   * СТАНИНА: основание — фанера 6 мм, на ней небольшие печатные стойки
+#     (5 под плиты моторов + стойка вала) на вставках M3 и потайных винтах
+#     снизу; плиты моторов, вал M8 со втулками — стопка внутренних колец
 #     608ZZ и проставки зажата болтом, шкивы крутятся только на наружных
-#     кольцах. Пазы натяжения ремней под винтами моторов.
+#     кольцах. Натяжение ремней — сдвигом плит по пазам.
 #   * РЕМНИ GT2 обеих ступеней (огибающая по шкивам) — чтобы проверять
 #     зазоры до них, а не на глаз.
 #   * РАБОЧИЙ УЗЕЛ на конце предплечья: кронштейн-хомут с T-направляющей,
 #     каретка Z на рейке (SG90 + шестерня z22, ход 34.6 мм за 180°),
-#     шпиндель на двух 624ZZ, электромагнит Ø20, поворот 0..360° через
+#     шпиндель на двух 625ZZ, электромагнит Ø25x20 M5, поворот 0..360° через
 #     передачу 13 -> 26 от второго SG90 (180° серво = 360° магнита).
 #   * ПОЛИГОН-ссылка: зоны, лист поля и центры клеток в координатах робота
 #     — для проверки ТЗ прямо в этом документе.
@@ -97,12 +98,13 @@ NEMA_BOSS = 22.0             # центрирующий буртик Ø22 x 2
 
 M3 = dict(d=3.0, dk=5.5, k=3.0, s=2.5, nut_s=5.5, nut_m=2.4, hole=3.4)
 M4 = dict(d=4.0, dk=7.0, k=4.0, s=3.0, nut_s=7.0, nut_m=3.2, hole=4.4)
+M5 = dict(d=5.0, dk=8.5, k=5.0, s=4.0, nut_s=8.0, nut_m=4.7, hole=5.5)
 M8 = dict(d=8.0, dk=13.0, k=8.0, s=6.0, nut_s=13.0, nut_m=6.8, hole=8.4)
 
-BRG624 = dict(d=4.0, D=13.0, B=5.0, d1=6.4)     # 624ZZ, d1 — Ø внутр. кольца
+BRG625 = dict(d=5.0, D=16.0, B=5.0, d1=7.5)     # 625ZZ, d1 — Ø внутр. кольца
 BRG608_D1 = 12.1                                 # Ø внутреннего кольца 608ZZ
 
-MAG_D, MAG_H, MAG_THREAD = 20.0, 15.0, 6.0      # электромагнит KK-P20/15, M4 x 6
+MAG_D, MAG_H, MAG_THREAD = 25.0, 20.0, 6.0      # электромагнит P25/20 12 В 5 кг, M5 x 6
 
 # SG90 (модель из библиотеки): ось выхода (0, 16.6), торец шлица z 29.9,
 # лапки z 15.9..18.4, отверстия лапок y -2.35 и 24.85
@@ -131,8 +133,8 @@ BLK_ZC = 70.0      # центр каретки MGN9H от грани магни�
                    # шпинделя и шестерни, иначе к ним спереди не подлезть
 SP_TOP = BLK_ZC + BLK_L / 2.0 + 2.0                # верх плиты каретки
 SPINDLE_X = 156.0                                  # ось шпинделя = вылет захвата
-HOUS_R, HOUS_Z0, HOUS_Z1 = 9.0, 33.0, 53.0         # корпус шпинделя
-EXT_H = 18.0                                       # удлинитель магнит -> подшипник
+HOUS_R, HOUS_Z0, HOUS_Z1 = 10.5, 33.0, 53.0         # корпус шпинделя
+EXT_H = 13.0                                       # удлинитель магнит -> подшипник
 GEAR_M = 1.0
 ZP_TEETH = 22                                      # шестерня оси Z (на SG90 №1)
 SPG_TEETH, SPG_SHIFT = 26, -0.3                    # шестерня шпинделя
@@ -222,6 +224,19 @@ def cap_screw(m, L):
     head = cyl(m["dk"] / 2.0, 0.0, m["k"])
     key = hexagon(m["s"], m["k"] - 0.6 * m["s"], m["k"] + 0.1)
     return head.cut(key).fuse(cyl(m["d"] / 2.0, -L, 0.0)).removeSplitter()
+
+
+CSK_DK, CSK_K = 6.0, 1.5    # ISO 10642 M3 (90°): головка Ø6
+CSK_SINK = 0.6              # головка утоплена в фанеру на 0.6 — поля касается только фанера
+CSK_L = 10                  # фанера 6 + 4 мм в вставку M3x5
+
+
+def csk_screw(m, L):
+    """ISO 10642: торец головки на z = 0, головка «вверх» (+Z локально),
+    конус и стержень вниз. Длина — с головкой."""
+    head = Part.makeCone(CSK_DK / 2.0, m["d"] / 2.0, CSK_K, V(0, 0, 0), V(0, 0, -1))
+    head = head.cut(hexagon(m["s"], -1.2, 0.1))
+    return head.fuse(cyl(m["d"] / 2.0, -L, -CSK_K + 0.01)).removeSplitter()
 
 
 def nut(m, rot=0.0):
@@ -377,6 +392,7 @@ def container(doc, name, label, parent=None):
 
 
 PLA = (0.93, 0.55, 0.15)       # печатные детали станины
+PLY = (0.86, 0.74, 0.52)       # фанера
 PLA2 = (0.25, 0.55, 0.85)      # печатные детали рабочего узла
 STEEL = (0.62, 0.64, 0.67)
 DARK = (0.30, 0.32, 0.35)
@@ -388,7 +404,7 @@ SERVO = (0.15, 0.35, 0.80)
 # Станина
 # ---------------------------------------------------------------------------
 def build_frame(doc, d, e):
-    """Основание, стенки, плиты моторов, вал шкивов. Глобальные координаты.
+    """Основание (фанера) и печатные стойки, плиты моторов, вал шкивов. Глобальные координаты.
 
     Моторы ПЕРЕВЁРНУТЫ: стоят фланцем вниз на плитах, валы смотрят вниз,
     ведущие шкивы — под плитами, на уровне венцов ведомых. Так вся стопка
@@ -425,28 +441,50 @@ def build_frame(doc, d, e):
     # над плитами ходит глаз тяги: R57.5 от оси шкивов + 4 мм + ход натяжения
     rod_keep = 61.5 + slot_h
 
-    # --- основание + стенки + колонна вала (одна печатная деталь) ---
+    # --- ОСНОВАНИЕ — ФАНЕРА 6 мм (лобзик/фрезер, сверловка по шаблону).
+    #     На ней — небольшие печатные стойки: 5 стоек под винты плит
+    #     моторов (вместо прежних сплошных стенок) и стойка вала.
+    #     Каждая стоит на подошве с резьбовыми вставками M3 снизу и
+    #     притянута к фанере потайными M3x10 СНИЗУ (головки утоплены в
+    #     зенковки, низ фанеры гладкий — робот стоит на полигоне ровно).
     base = rounded_rect(e.BaseX0.Value, S.x + e.BaseFront.Value, e.BaseY0.Value, e.BaseY1.Value,
                         fl, top, 8.0)
-    wall_rear_lo = box(xr0, xr1, yl0, ymid, top, zA0)
-    wall_rear_hi = box(xr0, xr1, ymid, yr1, top, zB0)
-    wall_left = box(xr0, NEMA_HALF + 5.0, yl0, yl1, top, zA0)
-    wall_right = box(xr0, M2.x + NEMA_HALF, yr0, yr1, top, zB0)
-    col_r = 12.0
-    column = cyl(col_r, top, col_top, S.x, S.y)
-    # ребро от левой стенки к колонне: под шкивом 1 и ремнём 1, ниже их
-    pa, pb = V(18.0, yl0 + wt / 2.0, 0), V(S.x, S.y, 0)
-    rl = (pb - pa).Length
-    rib = box(0, rl, -3.0, 3.0, top, col_top)
-    rib.rotate(V(0, 0, 0), V(0, 0, 1), math.degrees(math.atan2(pb.y - pa.y, pb.x - pa.x)))
-    rib.translate(pa)
-    frame = base.fuse([wall_rear_lo, wall_rear_hi, wall_left, wall_right, column, rib])
+    foot_t = 7.0                                           # подошва стоек: вставка 5 + 2
+    ext = 10.0                                             # подошва длиннее стойки с торцов
+    hw = wt / 2.0
+    hl = 9.0                                               # полудлина стойки вдоль стенки
+    ymA, ymB = ymid - 10.0, ymid + 10.0                    # винты плит у задней стенки
+    xw, ylw, yrw = xr0 + hw, yl0 + hw, yr0 + hw
+    posts = []      # (имя, [(x0, x1, y0, y1, z верха)], подошва (x0, x1, y0, y1), вставки [(x, y)])
 
-    # винты плит: по оси стенки, гайка в гнезде внутри стенки, паз — НАРУЖУ
-    xw, ylw, yrw = xr0 + wt / 2.0, yl0 + wt / 2.0, yr0 + wt / 2.0
-    padA = [(V(xw, ylw, 0), V(-1, 0, 0)), (V(xw, ymid - 10.0, 0), V(-1, 0, 0)),
+    def post_y(name, x, y, zt):        # стойка вдоль Y (задняя стенка)
+        posts.append((name, [(x - hw, x + hw, y - hl, y + hl, zt)],
+                      (x - hw, x + hw, y - hl - ext, y + hl + ext),
+                      [(x, y - hl - ext + 5.0), (x, y + hl + ext - 5.0)]))
+
+    def post_x(name, x, y, zt):        # стойка вдоль X (боковые стенки)
+        posts.append((name, [(x - hl, x + hl, y - hw, y + hw, zt)],
+                      (x - hl - ext, x + hl + ext, y - hw, y + hw),
+                      [(x - hl - ext + 5.0, y), (x + hl + ext - 5.0, y)]))
+
+    post_y("FR_Post1", xw, ylw, zA0)                       # зад-лево, плита 1
+    post_x("FR_Post2", 12.0, ylw, zA0)                     # лево, плита 1
+    # задняя средняя — общая для обеих плит, ступенькой: слева до плиты 1,
+    # справа до плиты 2
+    posts.append(("FR_Post3", [(xr0, xr1, ymA - hl, ymid, zA0), (xr0, xr1, ymid, ymB + hl, zB0)],
+                  (xr0, xr1, ymA - hl - ext, ymB + hl + ext),
+                  [(xw, ymA - hl - ext + 5.0), (xw, ymid), (xw, ymB + hl + ext - 5.0)]))
+    post_y("FR_Post4", xw, yrw, zB0)                       # зад-право, плита 2
+    post_x("FR_Post5", 10.0, yrw, zB0)                     # право, плита 2
+
+    col_r = 12.0
+    col_f = 17.0                                           # полуширина подошвы стойки вала
+    col_ins = [(S.x + sx * 12.0, S.y + sy * 12.0) for sx in (-1, 1) for sy in (-1, 1)]
+
+    # винты плит: по оси стойки, гайка в гнезде внутри стенки, паз — НАРУЖУ
+    padA = [(V(xw, ylw, 0), V(-1, 0, 0)), (V(xw, ymA, 0), V(-1, 0, 0)),
             (V(12.0, ylw, 0), V(0, -1, 0))]
-    padB = [(V(xw, ymid + 10.0, 0), V(-1, 0, 0)), (V(xw, yrw, 0), V(-1, 0, 0)),
+    padB = [(V(xw, ymB, 0), V(-1, 0, 0)), (V(xw, yrw, 0), V(-1, 0, 0)),
             (V(10.0, yrw, 0), V(0, 1, 0))]
     L_plate = 16.0
     holes = []
@@ -460,7 +498,7 @@ def build_frame(doc, d, e):
             nuts_.append((p, zn, ztop + t, rot))
     # вал M8: болт сверху, гайка в гнезде колонны (паз открыт вперёд, +X).
     # Длина — самая короткая стандартная, при которой над гайкой остаётся
-    # >= 4 мм пластика колонны: за этот «потолок» гайка тянет всю стопку
+    # >= 4 мм пластика стойки вала: за этот «потолок» гайка тянет всю стопку
     zb_head = Z0 + d.BrgZ2.Value + d.BrgW2.Value + 4.0       # низ головки болта
     bolt_L = None
     for L in (40, 45, 50, 55, 60, 65, 70, 75, 80):
@@ -473,9 +511,35 @@ def build_frame(doc, d, e):
     z_nut = zb_head - bolt_L + 2.0
     holes.append(cyl(M8["hole"] / 2.0, z_nut - 4, col_top + 1, S.x, S.y))
     holes.append(nut_pocket(M8, z_nut, S.x, S.y, V(1, 0, 0), rot=90.0, depth=20))
-    frame = frame.cut(holes).removeSplitter()
-    frame = soften(frame, 1.5, (top,), "основание")
-    feat(doc, part, "FR_Base", "Основание_станины", frame, PLA)
+    # --- печатные стойки: тело + подошва, гнёзда гаек плит и вставки снизу ---
+    ins_all = []
+    for name, cores, (fx0, fx1, fy0, fy1), ins in posts:
+        sh = rounded_rect(fx0, fx1, fy0, fy1, top, top + foot_t, 2.0)
+        sh = sh.fuse([rounded_rect(x0, x1, y0, y1, top, zt, 2.0) for x0, x1, y0, y1, zt in cores])
+        sh = sh.cut(holes + [cyl(INSERT_D / 2.0, top - 1, top + INSERT_L + 0.5, x, y) for x, y in ins])
+        feat(doc, part, name, "Стойка_плиты_%s_печать" % name[-1], sh.removeSplitter(), PLA)
+        ins_all += ins
+    col = rounded_rect(S.x - col_f, S.x + col_f, S.y - col_f, S.y + col_f, top, top + foot_t, 4.0)
+    col = col.fuse(cyl(col_r, top, col_top, S.x, S.y))
+    col = col.cut(holes + [cyl(INSERT_D / 2.0, top - 1, top + INSERT_L + 0.5, x, y) for x, y in col_ins])
+    feat(doc, part, "FR_Column", "Стойка_вала_печать", col.removeSplitter(), PLA)
+    ins_all += col_ins
+
+    # фанера: отверстия под потайные винты (зенковка снизу), под кончик болта вала
+    pcuts = [cyl(4.5, fl - 1, top + 1, S.x, S.y)]
+    for x, y in ins_all:
+        pcuts += [cyl(M3["hole"] / 2.0, fl - 1, top + 1, x, y),
+                  cyl(CSK_DK / 2.0 + 0.2, fl - 1, fl + CSK_SINK, x, y),
+                  Part.makeCone(CSK_DK / 2.0 + 0.2, M3["hole"] / 2.0, CSK_K, V(x, y, fl + CSK_SINK))]
+    base = soften(base, 1.5, (top,), "основание").cut(pcuts).removeSplitter()
+    feat(doc, part, "FR_Base", "Основание_фанера_6мм", base, PLY)
+    for i, (x, y) in enumerate(ins_all):
+        o = feat(doc, part, "FR_BaseIns%d" % (i + 1), "Вставка_резьбовая_M3x5_осн_%d" % (i + 1),
+                 tube(INSERT_D / 2.0, 1.5, 0, INSERT_L), (0.80, 0.62, 0.20))
+        o.Placement.Base = V(x, y, top)
+        o = feat(doc, part, "FR_BaseScr%d" % (i + 1), "Винт_осн_M3x%d_ISO10642_%d" % (CSK_L, i + 1),
+                 csk_screw(M3, CSK_L), DARK)
+        o.Placement = App.Placement(V(x, y, fl + CSK_SINK), App.Rotation(V(1, 0, 0), 180))
 
     # --- плиты моторов: мотор стоит на плите фланцем вниз, вал и ступица
     #     шкива проходят сквозь неё, буртик Ø22 — в выборке сверху.
@@ -726,10 +790,10 @@ def build_effector(doc, d, e):
     blk_holes = [(sy_ * BLK_B / 2.0, BLK_ZC + sz_ * BLK_C / 2.0) for sy_ in (-1, 1) for sz_ in (-1, 1)]
     for yy, zz in blk_holes:    # винты каретки MGN9H — спереди сквозь плиту
         car = car.cut(cyl_x(M3["hole"] / 2.0, SP_X0 - 1, SP_X1 + 1, yy, zz))
-    # гнёзда 624ZZ снизу и сверху, просвет между ними
-    car = car.cut([cyl(BRG624["D"] / 2.0, HOUS_Z0 - 1, HOUS_Z0 + BRG624["B"], xs_, 0),
-                   cyl(BRG624["D"] / 2.0, HOUS_Z1 - BRG624["B"], HOUS_Z1 + 1, xs_, 0),
-                   cyl(3.75, HOUS_Z0, HOUS_Z1, xs_, 0)])
+    # гнёзда 625ZZ снизу и сверху, просвет между ними
+    car = car.cut([cyl(BRG625["D"] / 2.0, HOUS_Z0 - 1, HOUS_Z0 + BRG625["B"], xs_, 0),
+                   cyl(BRG625["D"] / 2.0, HOUS_Z1 - BRG625["B"], HOUS_Z1 + 1, xs_, 0),
+                   cyl(BRG625["d1"] / 2.0 + 0.5, HOUS_Z0, HOUS_Z1, xs_, 0)])
     for ys in SG_HOLES_Y:
         car = car.cut(cyl(0.8, tab_z - 6, tab_z + 1, xs_of(ys), rt_y))
     feat(doc, carr, "CR_Carriage", "Каретка_Z_плита_шпиндель", car, PLA2)
@@ -748,22 +812,22 @@ def build_effector(doc, d, e):
         o.Placement = App.Placement(V(SP_X1, yy, zz), App.Rotation(V(0, 1, 0), 90))
 
     # подшипники и стопка внутренних колец шпинделя
-    for nm, z0 in (("CR_Brg1", HOUS_Z0), ("CR_Brg2", HOUS_Z1 - BRG624["B"])):
-        feat(doc, carr, nm, "Подшипник_шпинделя_624ZZ_%s" % nm[-1],
-             tube(BRG624["D"] / 2.0, BRG624["d"] / 2.0, z0, z0 + BRG624["B"], xs_, 0), STEEL)
-    feat(doc, carr, "CR_InnerSp", "Втулка_шпинделя_Ø6/Ø4.2x%.0f" % (HOUS_Z1 - HOUS_Z0 - 2 * BRG624["B"]),
-         tube(3.0, 2.1, HOUS_Z0 + BRG624["B"], HOUS_Z1 - BRG624["B"], xs_, 0), STEEL)
-    feat(doc, carr, "CR_Ext", "Удлинитель_магнита_Ø6/Ø4.2x%.0f" % EXT_H,
-         tube(3.0, 2.1, MAG_H, MAG_H + EXT_H, xs_, 0), STEEL)
-    mag = cyl(MAG_D / 2.0, 0.0, MAG_H, xs_, 0).cut(cyl(2.0, MAG_H - MAG_THREAD, MAG_H + 1, xs_, 0))
-    feat(doc, carr, "CR_Magnet", "Электромагнит_KK-P20-15_12В", mag, (0.75, 0.15, 0.15))
-    g_sp = involute_gear(GEAR_M, SPG_TEETH, GEAR_W, bore=4.3, shift=SPG_SHIFT, z0=HOUS_Z1 + 1.0)
-    g_sp = g_sp.fuse(tube(3.0, 2.15, HOUS_Z1, HOUS_Z1 + 1.0)).removeSplitter()   # бобышка по внутр. кольцу
+    for nm, z0 in (("CR_Brg1", HOUS_Z0), ("CR_Brg2", HOUS_Z1 - BRG625["B"])):
+        feat(doc, carr, nm, "Подшипник_шпинделя_625ZZ_%s" % nm[-1],
+             tube(BRG625["D"] / 2.0, BRG625["d"] / 2.0, z0, z0 + BRG625["B"], xs_, 0), STEEL)
+    feat(doc, carr, "CR_InnerSp", "Втулка_шпинделя_Ø7/Ø5.2x%.0f" % (HOUS_Z1 - HOUS_Z0 - 2 * BRG625["B"]),
+         tube(3.5, 2.6, HOUS_Z0 + BRG625["B"], HOUS_Z1 - BRG625["B"], xs_, 0), STEEL)
+    feat(doc, carr, "CR_Ext", "Удлинитель_магнита_Ø7/Ø5.2x%.0f" % EXT_H,
+         tube(3.5, 2.6, MAG_H, MAG_H + EXT_H, xs_, 0), STEEL)
+    mag = cyl(MAG_D / 2.0, 0.0, MAG_H, xs_, 0).cut(cyl(M5["d"] / 2.0, MAG_H - MAG_THREAD, MAG_H + 1, xs_, 0))
+    feat(doc, carr, "CR_Magnet", "Электромагнит_P25-20_12В_M5", mag, (0.75, 0.15, 0.15))
+    g_sp = involute_gear(GEAR_M, SPG_TEETH, GEAR_W, bore=5.3, shift=SPG_SHIFT, z0=HOUS_Z1 + 1.0)
+    g_sp = g_sp.fuse(tube(3.5, 2.65, HOUS_Z1, HOUS_Z1 + 1.0)).removeSplitter()   # бобышка по внутр. кольцу
     g_sp.translate(V(xs_, 0, 0))
     feat(doc, carr, "CR_GearSp", "Шестерня_шпинделя_m1_z%d" % SPG_TEETH, g_sp, (0.95, 0.95, 0.95))
     zh = HOUS_Z1 + 1.0 + GEAR_W
     L4 = zh - (MAG_H - MAG_THREAD)
-    o = feat(doc, carr, "CR_Screw", "Винт_шпинделя_M4x%.0f_ISO4762" % L4, cap_screw(M4, L4), DARK)
+    o = feat(doc, carr, "CR_Screw", "Винт_шпинделя_M5x%.0f_ISO4762" % L4, cap_screw(M5, L4), DARK)
     o.Placement.Base = V(xs_, 0, zh)
     s2 = sg90()
     o = feat(doc, carr, "CR_ServoR", "Серво_поворота_SG90", s2, SERVO)

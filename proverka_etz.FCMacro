@@ -98,7 +98,18 @@ ALLOWED = [
 ]
 
 
+_ALLOWED_MEMO = {}
+
+
 def allowed(a, b):
+    k = (a, b)
+    r = _ALLOWED_MEMO.get(k)
+    if r is None:
+        r = _ALLOWED_MEMO[k] = _ALLOWED_MEMO[(b, a)] = _allowed(a, b)
+    return r
+
+
+def _allowed(a, b):
     for p, q in ALLOWED:
         if (a.startswith(p) and b.startswith(q)) or (a.startswith(q) and b.startswith(p)):
             # "Body" не должен ловить Body_*: точное совпадение для коротких имён
@@ -109,11 +120,23 @@ def allowed(a, b):
     return False
 
 
-def bb_hit(a, b, gap=0.0):
-    A, B = a.BoundBox, b.BoundBox
+def box_hit(A, B, gap=0.0):
+    """Пересекаются ли габариты (BoundBox) с зазором gap."""
     return not (A.XMax + gap < B.XMin or B.XMax + gap < A.XMin or
                 A.YMax + gap < B.YMin or B.YMax + gap < A.YMin or
                 A.ZMax + gap < B.ZMin or B.ZMax + gap < A.ZMin)
+
+
+def bb_hit(a, b, gap=0.0):
+    return box_hit(a.BoundBox, b.BoundBox, gap)
+
+
+def box_dist(A, B):
+    """Расстояние между габаритами — нижняя граница расстояния между телами."""
+    dx = max(A.XMin - B.XMax, B.XMin - A.XMax, 0.0)
+    dy = max(A.YMin - B.YMax, B.YMin - A.YMax, 0.0)
+    dz = max(A.ZMin - B.ZMax, B.ZMin - A.ZMax, 0.0)
+    return math.sqrt(dx * dx + dy * dy + dz * dz)
 
 
 def overlap(a, b):
@@ -125,18 +148,52 @@ def overlap(a, b):
         return -1.0
 
 
-def collide(sa, sb, skip_allowed=True):
-    """Пары с пересечением объёмом > TOL между словарями sa и sb."""
+# Тела вращения вокруг оси шкивов: их пересечение с тем, что вращается
+# вокруг этой же оси (плечо, рычаг), от угла не зависит — считаем один раз.
+AXISYM = ("BRG_1", "BRG_2", "FR_ShaftBolt", "FR_ShaftBushLo", "FR_ShaftBushHi", "Body_Prost")
+_AXI_MEMO = {}
+
+
+def _axi_key(na, nb):
+    for x, y in ((na, nb), (nb, na)):
+        if x in AXISYM and group_of(y) in ("shoulder", "lever"):
+            return (x, y)
+    return None
+
+
+def bboxes(d):
+    """Габариты всех деталей словаря — один раз, а не на каждую пару:
+    BoundBox у формы не кэшируется и на ~6000 парах позы стоил секунды."""
+    return {n: s.BoundBox for n, s in d.items()}
+
+
+def collide(sa, sb, skip_allowed=True, ba=None, bb=None):
+    """Пары с пересечением объёмом > TOL между словарями sa и sb.
+    ba, bb — готовые габариты (bboxes), если уже посчитаны."""
+    ba = ba if ba is not None else bboxes(sa)
+    bb = bb if bb is not None else (ba if sb is sa else bboxes(sb))
     bad = []
     for na, a in sa.items():
+        A = ba[na]
         for nb, b in sb.items():
             if na >= nb and sa is sb:
                 continue
             if na == nb:
                 continue
+            if not box_hit(A, bb[nb]):
+                continue
             if skip_allowed and allowed(na, nb):
                 continue
-            v = overlap(a, b)
+            ak = _axi_key(na, nb)
+            if ak is not None and ak in _AXI_MEMO:
+                v = _AXI_MEMO[ak]
+            else:
+                try:
+                    v = a.common(b).Volume
+                except Exception:
+                    v = -1.0
+                if ak is not None:
+                    _AXI_MEMO[ak] = v
             if v > TOL or v < 0:
                 bad.append((na, nb, v))
     return bad
@@ -157,11 +214,19 @@ GROUPS = {
 }
 
 
+_GROUP_MEMO = {}
+
+
 def group_of(n):
-    for g, (exact, pref) in GROUPS.items():
-        if n in exact or n.startswith(pref):
-            return g
-    return "static"
+    r = _GROUP_MEMO.get(n)
+    if r is None:
+        r = "static"
+        for g, (exact, pref) in GROUPS.items():
+            if n in exact or n.startswith(pref):
+                r = g
+                break
+        _GROUP_MEMO[n] = r
+    return r
 
 
 def geom():
@@ -175,11 +240,24 @@ def geom():
                 Le=Le)
 
 
+def rz_pl(c, ang, move=None):
+    """Поворот вокруг вертикали через c на ang (град), затем сдвиг move."""
+    pl = App.Placement(V(0, 0, 0), App.Rotation(V(0, 0, 1), ang), V(c.x, c.y, 0))
+    if move is not None:
+        pl = App.Placement(move, App.Rotation()).multiply(pl)
+    return pl
+
+
+def moved(shape, pl):
+    """Форма в другом положении без копирования геометрии: transformed(copy=False)
+    в ~100 раз быстрее copy() + rotate() и даёт ту же форму."""
+    if pl.isIdentity():
+        return shape
+    return shape.transformed(pl.toMatrix(), copy=False)
+
+
 def rz(shape, c, ang):
-    s = shape.copy()
-    if abs(ang) > 1e-9:
-        s.rotate(V(c.x, c.y, 0), V(0, 0, 1), ang)
-    return s
+    return moved(shape, rz_pl(c, ang))
 
 
 def pose(base, g, t1, t2):
@@ -190,24 +268,12 @@ def pose(base, g, t1, t2):
     A0 = S + V(g["lev"] * math.cos(math.radians(g["lv_0"])), g["lev"] * math.sin(math.radians(g["lv_0"])), 0)
     lv = t2 + 180.0
     A1 = S + V(g["lev"] * math.cos(math.radians(lv)), g["lev"] * math.sin(math.radians(lv)), 0)
-    out = {}
-    for n, sh in base.items():
-        gr = group_of(n)
-        if gr == "static":
-            out[n] = sh
-        elif gr == "shoulder":
-            out[n] = rz(sh, S, t1 - g["t1_0"])
-        elif gr == "lever":
-            out[n] = rz(sh, S, t2 - g["t2_0"])
-        elif gr == "forearm":
-            s = rz(sh, P0, t2 - g["t2_0"])
-            s.translate(P1 - P0)
-            out[n] = s
-        elif gr == "rod":
-            s = rz(sh, A0, t1 - g["t1_0"])
-            s.translate(A1 - A0)
-            out[n] = s
-    return out
+    pls = {"static": App.Placement(),
+           "shoulder": rz_pl(S, t1 - g["t1_0"]),
+           "lever": rz_pl(S, t2 - g["t2_0"]),
+           "forearm": rz_pl(P0, t2 - g["t2_0"], P1 - P0),
+           "rod": rz_pl(A0, t1 - g["t1_0"], A1 - A0)}
+    return {n: moved(sh, pls[group_of(n)]) for n, sh in base.items()}
 
 
 def ik(g, x, y, sign=1):
@@ -278,6 +344,47 @@ def zone_forbidden(fz, h=400.0):
     return big.cut(ok)
 
 
+def zone_forbidden_boxes(fz, h=400.0):
+    """То же, что zone_forbidden, но набором из 5 непересекающихся коробок:
+    слева, справа, спереди, сзади от полигона и область поля между полосами
+    зоны 2. Габарит каждой — сама коробка, поэтому лишних булевых нет
+    (у цельной области габарит накрывает всё устройство)."""
+    o = robot_xy(0, 0)
+    z0 = fz - 1
+    mk = lambda x0, x1, y0, y1: Part.makeBox(x1 - x0, y1 - y0, h, V(o.x + x0, o.y + y0, z0))
+    return [mk(-700, 0, -700, 1300), mk(600, 1300, -700, 1300),
+            mk(0, 600, -700, 0), mk(0, 600, 500, 1300), mk(350, 600, 80, 420)]
+
+
+def forb_volume(shapes, boxes, stop=None):
+    """Объём деталей в запретной области; stop — прервать, как только больше."""
+    vol = 0.0
+    bxs = [b.BoundBox for b in boxes]
+    for s in shapes:
+        sb = s.BoundBox
+        for b, B in zip(boxes, bxs):
+            if box_hit(sb, B):
+                vol += s.common(b).Volume
+                if stop is not None and vol > stop:
+                    return vol
+    return vol
+
+
+def forb_dist(shapes, boxes):
+    """Точное наименьшее расстояние от деталей до запретной области. Пары
+    перебираются по возрастанию расстояния габаритов (нижней границы), и
+    перебор кончается, когда граница не меньше уже найденного."""
+    bxs = [b.BoundBox for b in boxes]
+    cand = sorted((box_dist(s.BoundBox, B), i, j) for i, s in enumerate(shapes)
+                  for j, B in enumerate(bxs))
+    best = 1e9
+    for lb, i, j in cand:
+        if lb >= best:
+            break
+        best = min(best, shapes[i].distToShape(boxes[j])[0])
+    return best
+
+
 # ---------------------------------------------------------------------------
 # Проверки
 # ---------------------------------------------------------------------------
@@ -313,6 +420,7 @@ def _cross(Pp, groups_moving, angles=None, cache=None):
     by = {}
     for n, s in Pp.items():
         by.setdefault(group_of(n), {})[n] = s
+    bxs = {gr: bboxes(d) for gr, d in by.items()}
     bad = []
     names = sorted(by.keys())
     for i in range(len(names)):
@@ -327,7 +435,7 @@ def _cross(Pp, groups_moving, angles=None, cache=None):
                     if key in cache:
                         continue
                     cache.add(key)
-            bad += collide(by[ga], by[gb])
+            bad += collide(by[ga], by[gb], ba=bxs[ga], bb=bxs[gb])
     return bad
 
 
@@ -465,13 +573,13 @@ def tz(report=True):
     # 2. парковка: всё устройство над зонами 1 и 2 (до старта и после финиша).
     #    Ищем позу перебором; берём ту, что с наибольшим запасом до запретной
     #    области. Её же печатаем — это поза, в которую программа паркует руку.
-    forb = zone_forbidden(fz)
+    forb = zone_forbidden_boxes(fz)
     old = set_magnet(38.6)
     base_p = parts()
     set_magnet(old)
     moving = {n: s for n, s in base_p.items() if group_of(n) != "static"}
-    static_out = [n for n, s in base_p.items() if group_of(n) == "static" and bb_hit(s, forb)
-                  and s.common(forb).Volume > TOL]
+    static_out = [n for n, s in base_p.items() if group_of(n) == "static"
+                  and forb_volume([s], forb) > TOL]
     if static_out:
         issues.append("неподвижные детали над запретной областью: %s" % ", ".join(static_out))
     best = None
@@ -480,17 +588,10 @@ def tz(report=True):
             if not in_work(g, t1, q2):
                 continue
             Pp = pose(moving, g, t1, t1 + q2)
-            vol = 0.0
-            for n, s in Pp.items():
-                if bb_hit(s, forb):
-                    vol += s.common(forb).Volume
-                    if vol > TOL:
-                        break
-            if vol > TOL:
+            if forb_volume(list(Pp.values()), forb, stop=TOL) > TOL:
                 continue
             # запас: расстояние от подвижных деталей до запретной области
-            dmin = min(s.distToShape(forb)[0] for s in Pp.values() if bb_hit(s, forb, 15.0)) \
-                if any(bb_hit(s, forb, 15.0) for s in Pp.values()) else 15.0
+            dmin = forb_dist(list(Pp.values()), forb)
             if best is None or dmin > best[0]:
                 best = (dmin, t1, q2)
     if best is None:
@@ -570,7 +671,7 @@ def bearings(report=True):
         ("локоть", "623ZZ (PV_Brg)", "наружное кольцо в хомуте 2, внутреннее под винтом"),
         ("тяга — рычаг (A)", "623ZZ (RD_BrgA)", "в глазу тяги; втулка+шайба по внутр. кольцу"),
         ("тяга — шарнир тяги (B)", "623ZZ (RD_BrgB)", "то же"),
-        ("шпиндель магнита", "624ZZ x2 (CR_Brg1/2)", "стопка внутр. колец стянута винтом M4"),
+        ("шпиндель магнита", "625ZZ x2 (CR_Brg1/2)", "стопка внутр. колец стянута винтом M5"),
         ("каретка Z", "MGN9H на рельсе MGN9", "покупная шариковая линейная направляющая"),
     ]
     issues = []
@@ -597,7 +698,8 @@ STEPS = [
     (20, ("FR_PlateA", "Body", "FR_MotScrA")),            # мотор 1 к плите на столе
     (21, ("FR_PlateB", "Body001", "FR_MotScrB")),
     (30, ("Pulley", "Driver2")),
-    (35, ("FR_Base", "FR_PlNut", "FR_ShaftNut")),         # основание с гайками
+    (33, ("FR_Base", "FR_Post", "FR_Column", "FR_BaseIns", "FR_BaseScr")),  # стойки на фанеру снизу
+    (35, ("FR_PlNut", "FR_ShaftNut")),                    # гайки в стойки
     (40, ("FR_PlScr1", "FR_PlScr2", "FR_PlScr3")),
     (41, ("FR_PlScr4", "FR_PlScr5", "FR_PlScr6")),
     (50, ("FR_ShaftBushLo", "Body003", "BRG_1", "FR_Belt1", "Body_Tube", "Body_Cap", "HW_")),
@@ -631,16 +733,16 @@ def step_of(n):
 
 
 # винты: (префикс, R ключа, R головки, головка заходит снаружи по оси).
-# Ключи: M3 — шестигранник 2.5 (R1.5 по углам), M4 — 3, M8 — 6;
+# Ключи: M3 — шестигранник 2.5 (R1.5 по углам), M4 — 3, M5 — 4, M8 — 6;
 # саморезы SG90 — крестовая отвёртка Ø3. Винт шарнира локтя ставится
 # головкой в карман хомута 2 СНИЗУ, до запрессовки подшипника, — для него
 # проверяется только проход ключа через технологическое отверстие.
 SCREWS = [
     ("FR_MotScr", 1.5, 2.75, True), ("FR_PlScr", 1.5, 2.75, True),
-    ("FR_ShaftBolt", 3.5, 6.5, True),
+    ("FR_ShaftBolt", 3.5, 6.5, True), ("FR_BaseScr", 1.5, 3.1, True),
     ("HW_Vint", 1.5, 2.75, True), ("EH_Vint", 1.5, 2.75, True),
     ("PV_Screw", 1.5, 2.75, False), ("RD_Vint", 1.1, 3.4, True),
-    ("EF_ClScr", 1.5, 2.75, True), ("CR_Screw", 1.75, 3.5, True),
+    ("EF_ClScr", 1.5, 2.75, True), ("CR_Screw", 2.3, 4.25, True),
     ("EF_SvScrZ", 1.5, 2.0, True), ("CR_SvScr", 1.5, 2.0, True),
     ("EF_RailScr", 1.5, 2.75, True), ("CR_BlkScr", 1.5, 2.75, True),
 ]
@@ -763,6 +865,7 @@ def nuts(report=True):
                 issues.append("гайка %s ни в чём не сидит" % label(n))
                 continue
             hs = P[h]
+            hsb = hs.BoundBox
             ax = global_shape(D().getObject(n)).Placement.Rotation.multVec(V(0, 0, 1))
             c = sh.BoundBox.Center
             # 1) в гнезде без натяга
@@ -785,12 +888,11 @@ def nuts(report=True):
                 dv = e1 * math.cos(a) + e2 * math.sin(a)
                 free = True
                 for step in [0.5 * i for i in range(1, 41)]:
-                    m = sh.copy()
-                    m.translate(dv * step)
+                    m = moved(sh, App.Placement(dv * step, App.Rotation()))
+                    if not box_hit(m.BoundBox, hsb):
+                        break
                     if hs.common(m).Volume > TOL:
                         free = False
-                        break
-                    if not bb_hit(m, hs):
                         break
                 if free:
                     ok = True
@@ -799,11 +901,11 @@ def nuts(report=True):
                 for dv in (ax, ax * -1):         # гнездо, открытое вдоль оси
                     free = True
                     for step in [0.5 * i for i in range(1, 41)]:
-                        m = sh.copy(); m.translate(dv * step)
+                        m = moved(sh, App.Placement(dv * step, App.Rotation()))
+                        if not box_hit(m.BoundBox, hsb):
+                            break
                         if hs.common(m).Volume > TOL:
                             free = False; break
-                        if not bb_hit(m, hs):
-                            break
                     if free:
                         ok = True; break
             if not ok:
@@ -912,8 +1014,9 @@ def gears(report=True):
 
 # ---------------------------------------------------------------------------
 MASS_FIXED = {"Body": 280.0, "Body001": 280.0, "EF_ServoZ": 9.0, "CR_ServoR": 9.0,
-              "CR_Magnet": 30.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
-RHO = [(("FR_Base", "FR_Plate", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
+              "CR_Magnet": 45.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
+RHO = [(("FR_Base",), 0.65),                          # фанера берёзовая
+       (("FR_Post", "FR_Column", "FR_Plate", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
          "Body_Cap", "Body_Elbow", "Body_RodJoint", "Body_Rod", "EF_BracketCap", "CR_Gear",
          "EF_Gear", "Body_Prost"), 1.24 * 0.6),       # печать, заполнение ~60 %
        (("Body_Tube",), 2.7)]                          # алюминиевые трубы
@@ -940,13 +1043,14 @@ def mass(report=True):
 
     issues = []
     worst = (1e9, None)
-    total = sum(m_of(n, s) for n, s in P.items())
+    M_ = {n: m_of(n, s) for n, s in P.items()}          # объём — один раз, не в каждой позе
+    total = sum(M_.values())
     # перебор поз по всей рабочей зоне + шашка 7 г в захвате + запас
     # на разгон: горизонтальная сила 0.3 g на подвижные массы на высоте их ЦМ
     for t1 in range(-110, 11, 10):
         for q2 in range(60, 157, 8):
             Pp = pose(P, g, t1, t1 + q2)
-            ms = [(m_of(n, P[n]), s.BoundBox.Center if s.BoundBox.isValid() else V(), group_of(n) != "static")
+            ms = [(M_[n], s.BoundBox.Center if s.BoundBox.isValid() else V(), group_of(n) != "static")
                   for n, s in Pp.items()]
             Le_pt = None
             cm = V(0, 0, 0)
@@ -999,6 +1103,7 @@ def run(names=None, log=None):
     if fh:
         sys.stdout = fh
     res = {}
+    _AXI_MEMO.clear()
     try:
         for f in funcs:
             t = time.time()
