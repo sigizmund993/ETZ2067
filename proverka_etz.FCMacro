@@ -95,6 +95,8 @@ ALLOWED = [
     ("EF_GearZ", "CR_Carriage"), ("CR_GearSp", "CR_GearRt"),
     # саморезы SG90 нарезают резьбу в пластике сами
     ("EF_SvScrZ", "EF_Bracket"), ("CR_SvScr", "CR_Carriage"),
+    ("CAM_SvScr", "CAM_Head"), ("CAM_BoardScr", "CAM_Bracket"),
+    ("CAM_Servo", "CAM_GearSv"),
 ]
 
 
@@ -288,6 +290,19 @@ def ik(g, x, y, sign=1):
     q2 = sign * math.acos(c)
     t1 = math.atan2(dy, dx) - math.atan2(Le * math.sin(q2), L1 + Le * math.cos(q2))
     return math.degrees(t1), math.degrees(t1 + q2)
+
+
+def set_cam(a):
+    """Угол консоли камеры (Etz.CamAngle); возвращает прежний."""
+    e = D().getObject("Etz")
+    if not hasattr(e, "CamAngle"):
+        return None
+    if a is None:
+        return None
+    old = e.CamAngle.Value
+    e.CamAngle = a
+    D().recompute()
+    return old
 
 
 def set_magnet(z):
@@ -683,6 +698,7 @@ def park(report=True):
     issues, lines = [], []
     worst = {}
     t1p, q2p = PARK
+    oc = set_cam(e.CamStow.Value)          # до старта и после финиша консоль сложена
     for mz in (38.6, 4.0):
         old = set_magnet(mz)
         P = parts()
@@ -744,6 +760,7 @@ def park(report=True):
     old = set_magnet(38.6)
     Pp = pose(parts(), g, t1p, t1p + q2p)
     set_magnet(old)
+    set_cam(oc)
     xs, ys = [], []
     for s_ in Pp.values():
         bb = s_.BoundBox
@@ -777,6 +794,120 @@ def park(report=True):
     return issues
 
 
+CAM_FOV = (60.0, 47.0)          # IMX179 AF: по длинной стороне кадра (вдоль Y полигона), по короткой
+CAM_FOV_MARGIN = 2.0            # град — запас у края кадра
+
+
+def cam(report=True):
+    """Камера на откидной консоли: в работе (CamWork) объектив над листом и
+    видит весь лист с допусками (сдвиг 5 мм, поворот 3°) и стопки до 5;
+    вид на клетки и метки не загорожен рукой в позе парковки; консоль
+    поворачивается из сложенного положения в рабочее без касаний; в работе
+    всё подвижное руки ниже камеры."""
+    doc = D()
+    e = doc.getObject("Etz")
+    issues, lines = [], []
+    if not hasattr(e, "CamAngle"):
+        return ["нет камеры (Etz.CamAngle)"]
+    g = geom()
+    fz = e.FloorZ.Value
+    stow, work = e.CamStow.Value, e.CamWork.Value
+    oc = set_cam(work)
+    old = set_magnet(38.6)
+    P = parts()
+    set_magnet(old)
+    lens = P["CAM_Lens"].BoundBox
+    Lc = V((lens.XMin + lens.XMax) / 2.0, (lens.YMin + lens.YMax) / 2.0, lens.ZMin)
+    h = Lc.z - fz
+    lp = poly_xy(Lc)
+    lines.append("объектив над полем %.0f мм, над точкой полигона (%.1f, %.1f) — центр листа (475, 250)"
+                 % (h, lp[0], lp[1]))
+    # 1. поле зрения: углы листа с допусками, на поле и на высоте стопки из 5
+    worst = 1e9
+    c = (475.0, 250.0)
+    for dx in (-5, 5):
+        for dy in (-5, 5):
+            for rot in (-3, 3):
+                a = math.radians(rot)
+                for sx in (-1, 1):
+                    for sy in (-1, 1):
+                        x, y = sx * 105.0, sy * 148.5
+                        px = c[0] + x * math.cos(a) - y * math.sin(a) + dx
+                        py = c[1] + x * math.sin(a) + y * math.cos(a) + dy
+                        q = robot_xy(px, py)
+                        for zz in (0.0, 25.0):
+                            dz = h - zz
+                            ay = math.degrees(math.atan2(abs(q.y - Lc.y), dz))
+                            ax = math.degrees(math.atan2(abs(q.x - Lc.x), dz))
+                            worst = min(worst, CAM_FOV[0] / 2.0 - ay, CAM_FOV[1] / 2.0 - ax)
+    lines.append("поле зрения %g x %g°: весь лист (сдвиг ±5, поворот ±3°, и на поле, и на стопке из 5) "
+                 "в кадре, запас до края кадра %.1f°" % (CAM_FOV[0], CAM_FOV[1], worst))
+    if worst < CAM_FOV_MARGIN:
+        issues.append("лист с допусками не помещается в кадр (запас %.1f° < %.1f°)" % (worst, CAM_FOV_MARGIN))
+    # 2. разрешение: мм на пиксель в центре и на краю (3264 px по длинной стороне)
+    span = 2 * h * math.tan(math.radians(CAM_FOV[0] / 2.0))
+    lines.append("кадр на поле %.0f x %.0f мм; 8 Мп: %.1f пикс/мм — модуль QR 21x21 на 15 мм = %.1f пикс"
+                 % (span, 2 * h * math.tan(math.radians(CAM_FOV[1] / 2.0)), 3264.0 / span,
+                    3264.0 / span * 15.0 / 21.0))
+    # 3. не загорожено: рука в позе парковки, лучи на центры клеток и метки
+    Pp = pose(P, g, PARK[0], PARK[0] + PARK[1])
+    targets = [(nm, px, py) for nm, px, py in cells()]
+    targets += [("ArUco27", 563.0, 126.5), ("ArUco28", 563.0, 350.5), ("ArUco29", 395.0, 378.5)]
+    blocked = []
+    for nm, px, py in targets:
+        q = robot_xy(px, py)
+        for zz in (5.0, 25.0):
+            seg = Part.makeLine(V(Lc.x, Lc.y, Lc.z - 0.1), V(q.x, q.y, fz + zz))
+            sb = seg.BoundBox
+            for n, s_ in Pp.items():
+                if n in ("CAM_Lens",):
+                    continue
+                if not box_hit(s_.BoundBox, sb):
+                    continue
+                if s_.distToShape(seg)[0] < 1e-6:
+                    blocked.append("%s(+%g): %s" % (nm, zz, n))
+                    break
+    lines.append("лучи на %d клеток/меток (верх шашки и стопки из 5): загорожено %d"
+                 % (len(targets), len(blocked)))
+    if blocked:
+        issues.append("вид загорожен: " + ", ".join(blocked[:8]))
+    # 4. в работе всё подвижное руки ниже камеры (высоты от позы не зависят)
+    cam_low = min(s_.BoundBox.ZMin for n, s_ in P.items() if n.startswith(("CAM_Lens", "CAM_Board",
+                                                                         "CAM_Bracket", "CAM_Boom",
+                                                                         "CAM_Hub", "CAM_Arm", "CAM_Br")))
+    arm_hi = max(s_.BoundBox.ZMax for n, s_ in P.items() if group_of(n) != "static")
+    lines.append("консоль с камерой от z %.0f, рука до z %.0f: зазор %.0f мм в любой позе"
+                 % (cam_low, arm_hi, cam_low - arm_hi))
+    if cam_low - arm_hi < 10.0:
+        issues.append("консоль камеры ближе 10 мм к руке по высоте")
+    # 5. поворот консоли stow -> work без касаний (шаг 4°), гнутся только поворотные детали
+    boom = [o.Name for o in doc.getObject("Part_CamBoom").Group]
+    n_ok = 0
+    a = stow
+    while True:
+        set_cam(a)
+        Q = parts()
+        mv = {n: s_ for n, s_ in Q.items() if n in boom}
+        rest = {n: s_ for n, s_ in Q.items() if n not in boom}
+        for x, y, v in collide(mv, rest):
+            issues.append("поворот консоли %.0f°: %s <-> %s" % (a, label(x), label(y)))
+        n_ok += 1
+        if a <= work + 1e-6:
+            break
+        a = max(work, a - 4.0)
+    lines.append("консоль: сложена %.1f° -> в работе %.1f° (поворот %.1f°, SG90 %.0f° через z13 -> z30), "
+                 "проверено положений %d" % (stow, work, stow - work, (stow - work) * 30.0 / 13.0, n_ok))
+    set_cam(oc)
+    if report:
+        print("CAM:")
+        for l in lines:
+            print("  ", l)
+        print("   замечаний %d" % len(issues))
+        for i in issues:
+            print("   !!", i)
+    return issues
+
+
 def bearings(report=True):
     """Таблица вращательных пар — по построению модели."""
     doc = D()
@@ -789,6 +920,7 @@ def bearings(report=True):
         ("тяга — шарнир тяги (B)", "623ZZ (RD_BrgB)", "то же"),
         ("шпиндель магнита", "625ZZ x2 (CR_Brg1/2)", "стопка внутр. колец стянута винтом M5"),
         ("каретка Z", "MGN9H на рельсе MGN9", "покупная шариковая линейная направляющая"),
+        ("консоль камеры", "625ZZ x2 (CAM_Brg1/2)", "ось M5 неподвижна, внутр. кольца на буртике головы"),
     ]
     issues = []
     # вращающиеся детали касаются только наружных колец: размеры
@@ -796,7 +928,8 @@ def bearings(report=True):
         issues.append("проставка шире внутреннего кольца 608ZZ")
     if min(d.ShaftHoleD.Value, d.ShaftHoleD2.Value) < d.SpacerOD.Value + 1.0:
         issues.append("упор шкива ближе 0.5 мм к проставке/втулке")
-    for n in ("BRG_1", "BRG_2", "PV_Brg", "RD_BrgA", "RD_BrgB", "CR_Brg1", "CR_Brg2"):
+    for n in ("BRG_1", "BRG_2", "PV_Brg", "RD_BrgA", "RD_BrgB", "CR_Brg1", "CR_Brg2",
+              "CAM_Brg1", "CAM_Brg2"):
         if doc.getObject(n) is None:
             issues.append("нет подшипника %s" % n)
     if report:
@@ -814,7 +947,8 @@ STEPS = [
     (20, ("FR_PlateA", "Body", "FR_MotScrA")),            # мотор 1 к плите на столе
     (21, ("FR_PlateB", "Body001", "FR_MotScrB")),
     (30, ("Pulley", "Driver2")),
-    (33, ("FR_Base", "FR_Post", "FR_Column", "FR_BaseIns", "FR_BaseScr")),  # стойки на фанеру снизу
+    (33, ("FR_Base", "FR_Post", "FR_Column", "FR_BaseIns", "FR_BaseScr",
+          "CAM_Foot", "CAM_BaseIns", "CAM_BaseScr")),  # стойки на фанеру снизу
     (35, ("FR_PlNut", "FR_ShaftNut")),                    # гайки в стойки
     (40, ("FR_PlScr1", "FR_PlScr2", "FR_PlScr3")),
     (41, ("FR_PlScr4", "FR_PlScr5", "FR_PlScr6")),
@@ -834,6 +968,13 @@ STEPS = [
     (75, ("EF_GearZ",)),
     (80, ("Body_Prost", "Body_Pulley2", "BRG_2", "FR_Belt2", "FR_ShaftBushHi", "FR_ShaftBolt")),
     (90, ("Body_Rod", "RD_")),
+    # камера: стойка мачты — вместе с остальными стойками (шаг 33)
+    (93, ("CAM_Mast", "CAM_FootScr", "CAM_FootNut")),
+    (94, ("CAM_Head", "CAM_HeadScr", "CAM_HeadNut", "CAM_AxNut", "CAM_Servo", "CAM_SvScr")),
+    (95, ("CAM_Hub", "CAM_Brg", "CAM_SpIn", "CAM_SpTop", "CAM_AxBolt")),
+    (96, ("CAM_Boom", "CAM_ArmScr", "CAM_ArmNut")),
+    (97, ("CAM_Bracket", "CAM_BrScr", "CAM_BrNut", "CAM_Board", "CAM_Lens", "CAM_BoardScr")),
+    (98, ("CAM_GearSv",)),                                # шестерня на шлиц — консоль сложена
 ]
 
 
@@ -861,6 +1002,10 @@ SCREWS = [
     ("EF_ClScr", 1.5, 2.75, True), ("CR_Screw", 2.3, 4.25, True),
     ("EF_SvScrZ", 1.5, 2.0, True), ("CR_SvScr", 1.5, 2.0, True),
     ("EF_RailScr", 1.5, 2.75, True), ("CR_BlkScr", 1.5, 2.75, True),
+    ("CAM_BaseScr", 1.5, 3.1, True), ("CAM_FootScr", 1.5, 2.75, True),
+    ("CAM_HeadScr", 1.5, 2.75, True), ("CAM_AxBolt", 2.3, 4.25, True),
+    ("CAM_ArmScr", 1.5, 2.75, True), ("CAM_BrScr", 1.5, 2.75, True),
+    ("CAM_SvScr", 1.5, 2.0, True), ("CAM_BoardScr", 1.5, 1.9, True),
 ]
 
 
@@ -947,7 +1092,8 @@ def screws(report=True):
 SCREWS_SERVICE = ("FR_PlScr",)
 
 
-NUTS_CAPTIVE = ("FR_PlNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut")
+NUTS_CAPTIVE = ("FR_PlNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut",
+                "CAM_FootNut", "CAM_HeadNut", "CAM_AxNut", "CAM_ArmNut", "CAM_BrNut")
 NUTS_OPEN = ("RD_Gayka",)
 
 
@@ -957,7 +1103,8 @@ def _holder(P, n, sh):
     big.scale(1.3, sh.BoundBox.Center)
     for m, x in P.items():
         if m == n or m.startswith(("FR_PlScr", "FR_ShaftBolt", "HW_Vint", "EH_Vint", "PV_Screw",
-                                    "EF_ClScr")):
+                                    "EF_ClScr", "CAM_FootScr", "CAM_HeadScr", "CAM_AxBolt",
+                                    "CAM_ArmScr", "CAM_BrScr", "CAM_Mast", "CAM_Boom")):
             continue
         if not bb_hit(x, big):
             continue
@@ -1069,6 +1216,8 @@ RUB_PAIRS = [
     ("CR_InnerSp", ["CR_Carriage"]), ("CR_Screw", ["CR_Carriage"]),
     ("CR_Carriage", ["EF_Bracket", "EF_ServoZ", "EF_Rail", "EF_RailScr"]),
     ("CR_Block", ["EF_Bracket", "EF_RailScr"]),
+    ("CAM_Hub", ["CAM_Head", "CAM_SpIn", "CAM_SpTop", "CAM_AxBolt", "CAM_Mast", "CAM_Servo",
+                 "CAM_SvScr"]),
 ]
 
 
@@ -1130,19 +1279,23 @@ def gears(report=True):
 
 # ---------------------------------------------------------------------------
 MASS_FIXED = {"Body": 280.0, "Body001": 280.0, "EF_ServoZ": 9.0, "CR_ServoR": 9.0,
+              "CAM_Servo": 9.0, "CAM_Board": 12.0, "CAM_Lens": 6.0,
               "CR_Magnet": 45.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
 RHO = [(("FR_Base",), 0.65),                          # фанера берёзовая
-       (("FR_Post", "FR_Column", "FR_Plate", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
+       (("FR_Post", "FR_Column", "FR_Plate", "CAM_Foot", "CAM_Head", "CAM_Hub", "CAM_Bracket",
+         "CAM_GearSv", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
          "Body_Cap", "Body_Elbow", "Body_RodJoint", "Body_Rod", "EF_BracketCap", "CR_Gear",
          "EF_Gear", "Body_Prost"), 1.24 * 0.6),       # печать, заполнение ~60 %
-       (("Body_Tube",), 2.7)]                          # алюминиевые трубы
+       (("Body_Tube", "CAM_Mast", "CAM_Boom"), 2.7)]                          # алюминиевые трубы
 
 
 def mass(report=True):
     g = geom()
     e = D().getObject("Etz")
     old = set_magnet(38.6)
+    oc = set_cam(e.CamWork.Value)          # в работе консоль над полем — хуже для «перед»
     P = parts()
+    set_cam(oc)
     set_magnet(old)
     fz = e.FloorZ.Value
     base_bb = P["FR_Base"].BoundBox
@@ -1212,7 +1365,7 @@ def run(names=None, log=None):
     отчёт пишется в файл построчно, и его можно читать, пока идёт расчёт.
     """
     import sys, time
-    funcs = [static, bearings, rubbing, gears, tz, park, sweep, sweep_cells, screws, nuts, mass]
+    funcs = [static, bearings, rubbing, gears, tz, park, cam, sweep, sweep_cells, screws, nuts, mass]
     if names:
         funcs = [f for f in funcs if f.__name__ in names]
     old = sys.stdout
