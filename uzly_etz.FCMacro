@@ -12,7 +12,7 @@
 #     зазоры до них, а не на глаз.
 #   * РАБОЧИЙ УЗЕЛ на конце предплечья: кронштейн-хомут с T-направляющей,
 #     каретка Z на рейке (SG90 + шестерня z22, ход 34.6 мм за 180°),
-#     шпиндель на двух 625ZZ, вакуумный захват — 3 присоски DP8 на печатном
+#     шпиндель на двух 625ZZ, вакуумный захват — присоска DP8 на печатном
 #     держателе, поворот 0..360° через передачу 13 -> 26 от второго SG90
 #     (180° серво = 360° захвата).
 #   * ПОЛИГОН-ссылка: зоны, лист поля и центры клеток в координатах робота
@@ -56,7 +56,7 @@ INPUTS = [
      "Поверхность полигона в координатах робота. Низ левого мотора — z 0, "
      "под ним 1 мм зазора и основание 6 мм"),
     ("MagnetZ", "App::PropertyLength", "2 Поза", 30.0,
-     "Высота рабочей грани захвата (губ присосок) над полем. 5 = касается "
+     "Высота рабочей грани захвата (губы присоски) над полем. 5 = касается "
      "шашки, лежащей на поле (4 — поджата на 1 мм); 25 = верх стопки из 5"),
     ("BaseT", "App::PropertyLength", "3 Станина", 6.0, "Толщина основания"),
     ("WallT", "App::PropertyLength", "3 Станина", 10.0,
@@ -119,19 +119,17 @@ M8 = dict(d=8.0, dk=13.0, k=8.0, s=6.0, nut_s=13.0, nut_m=6.8, hole=8.4)
 BRG625 = dict(d=5.0, D=16.0, B=5.0, d1=7.5)     # 625ZZ, d1 — Ø внутр. кольца
 BRG608_D1 = 12.1                                 # Ø внутреннего кольца 608ZZ
 
-# вакуумный захват: 3 присоски DP8 (сильфон 1.5 гофра, чертёж — Screenshot_20261101-164036):
+# вакуумный захват: 1 присоска DP8 на оси шпинделя (сильфон 1.5 гофра, чертёж — Screenshot_20261101-164036):
 # высота 15, верх Ø12, губа Ø8, канал Ø2. Гнездо сверху: ВХОД Ø4.2 x 3, под ним
 # расширение Ø6.8 x 2 — присоска защёлкивается на штуцер-грибок
 CUP_H, CUP_TOP_R, CUP_LIP_R = 15.0, 6.0, 4.0
 CUP_SOCK = ((4.2, 3.0), (6.8, 2.0))           # гнездо присоски сверху вниз: (Ø, глубина)
 HEAD_CH = 0.6                 # заходная фаска на головке грибка (проходит вход Ø4.2)
-CUP_N, CUP_RC = 3, 7.5        # на окружности R7.5 через 120°: верхи Ø12 не касаются (13 мм
-                              # между осями), губы Ø8 — внутри верха шашки Ø26 (до R11.5)
-HOLD_R, HOLD_Z0, HOLD_Z1 = 14.0, CUP_H, 26.0   # держатель присосок (печать)
-RING_R0, RING_R1, RING_Z0, RING_Z1 = 6.0, 9.0, 16.3, 18.3   # кольцевой вакуумный канал
+HOLD_R, HOLD_Z0, HOLD_Z1 = 9.0, CUP_H, 27.0    # держатель присоски (печать)
+CH_Z = HOLD_Z0 + 1.8          # ось поперечного вакуумного канала: штуцер присоски -> штуцер трубки
 NIP_BORE = 1.0                # канал в штуцере под присоску, R (Ø2 — как канал присоски; Ø1.6 FDM затягивает)
-BARB_A, BARB_R1 = 270.0, 20.0  # штуцер-ёлочка под силикон 3x5: направление, конец (R от оси);
-                               # сзади на R23.5 рельс — дальше выносить нельзя
+BARB_A, BARB_R1 = 270.0, HOLD_R + 6.0   # штуцер-ёлочка под силикон 3x5: направление, конец (R от оси);
+                                         # сзади на R23.5 рельс
 
 # SG90 (модель из библиотеки): ось выхода (0, 16.6), торец шлица z 29.9,
 # лапки z 15.9..18.4, отверстия лапок y -2.35 и 24.85
@@ -161,7 +159,7 @@ BLK_ZC = 70.0      # центр каретки MGN9H от грани магни�
 SP_TOP = BLK_ZC + BLK_L / 2.0 + 2.0                # верх плиты каретки
 SPINDLE_X = 156.0                                  # ось шпинделя = вылет захвата
 HOUS_R, HOUS_Z0, HOUS_Z1 = 10.5, 33.0, 53.0         # корпус шпинделя
-EXT_H = HOUS_Z0 - HOLD_Z1                          # удлинитель держатель -> подшипник (7)
+EXT_H = HOUS_Z0 - HOLD_Z1                          # удлинитель держатель -> подшипник (6)
 GEAR_M = 1.0
 ZP_TEETH = 22                                      # шестерня оси Z (на SG90 №1)
 SPG_TEETH, SPG_SHIFT = 26, -0.3                    # шестерня шпинделя
@@ -861,42 +859,36 @@ def build_effector(doc, d, e):
          tube(3.5, 2.6, HOUS_Z0 + BRG625["B"], HOUS_Z1 - BRG625["B"], xs_, 0), STEEL)
     feat(doc, carr, "CR_Ext", "Удлинитель_шпинделя_Ø7/Ø5.2x%.0f" % EXT_H,
          tube(3.5, 2.6, HOLD_Z1, HOLD_Z1 + EXT_H, xs_, 0), STEEL)
-    # --- вакуумный захват: держатель + 3 присоски (рабочая грань z 0 = губы) ---
-    cups_xy = [(xs_ + CUP_RC * math.cos(math.radians(90.0 + 120.0 * k)),
-                CUP_RC * math.sin(math.radians(90.0 + 120.0 * k))) for k in range(CUP_N)]
+    # --- вакуумный захват: держатель + присоска на оси шпинделя (рабочая грань z 0 = губа) ---
     hold = cyl(HOLD_R, HOLD_Z0, HOLD_Z1, xs_, 0)
-    zb_ = (RING_Z0 + RING_Z1) / 2.0                         # ось штуцера трубки
-    ub = V(math.cos(math.radians(BARB_A)), math.sin(math.radians(BARB_A)), 0)
     barb = Part.makeCylinder(1.9, BARB_R1 - 2.0 - (HOLD_R - 0.5), V(0, 0, 0), V(1, 0, 0))
     barb.translate(V(HOLD_R - 0.5, 0, 0))
     barb = barb.fuse(Part.makeCone(2.25, 1.7, 2.0, V(BARB_R1 - 2.0, 0, 0), V(1, 0, 0)))
     barb.rotate(V(0, 0, 0), V(0, 0, 1), BARB_A)
-    barb.translate(V(xs_, 0, zb_))
+    barb.translate(V(xs_, 0, CH_Z))
     hold = hold.fuse(barb)
-    z_n = HOLD_Z0 + 1.0                                     # штуцеры под присоски: Ø6.8 x 3, Ø4.2 x 2
-    for cx, cy in cups_xy:
-        zz = HOLD_Z0
-        for i, (dd, hh) in enumerate(CUP_SOCK):          # нахлёст 0.01 — только шейке в диск
-            hold = hold.fuse(cyl(dd / 2.0, zz - hh, zz + (0.01 if i == 0 else 0.0), cx, cy))
-            zz -= hh
-        # грибок: шейка Ø4.2 (вход гнезда), головка Ø6.8 (расширение) — на её
-        # торце заходная фаска, плоский уступ сверху держит присоску
-        hold = hold.cut(cyl(CUP_SOCK[1][0] / 2.0 + 1, zz - 1, zz + HEAD_CH, cx, cy).cut(
-            Part.makeCone(CUP_SOCK[1][0] / 2.0 - HEAD_CH, CUP_SOCK[1][0] / 2.0, HEAD_CH, V(cx, cy, zz))))
+    zz = HOLD_Z0
+    for i, (dd, hh) in enumerate(CUP_SOCK):              # нахлёст 0.01 — только шейке в диск
+        hold = hold.fuse(cyl(dd / 2.0, zz - hh, zz + (0.01 if i == 0 else 0.0), xs_, 0))
+        zz -= hh
+    # грибок: шейка Ø4.2 (вход гнезда), головка Ø6.8 (расширение) — на её
+    # торце заходная фаска, плоский уступ сверху держит присоску
+    hold = hold.cut(cyl(CUP_SOCK[1][0] / 2.0 + 1, zz - 1, zz + HEAD_CH, xs_, 0).cut(
+        Part.makeCone(CUP_SOCK[1][0] / 2.0 - HEAD_CH, CUP_SOCK[1][0] / 2.0, HEAD_CH, V(xs_, 0, zz))))
     hold = hold.removeSplitter()
-    hcut = [cyl(RING_R1, RING_Z0, RING_Z1, xs_, 0).cut(cyl(RING_R0, RING_Z0 - 1, RING_Z1 + 1, xs_, 0))]
-    for cx, cy in cups_xy:                                  # канал штуцера -> кольцо
-        hcut.append(cyl(NIP_BORE, HOLD_Z0 - 9.0, RING_Z0 + 0.5, cx, cy))
-    bb_ = Part.makeCylinder(0.9, BARB_R1 + 1.0 - (RING_R1 - 1.0), V(RING_R1 - 1.0, 0, 0), V(1, 0, 0))
+    hcut = [cyl(NIP_BORE, HOLD_Z0 - 9.0, CH_Z, xs_, 0)]     # канал штуцера вверх до поперечного
+    bb_ = Part.makeCylinder(0.9, BARB_R1 + 1.0, V(0, 0, 0), V(1, 0, 0))
     bb_.rotate(V(0, 0, 0), V(0, 0, 1), BARB_A)
-    bb_.translate(V(xs_, 0, zb_))
+    bb_.translate(V(xs_, 0, CH_Z))
     hcut.append(bb_)
-    # винт шпинделя M5 — в гайку внутри держателя (паз гнезда наружу, на +Y, мимо штуцера)
-    zn5 = RING_Z1 + 1.3
-    hcut.append(cyl(M5["hole"] / 2.0, RING_Z1 + 0.3, HOLD_Z1 + 1, xs_, 0))
+    # винт шпинделя M5 — в гайку внутри держателя (паз гнезда наружу, на +Y, мимо штуцера);
+    # глухое отверстие кончается в 1 мм над каналом — вакуум к винту не уходит
+    zs5 = CH_Z + 0.9 + 1.0
+    zn5 = zs5 + 1.0
+    hcut.append(cyl(M5["hole"] / 2.0, zs5, HOLD_Z1 + 1, xs_, 0))
     hcut.append(nut_pocket(M5, zn5, xs_, 0, V(0, 1, 0), rot=0.0, depth=20))
     hold = hold.cut(hcut).removeSplitter()
-    feat(doc, carr, "CR_CupHolder", "Держатель_присосок_печать", hold, PLA2)
+    feat(doc, carr, "CR_CupHolder", "Держатель_присоски_печать", hold, PLA2)
     o = feat(doc, carr, "CR_HolderNut", "Гайка_держателя_M5", nut(M5, 0.0), STEEL)
     o.Placement.Base = V(xs_, 0, zn5 + 0.2)
     # присоска DP8: тело вращения по чертежу (r, z), губа на z 0
@@ -908,9 +900,8 @@ def build_effector(doc, d, e):
              (2.6, 7.6), (4.1, 5.2), (1.0, 2.8), (1.0, 2.4)]
     prof = [V(r, 0, z) for r, z in outer + inner] + [V(outer[0][0], 0, outer[0][1])]
     cup = Part.Face(Part.makePolygon(prof)).revolve(V(0, 0, 0), V(0, 0, 1), 360)
-    for k, (cx, cy) in enumerate(cups_xy):
-        o = feat(doc, carr, "CR_Cup%d" % (k + 1), "Присоска_DP8_%d" % (k + 1), cup.copy(), (0.12, 0.12, 0.12))
-        o.Placement.Base = V(cx, cy, 0)
+    o = feat(doc, carr, "CR_Cup1", "Присоска_DP8", cup, (0.12, 0.12, 0.12))
+    o.Placement.Base = V(xs_, 0, 0)
     g_sp = involute_gear(GEAR_M, SPG_TEETH, GEAR_W, bore=5.3, shift=SPG_SHIFT, z0=HOUS_Z1 + 1.0)
     g_sp = g_sp.fuse(tube(3.5, 2.65, HOUS_Z1, HOUS_Z1 + 1.0)).removeSplitter()   # бобышка по внутр. кольцу
     g_sp.translate(V(xs_, 0, 0))
@@ -1331,12 +1322,12 @@ def main():
     print("  ось консоли вынесена от мачты на %.0f мм (под %.1f°); мачта над головой %.1f мм; "
           "консоль L%.0f, за хомутом ступицы %.1f мм"
           % (CAM_OFF, cam["off"], cam["mast_up"], cam["L_b"], cam["tail"]))
-    print("  ход Z %.1f мм за 180° SG90 (шестерня m1 z%d), губы присосок от поля +4 до +%.1f"
+    print("  ход Z %.1f мм за 180° SG90 (шестерня m1 z%d), губа присоски от поля +4 до +%.1f"
           % (Z_STROKE, ZP_TEETH, 4.0 + Z_STROKE))
     print("  поворот: z%d -> z%d, i = %.1f: 180° серво = %.0f° захвата"
           % (RTP_TEETH, SPG_TEETH, SPG_TEETH / float(RTP_TEETH), 180.0 * SPG_TEETH / RTP_TEETH))
-    print("  вылет захвата от оси локтя %.1f мм; захват — %d присоски DP8 на R%.1f, винт шпинделя %s"
-          % (SPINDLE_X, CUP_N, CUP_RC, doc.getObject("CR_Screw").Label))
+    print("  вылет захвата от оси локтя %.1f мм; захват — присоска DP8 на оси шпинделя, винт шпинделя %s"
+          % (SPINDLE_X, doc.getObject("CR_Screw").Label))
     bad = [(o.Name, o.State) for o in doc.Objects if "Invalid" in o.State]
     if bad:
         print("  !! невалидные объекты:", bad)

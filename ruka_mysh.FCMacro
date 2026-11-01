@@ -262,7 +262,7 @@ class ArmDrag(object):
     def report(self):
         t1, t2 = self.pose_now()
         q2 = t2 - t1
-        # центр захвата: по трём присоскам (симметричны вокруг оси шпинделя);
+        # центр захвата: по присоскам (одна на оси шпинделя, их ряд симметричен вокруг неё);
         # в старых документах — по магниту
         grip = [o for o in (self.doc.getObject(n) for n in ("CR_Cup1", "CR_Cup2", "CR_Cup3"))
                 if o is not None] or [o for o in (self.doc.getObject("CR_Magnet"),) if o is not None]
