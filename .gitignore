@@ -18,3 +18,6 @@ _slices.json
 _rename_map.json
 _varset_values.json
 .proverka*.txt
+
+# рабочие копии документа для headless-прогонов
+.work/

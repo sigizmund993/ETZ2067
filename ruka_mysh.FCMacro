@@ -1,0 +1,454 @@
+# -*- coding: utf-8 -*-
+"""Двигать руку робота мышью, как в Inventor (документ ETZ_Robot).
+
+Запуск макроса включает режим, повторный запуск (или Esc в 3D-виде) —
+выключает. В режиме левой кнопкой тащат подвижные детали:
+
+  захват / предплечье  — схваченная точка идёт за мышью (обратная задача:
+                         плечо + локоть), в горизонтальной плоскости;
+  Shift + захват       — захват по высоте (Etz.MagnetZ — губы присосок, +4..+38.6);
+  плечо (труба 1,      — поворот плеча; рычаг стоит, предплечье едет
+  шкив 1, хомут)         параллельно себе (так и есть при стоящем моторе 2);
+  шкив 2, рычаг, тяга  — поворот предплечья (мотор 2), плечо стоит;
+  консоль камеры       — поворот консоли между «сложена» и «в работе».
+
+Клик без движения — обычное выделение. Колесо/средняя кнопка — вид, как
+всегда. Каждое перетаскивание — одна запись отмены (Ctrl+Z).
+
+Поза — VarSet «Poza» (ShoulderAngle, Tube2Angle, LeverAngle); угол рычага
+ставится так, чтобы параллелограмм был замкнут. Если документ старый
+(углы в Drive), макрос сам вызывает upgrade_pose() из shkiv_param.FCMacro.
+
+Пределы — по проверке proverka_etz: угол в локте Q2_LIM, плечо T1_LIM.
+Касания деталей при перетаскивании не ищутся: в строке состояния
+пишется, когда поза вне проверенной области (sweep / переезд на парковку).
+"""
+import math
+import os
+
+import FreeCAD as App
+import FreeCADGui as Gui
+from pivy import coin
+
+V = App.Vector
+HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() else \
+    os.path.join(os.path.expanduser("~"), "ETZ2067")
+
+Q2_LIM = (56.0, 156.0)       # угол в локте: проверенный sweep (тяга и хомуты не задевают)
+T1_LIM = (-120.0, 140.0)     # плечо: от края рабочей зоны до парковки (136)
+MAG_LIM = (4.0, 38.6)        # грань магнита над полем: ход Z за 180° SG90
+# проверено proverka_etz: sweep — t1 -110..10 x q2 56..156; парковка — q2 100 ± 2, t1 10..138
+SWEEP_T1, SWEEP_Q2 = (-110.0, 10.0), (56.0, 156.0)
+PARK_Q2, PARK_T1 = (98.0, 102.0), (10.0, 138.0)
+DRAG_PX = 4                  # на сколько пикселей сдвинуть мышь, чтобы начать тащить
+
+FOREARM = ("Part_Eff", "Body_Elbow2", "Body_Elbow2Cap", "Body_Tube2", "Body_RodJoint",
+           "Body_RodJointCap")
+LEVER = ("Body_Pulley2", "Body_Rod")
+SHOULDER = ("Part_Tube", "Body003", "Body_Cap")
+
+
+def dbg(*a):
+    """Последние 300 событий — в Gui._ruka_mysh_log (читать через MCP/консоль);
+    ошибки обработчиков — ещё и в Report view."""
+    lst = getattr(Gui, "_ruka_mysh_log", None)
+    if lst is None:
+        lst = Gui._ruka_mysh_log = []
+    lst.append(" ".join(str(x) for x in a))
+    del lst[:-300]
+
+
+def guarded(fn):
+    """Исключение в обработчике событий FreeCAD глотает молча — ловим сами."""
+    import functools
+    import traceback
+
+    @functools.wraps(fn)
+    def w(*a, **k):
+        try:
+            return fn(*a, **k)
+        except Exception:
+            tb = traceback.format_exc()
+            dbg("ОШИБКА", fn.__name__, tb)
+            App.Console.PrintError("ruka_mysh: %s\n" % tb)
+    return w
+
+
+def norm(a):
+    """Угол в (-180, 180]."""
+    a = math.fmod(a + 180.0, 360.0)
+    if a <= 0:
+        a += 360.0
+    return a - 180.0
+
+
+def clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+
+def pick_doc():
+    act = App.ActiveDocument
+    if act is not None and act.getObject("Drive") is not None:
+        return act
+    for d in App.listDocuments().values():
+        if d.getObject("Drive") is not None:
+            return d
+    raise RuntimeError("не нашёл документ робота (VarSet Drive)")
+
+
+def ensure_pose(doc):
+    if doc.getObject("Poza") is not None:
+        return doc.getObject("Poza")
+    path = os.path.join(os.path.dirname(doc.FileName) or HERE, "shkiv_param.FCMacro")
+    ns = {"__name__": "shkiv_lib"}
+    exec(compile(open(path, encoding="utf-8").read(), path, "exec"), ns)
+    App.Console.PrintMessage("ruka_mysh: поза перенесена в VarSet Poza (upgrade_pose)\n")
+    return ns["upgrade_pose"](doc)
+
+
+class ArmDrag(object):
+    def __init__(self, doc):
+        self.doc = doc
+        self.d = doc.getObject("Drive")
+        self.p = ensure_pose(doc)
+        self.e = doc.getObject("Etz")
+        gd = Gui.getDocument(doc.Name)
+        Gui.ActiveDocument = gd
+        self.view = gd.ActiveView
+        self.mode = None           # что тащим: "ik" / "shoulder" / "lever" / "cam" / "z"
+        self.press = None          # (пиксели, info) нажатия до начала перетаскивания
+        self.pending = None
+        self.busy = False
+        from PySide import QtCore
+        self.timer = QtCore.QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self._apply)
+        self.cbs = [
+            (coin.SoMouseButtonEvent.getClassTypeId(),
+             self.view.addEventCallbackPivy(coin.SoMouseButtonEvent.getClassTypeId(), self.on_button)),
+            (coin.SoLocation2Event.getClassTypeId(),
+             self.view.addEventCallbackPivy(coin.SoLocation2Event.getClassTypeId(), self.on_move)),
+            (coin.SoKeyboardEvent.getClassTypeId(),
+             self.view.addEventCallbackPivy(coin.SoKeyboardEvent.getClassTypeId(), self.on_key)),
+        ]
+        dbg("режим включён", doc.Name)
+        self.status("Рука: тащите захват, плечо, рычаг или консоль камеры левой кнопкой. "
+                    "Shift — магнит по высоте. Esc — выход")
+
+    # ------------------------------------------------------------------ служебное
+    def stop(self):
+        for t, cb in self.cbs:
+            try:
+                self.view.removeEventCallbackPivy(t, cb)
+            except Exception:
+                pass
+        self.cbs = []
+        if self.mode is not None:
+            self.doc.abortTransaction()
+        self.mode = None
+        self.status("Рука: режим перетаскивания выключен")
+        if getattr(Gui, "_ruka_mysh", None) is self:
+            Gui._ruka_mysh = None
+
+    def status(self, text):
+        try:
+            Gui.getMainWindow().statusBar().showMessage(text)
+        except Exception:
+            pass
+
+    def ray(self, pos):
+        """Луч под курсором: (точка, направление)."""
+        p = self.view.getPoint(int(pos[0]), int(pos[1]))
+        cam = self.view.getCameraNode()
+        if cam.getTypeId().isDerivedFrom(coin.SoPerspectiveCamera.getClassTypeId()):
+            c = V(*cam.position.getValue().getValue())
+            dv = p - c
+            return c, dv
+        return p, V(*tuple(self.view.getViewDirection()))
+
+    def on_plane_z(self, pos, z):
+        o, dv = self.ray(pos)
+        if abs(dv.z) < 1e-9:
+            return None
+        t = (z - o.z) / dv.z
+        return o + dv * t
+
+    def on_plane(self, pos, pt, n):
+        o, dv = self.ray(pos)
+        den = dv.dot(n)
+        if abs(den) < 1e-9:
+            return None
+        return o + dv * ((pt - o).dot(n) / den)
+
+    def chain(self, info):
+        """Имена объекта под курсором и всех его родителей."""
+        names = []
+        for k in ("ParentObject", "Object"):
+            v = info.get(k)
+            if v is not None:
+                names.append(v if isinstance(v, str) else getattr(v, "Name", str(v)))
+        names += [s for s in (info.get("SubName") or "").split(".") if s]
+        out = []
+        for n in names:
+            o = self.doc.getObject(n)
+            while o is not None and o.Name not in out:
+                out.append(o.Name)
+                o = o.getParentGeoFeatureGroup()
+        return out
+
+    def classify(self, names, shift):
+        has = lambda pref: any(n == pref or n.startswith(pref) for n in names)
+        if "Part_CamBoom" in names:
+            return "cam"
+        if "Part_Carr" in names or "Part_Eff" in names:
+            return "z" if shift else "ik"
+        if any(n in FOREARM for n in names) or any(n.startswith("EH_") and ("_E2" in n or "_RJ" in n)
+                                                  for n in names):
+            return "ik"
+        if any(n in LEVER for n in names) or has("RD_"):
+            return "lever"
+        if any(n in SHOULDER for n in names) or has("HW_"):
+            return "shoulder"
+        return None
+
+    # ------------------------------------------------------------------ поза
+    def pose_now(self):
+        t1 = self.p.ShoulderAngle.Value
+        return t1, t1 + self.p.Tube2Angle.Value          # плечо, абсолютный угол предплечья
+
+    def S(self):
+        """Ось шкивов (плеча) в глобальных координатах."""
+        return V(self.d.PulleyAxisX.Value, self.d.ArmAxisY.Value, 0)
+
+    def set_pose(self, t1, t2):
+        q2 = clamp(norm(t2 - t1), Q2_LIM[0], Q2_LIM[1])
+        t1 = clamp(norm(t1), T1_LIM[0], T1_LIM[1])
+        self.p.ShoulderAngle = t1
+        self.p.Tube2Angle = q2
+        self.p.LeverAngle = norm(t1 + q2 - 180.0)      # параллелограмм замкнут
+        return t1, q2
+
+    def ik(self, T):
+        """Схваченная точка (её полярные координаты от локтя — self.g) -> T."""
+        S = self.S()
+        L1 = self.d.PivotX.Value
+        rg, dl = self.g
+        dx, dy = T.x - S.x, T.y - S.y
+        r = clamp(math.hypot(dx, dy), abs(L1 - rg) + 1e-6, L1 + rg - 1e-6)
+        c = clamp((r * r - L1 * L1 - rg * rg) / (2 * L1 * rg), -1.0, 1.0)
+        t1_now, t2_now = self.pose_now()
+        best = None
+        for sgn in (1, -1):
+            q = sgn * math.degrees(math.acos(c))       # угол между плечом и «локоть -> точка»
+            t1 = math.degrees(math.atan2(dy, dx)) - math.degrees(
+                math.atan2(rg * math.sin(math.radians(q)), L1 + rg * math.cos(math.radians(q))))
+            q2 = norm(q - dl)
+            out = 0.0 if Q2_LIM[0] <= q2 <= Q2_LIM[1] else 1000.0
+            cost = out + abs(norm(q2 - (t2_now - t1_now))) + abs(norm(t1 - t1_now)) * 0.1
+            if best is None or cost < best[0]:
+                best = (cost, t1, t1 + q2)
+        t1, t2 = best[1], best[2]
+        q2 = norm(t2 - t1)
+        if not Q2_LIM[0] <= q2 <= Q2_LIM[1]:
+            # точка недостижима в пределах локтя: локоть встаёт в предел, а
+            # плечо поворачивается так, чтобы схваченная точка смотрела на
+            # курсор — рука идёт за мышью, а не замирает
+            q2 = clamp(q2, Q2_LIM[0], Q2_LIM[1])
+            a = math.radians(q2 + dl)
+            t1 = math.degrees(math.atan2(dy, dx) - math.atan2(rg * math.sin(a), L1 + rg * math.cos(a)))
+            t2 = t1 + q2
+        return t1, t2
+
+    def report(self):
+        t1, t2 = self.pose_now()
+        q2 = t2 - t1
+        # центр захвата: по трём присоскам (симметричны вокруг оси шпинделя);
+        # в старых документах — по магниту
+        grip = [o for o in (self.doc.getObject(n) for n in ("CR_Cup1", "CR_Cup2", "CR_Cup3"))
+                if o is not None] or [o for o in (self.doc.getObject("CR_Magnet"),) if o is not None]
+        txt = "плечо %.1f°, локоть %.1f°" % (t1, q2)
+        if grip:
+            import Part
+            shs = []
+            for o in grip:
+                sh = o.Shape.copy()
+                sh.Placement = o.getGlobalPlacement() * o.Placement.inverse() * sh.Placement
+                shs.append(sh)
+            c = Part.makeCompound(shs).BoundBox.Center
+            e = self.e
+            px = c.x - self.d.PulleyAxisX.Value + e.PolyShaftX.Value
+            py = c.y - self.d.ArmAxisY.Value + e.PolyShaftY.Value
+            txt += " | захват на полигоне (%.1f, %.1f), присоски +%.1f" % (px, py, e.MagnetZ.Value)
+            cell = nearest_cell(px, py)
+            if cell is not None:
+                txt += " — над %s (%.1f мм)" % cell
+        ok = (SWEEP_T1[0] <= t1 <= SWEEP_T1[1] and SWEEP_Q2[0] <= q2 <= SWEEP_Q2[1]) or \
+             (PARK_T1[0] <= t1 <= PARK_T1[1] and PARK_Q2[0] <= q2 <= PARK_Q2[1])
+        if not ok:
+            txt += " | !! вне проверенной области (sweep / переезд на парковку)"
+        return txt
+
+    # ------------------------------------------------------------------ события
+    @guarded
+    def on_key(self, cb):
+        ev = cb.getEvent()
+        if ev.getKey() == coin.SoKeyboardEvent.ESCAPE and ev.getState() == coin.SoButtonEvent.DOWN:
+            cb.setHandled()
+            self.stop()
+
+    @guarded
+    def on_button(self, cb):
+        ev = cb.getEvent()
+        if ev.getButton() != coin.SoMouseButtonEvent.BUTTON1:
+            return
+        pos = ev.getPosition().getValue()
+        if ev.getState() == coin.SoButtonEvent.DOWN:
+            info = self.view.getObjectInfo((int(pos[0]), int(pos[1])))
+            dbg("нажатие", pos, info and info.get("SubName"), info and info.get("Object"))
+            if not info:
+                return
+            mode = self.classify(self.chain(info), ev.wasShiftDown())
+            dbg("  цепочка", self.chain(info), "->", mode)
+            if mode is None:
+                return                               # неподвижная деталь — обычное поведение
+            self.press = (pos, info, mode)
+            cb.setHandled()
+        elif ev.getState() == coin.SoButtonEvent.UP and (self.press or self.mode):
+            cb.setHandled()
+            if self.mode is None:                    # клик без движения — выделить
+                info = self.press[1]
+                self.press = None
+                try:
+                    Gui.Selection.clearSelection()
+                    Gui.Selection.addSelection(self.doc.Name, info.get("ParentObject") or info["Object"],
+                                               info.get("SubName") or info.get("Component") or "")
+                except Exception:
+                    pass
+                return
+            if self.pending is not None:
+                self._apply()
+            self.doc.commitTransaction()
+            self.mode = None
+            self.press = None
+            msg = self.report()
+            dbg("отпущено", msg)
+            self.status("Рука: " + msg)
+            App.Console.PrintMessage("ruka_mysh: %s\n" % msg)
+
+    def begin(self):
+        pos, info, mode = self.press
+        dbg("тащу", mode)
+        g = V(info["x"], info["y"], info["z"])
+        self.grab = g
+        self.mode = mode
+        self.doc.openTransaction("Поза руки (мышь)")
+        t1, t2 = self.pose_now()
+        self.t0 = (t1, t2)
+        S = self.S()
+        if mode == "ik":
+            L1 = self.d.PivotX.Value
+            E = S + V(L1 * math.cos(math.radians(t1)), L1 * math.sin(math.radians(t1)), 0)
+            v = g - E
+            self.g = (max(math.hypot(v.x, v.y), 1.0),
+                      norm(math.degrees(math.atan2(v.y, v.x)) - t2))
+        elif mode in ("shoulder", "lever"):
+            self.a0 = math.degrees(math.atan2(g.y - S.y, g.x - S.x))
+        elif mode == "cam":
+            bp = self.doc.getObject("Part_CamBoom").getGlobalPlacement().Base
+            self.cam_c = V(bp.x, bp.y, 0)
+            self.a0 = math.degrees(math.atan2(g.y - bp.y, g.x - bp.x))
+            self.cam0 = self.e.CamAngle.Value
+        elif mode == "z":
+            dv = V(*tuple(self.view.getViewDirection()))
+            n = V(dv.x, dv.y, 0)
+            self.zn = n.normalize() if n.Length > 1e-6 else V(1, 0, 0)
+            self.mz0 = self.e.MagnetZ.Value
+
+    @guarded
+    def on_move(self, cb):
+        if self.press is None and self.mode is None:
+            return
+        pos = cb.getEvent().getPosition().getValue()
+        if self.mode is None:
+            p0 = self.press[0]
+            if abs(pos[0] - p0[0]) + abs(pos[1] - p0[1]) < DRAG_PX:
+                cb.setHandled()
+                return
+            self.begin()
+        cb.setHandled()
+        self.pending = (int(pos[0]), int(pos[1]))
+        if not self.timer.isActive() and not self.busy:
+            self.timer.start(10)       # события, пришедшие во время пересчёта, схлопываются
+
+    @guarded
+    def _apply(self):
+        if self.pending is None or self.mode is None:
+            return
+        pos, self.pending = self.pending, None
+        self.busy = True
+        try:
+            m = self.mode
+            t1, t2 = self.t0
+            if m == "z":
+                pt = self.on_plane(pos, self.grab, self.zn)
+                if pt is None:
+                    return
+                self.e.MagnetZ = clamp(self.mz0 + pt.z - self.grab.z, MAG_LIM[0], MAG_LIM[1])
+            else:
+                pt = self.on_plane_z(pos, self.grab.z)
+                if pt is None:
+                    return
+                if m == "ik":
+                    t1, t2 = self.ik(pt)
+                elif m in ("shoulder", "lever", "cam"):
+                    c = self.cam_c if m == "cam" else self.S()
+                    da = norm(math.degrees(math.atan2(pt.y - c.y, pt.x - c.x)) - self.a0)
+                    if m == "shoulder":           # предплечье держит свой абсолютный угол
+                        t1 = clamp(t1 + da, max(T1_LIM[0], t2 - Q2_LIM[1]), min(T1_LIM[1], t2 - Q2_LIM[0]))
+                    elif m == "lever":
+                        t2 = clamp(t2 + da, t1 + Q2_LIM[0], t1 + Q2_LIM[1])
+                    else:
+                        lo = min(self.e.CamWork.Value, self.e.CamStow.Value)
+                        hi = max(self.e.CamWork.Value, self.e.CamStow.Value)
+                        self.e.CamAngle = clamp(self.cam0 + da, lo, hi)
+                if m != "cam":
+                    self.set_pose(t1, t2)
+            self.doc.recompute()
+            self.status("Рука: " + self.report())
+            Gui.updateGui()
+        finally:
+            self.busy = False
+            if self.pending is not None and not self.timer.isActive():
+                self.timer.start(0)
+
+
+def nearest_cell(px, py):
+    """Ближайший центр клетки / отбоя (по ETZ_poligon: начало поля — метка 27),
+    если захват над ним ближе 6 мм: (имя, расстояние)."""
+    ox, oy = 370.0 + 193.0, (85.0 + (330.0 + 297.0) / 2.0) - 272.0
+    best = None
+    for k, row in enumerate(u"АБВГДЕ"):
+        for n in range(9):
+            x, y = ox - 28.0 * (k + 1), oy + 28.0 * n
+            dd = math.hypot(px - x, py - y)
+            if best is None or dd < best[1]:
+                best = (u"%s%d" % (row, n), dd)
+    for k in range(1, 6):
+        x, y = ox - 28.0 * k, oy + 252.0
+        dd = math.hypot(px - x, py - y)
+        if dd < best[1]:
+            best = (u"Отбой%d" % k, dd)
+    return best if best[1] < 6.0 else None
+
+
+def toggle():
+    cur = getattr(Gui, "_ruka_mysh", None)
+    if cur is not None:
+        cur.stop()
+        return None
+    Gui._ruka_mysh = ArmDrag(pick_doc())
+    return Gui._ruka_mysh
+
+
+if __name__ == "__main__" or __name__ == "ruka_mysh":
+    toggle()

@@ -12,15 +12,16 @@
 #     зазоры до них, а не на глаз.
 #   * РАБОЧИЙ УЗЕЛ на конце предплечья: кронштейн-хомут с T-направляющей,
 #     каретка Z на рейке (SG90 + шестерня z22, ход 34.6 мм за 180°),
-#     шпиндель на двух 625ZZ, электромагнит Ø25x20 M5, поворот 0..360° через
-#     передачу 13 -> 26 от второго SG90 (180° серво = 360° магнита).
+#     шпиндель на двух 625ZZ, вакуумный захват — 3 присоски DP8 на печатном
+#     держателе, поворот 0..360° через передачу 13 -> 26 от второго SG90
+#     (180° серво = 360° захвата).
 #   * ПОЛИГОН-ссылка: зоны, лист поля и центры клеток в координатах робота
 #     — для проверки ТЗ прямо в этом документе.
 #
 # Размеры берутся из VarSet `Drive` (привод) и `Etz` (этот макрос) В МОМЕНТ
 # ЗАПУСКА: геометрия деталей — Part::Feature, её надо пересобрать этим
 # макросом после правки Drive. Положения, зависящие от позы (угол
-# предплечья, высота магнита), привязаны выражениями и меняются сами.
+# предплечья, высота захвата), привязаны выражениями и меняются сами.
 #
 # Проверка всего этого — proverka_etz.FCMacro.
 #
@@ -55,8 +56,8 @@ INPUTS = [
      "Поверхность полигона в координатах робота. Низ левого мотора — z 0, "
      "под ним 1 мм зазора и основание 6 мм"),
     ("MagnetZ", "App::PropertyLength", "2 Поза", 30.0,
-     "Высота рабочей грани электромагнита над полем. 5 = касается шашки, "
-     "лежащей на поле; 30 = стопка из 5 шашек"),
+     "Высота рабочей грани захвата (губ присосок) над полем. 5 = касается "
+     "шашки, лежащей на поле (4 — поджата на 1 мм); 25 = верх стопки из 5"),
     ("BaseT", "App::PropertyLength", "3 Станина", 6.0, "Толщина основания"),
     ("WallT", "App::PropertyLength", "3 Станина", 10.0,
      "Толщина стенок станины. 10 мм — чтобы гнездо гайки M3 помещалось "
@@ -85,6 +86,9 @@ INPUTS = [
      "центром поля"),
     ("CamWork", "App::PropertyAngle", "4 Камера", 17.8,
      "Угол консоли в работе — считает макрос (направление на центр листа)"),
+    ("CamLensH", "App::PropertyLength", "4 Камера", 327.0,
+     "Высота объектива над полем. Голова зажата на мачте разрезным хомутом "
+     "и ставится на любую высоту — мачта может быть длиннее и торчать выше"),
 ]
 
 
@@ -115,7 +119,19 @@ M8 = dict(d=8.0, dk=13.0, k=8.0, s=6.0, nut_s=13.0, nut_m=6.8, hole=8.4)
 BRG625 = dict(d=5.0, D=16.0, B=5.0, d1=7.5)     # 625ZZ, d1 — Ø внутр. кольца
 BRG608_D1 = 12.1                                 # Ø внутреннего кольца 608ZZ
 
-MAG_D, MAG_H, MAG_THREAD = 25.0, 20.0, 6.0      # электромагнит P25/20 12 В 5 кг, M5 x 6
+# вакуумный захват: 3 присоски DP8 (сильфон 1.5 гофра, чертёж — Screenshot_20261101-164036):
+# высота 15, верх Ø12, губа Ø8, канал Ø2. Гнездо сверху: ВХОД Ø4.2 x 3, под ним
+# расширение Ø6.8 x 2 — присоска защёлкивается на штуцер-грибок
+CUP_H, CUP_TOP_R, CUP_LIP_R = 15.0, 6.0, 4.0
+CUP_SOCK = ((4.2, 3.0), (6.8, 2.0))           # гнездо присоски сверху вниз: (Ø, глубина)
+HEAD_CH = 0.6                 # заходная фаска на головке грибка (проходит вход Ø4.2)
+CUP_N, CUP_RC = 3, 7.5        # на окружности R7.5 через 120°: верхи Ø12 не касаются (13 мм
+                              # между осями), губы Ø8 — внутри верха шашки Ø26 (до R11.5)
+HOLD_R, HOLD_Z0, HOLD_Z1 = 14.0, CUP_H, 26.0   # держатель присосок (печать)
+RING_R0, RING_R1, RING_Z0, RING_Z1 = 6.0, 9.0, 16.3, 18.3   # кольцевой вакуумный канал
+NIP_BORE = 1.0                # канал в штуцере под присоску, R (Ø2 — как канал присоски; Ø1.6 FDM затягивает)
+BARB_A, BARB_R1 = 270.0, 20.0  # штуцер-ёлочка под силикон 3x5: направление, конец (R от оси);
+                               # сзади на R23.5 рельс — дальше выносить нельзя
 
 # SG90 (модель из библиотеки): ось выхода (0, 16.6), торец шлица z 29.9,
 # лапки z 15.9..18.4, отверстия лапок y -2.35 и 24.85
@@ -145,7 +161,7 @@ BLK_ZC = 70.0      # центр каретки MGN9H от грани магни�
 SP_TOP = BLK_ZC + BLK_L / 2.0 + 2.0                # верх плиты каретки
 SPINDLE_X = 156.0                                  # ось шпинделя = вылет захвата
 HOUS_R, HOUS_Z0, HOUS_Z1 = 10.5, 33.0, 53.0         # корпус шпинделя
-EXT_H = 13.0                                       # удлинитель магнит -> подшипник
+EXT_H = HOUS_Z0 - HOLD_Z1                          # удлинитель держатель -> подшипник (7)
 GEAR_M = 1.0
 ZP_TEETH = 22                                      # шестерня оси Z (на SG90 №1)
 SPG_TEETH, SPG_SHIFT = 26, -0.3                    # шестерня шпинделя
@@ -157,7 +173,13 @@ Z_STROKE = math.pi * GEAR_M * ZP_TEETH / 2.0       # 180° серво: pi * r
 
 # --- камера на откидной консоли ---
 SHEET_C = (475.0, 250.0)          # центр листа А4 на полигоне (ETZ_poligon)
-MAST_D, MAST_T, MAST_L = 16.0, 1.5, 330.0          # мачта: Al труба Ø16x1.5 x 330 (кадр с запасом 2°)
+MAST_D, MAST_T, MAST_L = 16.0, 1.5, 330.0          # мачта: Al труба Ø16x1.5 x 330 (голова на любой высоте)
+CAM_OFF = 30.0                    # ось консоли вынесена вбок от оси мачты
+HUB_HL, HUB_HW = 19.0, 11.5       # хомут консоли на ступице: полудлина, полуширина
+HUB_SY, HUB_SX = 7.8, 13.5        # винты хомута консоли: от оси трубы поперёк / вдоль
+HUB_CAP = 8.0                     # крышка хомута консоли над осью трубы
+HUB_GAP = 0.3                     # зазор крышка — седло: есть что затягивать
+SLEEVE_H = 40.0                   # хомут головы на мачте
 BOOM_D, BOOM_T = 10.0, 1.0                         # консоль: Al труба Ø10x1 (как рука)
 CAM_GEAR_HUB, CAM_GEAR_SV = 30, 13                 # z30 на ступице <- z13 на SG90
 CAM_PCB, CAM_HOLE = 38.0, 34.0    # плата USB-камеры 38x38, крепёж M2 по 34x34
@@ -363,6 +385,7 @@ def sg90():
     if sh is None:      # габаритная замена
         sh = box(-5.9, 5.9, 0, 22.5, 0, 22.7).fuse(box(-5.9, 5.9, -4.7, 27.7, 15.9, 18.4))
         sh = sh.fuse(cyl(2.4, 22.7, 29.9, 0, SG_AXIS_Y))
+        sh = sh.cut([cyl(1.1, SG_TAB_Z0 - 1, SG_TAB_Z1 + 1, 0, ys) for ys in SG_HOLES_Y])  # лапки
     sh = sh.copy()
     m = sh.Placement.toMatrix()
     sh.Placement = App.Placement()
@@ -661,7 +684,7 @@ def build_effector(doc, d, e):
     eff = container(doc, EFF_PART, "Рабочий_узел", tube_part)
     carr = container(doc, CARR_PART, "Каретка_Z", eff)
     eff.setExpression("Placement.Base.x", "%s.PivotX" % VS)
-    eff.setExpression("Placement.Rotation.Angle", "%s.Tube2Angle" % VS)
+    eff.setExpression("Placement.Rotation.Angle", "Poza.Tube2Angle")       # поза — в своём VarSet, см. shkiv_param
     # грань магнита: высота над полем -> z в Part_Tube
     carr.setExpression("Placement.Base.z", "%s.FloorZ + %s.MagnetZ - (%s.BeltPlaneZ - %s.FlangeThk)"
                        % (VE, VE, VS, VS))
@@ -836,16 +859,64 @@ def build_effector(doc, d, e):
              tube(BRG625["D"] / 2.0, BRG625["d"] / 2.0, z0, z0 + BRG625["B"], xs_, 0), STEEL)
     feat(doc, carr, "CR_InnerSp", "Втулка_шпинделя_Ø7/Ø5.2x%.0f" % (HOUS_Z1 - HOUS_Z0 - 2 * BRG625["B"]),
          tube(3.5, 2.6, HOUS_Z0 + BRG625["B"], HOUS_Z1 - BRG625["B"], xs_, 0), STEEL)
-    feat(doc, carr, "CR_Ext", "Удлинитель_магнита_Ø7/Ø5.2x%.0f" % EXT_H,
-         tube(3.5, 2.6, MAG_H, MAG_H + EXT_H, xs_, 0), STEEL)
-    mag = cyl(MAG_D / 2.0, 0.0, MAG_H, xs_, 0).cut(cyl(M5["d"] / 2.0, MAG_H - MAG_THREAD, MAG_H + 1, xs_, 0))
-    feat(doc, carr, "CR_Magnet", "Электромагнит_P25-20_12В_M5", mag, (0.75, 0.15, 0.15))
+    feat(doc, carr, "CR_Ext", "Удлинитель_шпинделя_Ø7/Ø5.2x%.0f" % EXT_H,
+         tube(3.5, 2.6, HOLD_Z1, HOLD_Z1 + EXT_H, xs_, 0), STEEL)
+    # --- вакуумный захват: держатель + 3 присоски (рабочая грань z 0 = губы) ---
+    cups_xy = [(xs_ + CUP_RC * math.cos(math.radians(90.0 + 120.0 * k)),
+                CUP_RC * math.sin(math.radians(90.0 + 120.0 * k))) for k in range(CUP_N)]
+    hold = cyl(HOLD_R, HOLD_Z0, HOLD_Z1, xs_, 0)
+    zb_ = (RING_Z0 + RING_Z1) / 2.0                         # ось штуцера трубки
+    ub = V(math.cos(math.radians(BARB_A)), math.sin(math.radians(BARB_A)), 0)
+    barb = Part.makeCylinder(1.9, BARB_R1 - 2.0 - (HOLD_R - 0.5), V(0, 0, 0), V(1, 0, 0))
+    barb.translate(V(HOLD_R - 0.5, 0, 0))
+    barb = barb.fuse(Part.makeCone(2.25, 1.7, 2.0, V(BARB_R1 - 2.0, 0, 0), V(1, 0, 0)))
+    barb.rotate(V(0, 0, 0), V(0, 0, 1), BARB_A)
+    barb.translate(V(xs_, 0, zb_))
+    hold = hold.fuse(barb)
+    z_n = HOLD_Z0 + 1.0                                     # штуцеры под присоски: Ø6.8 x 3, Ø4.2 x 2
+    for cx, cy in cups_xy:
+        zz = HOLD_Z0
+        for i, (dd, hh) in enumerate(CUP_SOCK):          # нахлёст 0.01 — только шейке в диск
+            hold = hold.fuse(cyl(dd / 2.0, zz - hh, zz + (0.01 if i == 0 else 0.0), cx, cy))
+            zz -= hh
+        # грибок: шейка Ø4.2 (вход гнезда), головка Ø6.8 (расширение) — на её
+        # торце заходная фаска, плоский уступ сверху держит присоску
+        hold = hold.cut(cyl(CUP_SOCK[1][0] / 2.0 + 1, zz - 1, zz + HEAD_CH, cx, cy).cut(
+            Part.makeCone(CUP_SOCK[1][0] / 2.0 - HEAD_CH, CUP_SOCK[1][0] / 2.0, HEAD_CH, V(cx, cy, zz))))
+    hold = hold.removeSplitter()
+    hcut = [cyl(RING_R1, RING_Z0, RING_Z1, xs_, 0).cut(cyl(RING_R0, RING_Z0 - 1, RING_Z1 + 1, xs_, 0))]
+    for cx, cy in cups_xy:                                  # канал штуцера -> кольцо
+        hcut.append(cyl(NIP_BORE, HOLD_Z0 - 9.0, RING_Z0 + 0.5, cx, cy))
+    bb_ = Part.makeCylinder(0.9, BARB_R1 + 1.0 - (RING_R1 - 1.0), V(RING_R1 - 1.0, 0, 0), V(1, 0, 0))
+    bb_.rotate(V(0, 0, 0), V(0, 0, 1), BARB_A)
+    bb_.translate(V(xs_, 0, zb_))
+    hcut.append(bb_)
+    # винт шпинделя M5 — в гайку внутри держателя (паз гнезда наружу, на +Y, мимо штуцера)
+    zn5 = RING_Z1 + 1.3
+    hcut.append(cyl(M5["hole"] / 2.0, RING_Z1 + 0.3, HOLD_Z1 + 1, xs_, 0))
+    hcut.append(nut_pocket(M5, zn5, xs_, 0, V(0, 1, 0), rot=0.0, depth=20))
+    hold = hold.cut(hcut).removeSplitter()
+    feat(doc, carr, "CR_CupHolder", "Держатель_присосок_печать", hold, PLA2)
+    o = feat(doc, carr, "CR_HolderNut", "Гайка_держателя_M5", nut(M5, 0.0), STEEL)
+    o.Placement.Base = V(xs_, 0, zn5 + 0.2)
+    # присоска DP8: тело вращения по чертежу (r, z), губа на z 0
+    outer = [(3.3, 0.0), (CUP_LIP_R, 0.0), (CUP_LIP_R, 0.5), (2.6, 2.6), (5.0, 5.2), (3.4, 7.6),
+             (5.6, 10.0), (CUP_TOP_R, 11.0), (CUP_TOP_R, CUP_H - 0.8), (CUP_TOP_R - 0.8, CUP_H)]
+    inner = [(CUP_SOCK[0][0] / 2.0, CUP_H), (CUP_SOCK[0][0] / 2.0, CUP_H - CUP_SOCK[0][1]),
+             (CUP_SOCK[1][0] / 2.0, CUP_H - CUP_SOCK[0][1]),
+             (CUP_SOCK[1][0] / 2.0, CUP_H - CUP_SOCK[0][1] - CUP_SOCK[1][1]),
+             (2.6, 7.6), (4.1, 5.2), (1.0, 2.8), (1.0, 2.4)]
+    prof = [V(r, 0, z) for r, z in outer + inner] + [V(outer[0][0], 0, outer[0][1])]
+    cup = Part.Face(Part.makePolygon(prof)).revolve(V(0, 0, 0), V(0, 0, 1), 360)
+    for k, (cx, cy) in enumerate(cups_xy):
+        o = feat(doc, carr, "CR_Cup%d" % (k + 1), "Присоска_DP8_%d" % (k + 1), cup.copy(), (0.12, 0.12, 0.12))
+        o.Placement.Base = V(cx, cy, 0)
     g_sp = involute_gear(GEAR_M, SPG_TEETH, GEAR_W, bore=5.3, shift=SPG_SHIFT, z0=HOUS_Z1 + 1.0)
     g_sp = g_sp.fuse(tube(3.5, 2.65, HOUS_Z1, HOUS_Z1 + 1.0)).removeSplitter()   # бобышка по внутр. кольцу
     g_sp.translate(V(xs_, 0, 0))
     feat(doc, carr, "CR_GearSp", "Шестерня_шпинделя_m1_z%d" % SPG_TEETH, g_sp, (0.95, 0.95, 0.95))
     zh = HOUS_Z1 + 1.0 + GEAR_W
-    L4 = zh - (MAG_H - MAG_THREAD)
+    L4 = int(math.ceil(zh - zn5 + 0.5))                     # проходит гайку держателя насквозь
     o = feat(doc, carr, "CR_Screw", "Винт_шпинделя_M5x%.0f_ISO4762" % L4, cap_screw(M5, L4), DARK)
     o.Placement.Base = V(xs_, 0, zh)
     s2 = sg90()
@@ -871,40 +942,63 @@ def build_effector(doc, d, e):
 def build_camera(doc, d, e):
     """Камера на откидной консоли (ЕТЗ п. 3.1: до старта и после финиша над
     полем ничего быть не может, поэтому неподвижно висеть над полем она не
-    может). Мачта — в заднем углу фанеры, вне хода руки. Наверху — ступица
-    на двух 625ZZ, её поворачивает SG90 через z13 -> z30. В работе консоль
-    стоит на CamWork (камера над центром листа, объективом вниз) и не
-    двигается; сложенная (CamStow) — целиком над зоной 1."""
+    может). Мачта — в заднем углу фанеры, вне хода руки. Голова зажата на
+    мачте разрезным хомутом, ось консоли вынесена вбок от мачты на CAM_OFF:
+    мачта проходит голову насквозь, поэтому голову можно поставить на любую
+    высоту, а мачта — любой длины. На оси — ступица на двух 625ZZ, её
+    поворачивает SG90 через z13 -> z30. Консоль лежит в хомуте НАД верхним
+    подшипником и проходит его насквозь — её можно выдвинуть на любую длину.
+    В работе консоль стоит на CamWork (камера над центром листа, объективом
+    вниз) и не двигается; сложенная (CamStow) — целиком над зоной 1."""
     purge(doc, ("CAM_",))
     part = container(doc, "Part_Cam", "Камера")
     boom_p = container(doc, "Part_CamBoom", "Камера_консоль", part)
 
     P = poly_to_robot(d, e, e.CamPivotX.Value, e.CamPivotY.Value)
-    P = V(P.x, P.y, 0)
+    P = V(P.x, P.y, 0)                                   # ось мачты
     F = poly_to_robot(d, e, SHEET_C[0], SHEET_C[1])
-    vF = F - P
-    reach = math.hypot(vF.x, vF.y)                       # от оси мачты до центра листа
+    stow = e.CamStow.Value
+    # ось консоли A — сбоку от мачты, перпендикулярно середине сектора
+    # поворота: тогда ни консоль, ни хомут ступицы над мачтой не проходят,
+    # как бы высоко она ни торчала. A зависит от угла в работе, а он от A —
+    # несколько итераций
+    A = P
+    for _ in range(6):
+        vF = F - A
+        work = math.degrees(math.atan2(vF.y, vF.x))
+        psi = math.radians((stow + work) / 2.0 - 90.0)
+        A = P + V(CAM_OFF * math.cos(psi), CAM_OFF * math.sin(psi), 0)
+    vF = F - A
+    reach = math.hypot(vF.x, vF.y)                       # от оси консоли до центра листа
     work = math.degrees(math.atan2(vF.y, vF.x))
     e.CamWork = work
-    stow = e.CamStow.Value
     fl = e.FloorZ.Value
     top = fl + e.BaseT.Value
-
-    # --- высоты (z робота) ---
-    z_floor = top + 3.0                                  # дно гнезда мачты в стойке
-    z_t = z_floor + MAST_L                               # верх мачты
-    Hb = z_t + 12.5                                      # низ ступицы
-    zb = Hb + 9.0                                        # ось консоли = середина ступицы
     B5 = BRG625
-    sock_r, flat = 14.0, 12.5                            # бобышки под трубу, лыски под стяжку
+    sock_r, flat = 14.0, 12.5                            # стойка: бобышка под трубу, лыски
     rm = MAST_D / 2.0
+
+    # --- высоты (z робота) от высоты объектива ---
+    # объектив: низ ствола на 33.6 ниже оси консоли (кронштейн 9, плита 3,
+    # бобышки 5, плата 1.6, объектив 15)
+    zb = fl + e.CamLensH.Value + 33.6                    # ось консоли
+    # над осью M5: подшипники 2 x 5 с шагом 13, шайба 1, головка M5 5, зазор 1
+    Hb = zb - BOOM_D / 2.0 - 1.0 - B5["d"] - 1.0 - 13.0 - B5["B"]   # низ ступицы
+    z_floor = top + 3.0                                  # дно гнезда мачты в стойке
+    z_mt = z_floor + MAST_L                              # верх мачты
+    z_s1 = Hb - 0.5                                      # верх головы
+    z_s0 = z_s1 - SLEEVE_H                               # низ хомута головы на мачте
+    if z_mt < z_s1:
+        raise RuntimeError("мачта %g коротка: голова на z %.1f, верх мачты %.1f"
+                           % (MAST_L, z_s1, z_mt))
+    if z_s0 < top + 40.0 + 20.0:
+        raise RuntimeError("голова камеры опущена до стойки мачты")
 
     def mast_clamp(z0, z1, zc):
         """Гнездо под трубу мачты z0..z1 со стяжкой M3 поперёк (по Y) на zc:
         головка на лыске +Y, гайка утоплена в лыску -Y (гнездо открыто наружу)."""
         b = cyl(sock_r, z0, z1).common(box(-sock_r, sock_r, -flat, flat, z0 - 1, z1 + 1))
-        foot_ = z0 < z_floor
-        cuts = [cyl(rm + 0.15, z0 + 3.0 if foot_ else z0 - 1.0, z1 + 1.0 if foot_ else z1)]
+        cuts = [cyl(rm + 0.15, z0 + 3.0, z1 + 1.0)]
         h = Part.makeCylinder(M3["hole"] / 2.0, 2 * flat + 2, V(0, -flat - 1, zc), V(0, 1, 0))
         cuts.append(h)
         hx = hexagon(M3["nut_s"] + 0.3, 0, M3["nut_m"] + 0.2)
@@ -946,24 +1040,48 @@ def build_camera(doc, d, e):
         o.Placement = App.Placement(V(x, y, fl + CSK_SINK), App.Rotation(V(1, 0, 0), 180))
     base.Shape = base.Shape.cut(pc).removeSplitter()
 
-    # --- мачта ---
-    m = tube(rm, rm - MAST_T, z_floor, z_t)
-    m = m.cut([Part.makeCylinder(M3["hole"] / 2.0, 2 * rm + 2, V(0, -rm - 1, zc), V(0, 1, 0))
-               for zc in (top + 25.0, z_t - 15.0)])       # сверловка Ø3.4 под стяжки
+    # --- мачта: сверловка только в стойке, голова держится трением ---
+    m = tube(rm, rm - MAST_T, z_floor, z_mt)
+    m = m.cut(Part.makeCylinder(M3["hole"] / 2.0, 2 * rm + 2, V(0, -rm - 1, zc_f), V(0, 1, 0)))
     m.translate(P)
     feat(doc, part, "CAM_Mast", "Мачта_Al_труба_Ø%gx%g_L%g" % (MAST_D, MAST_T, MAST_L), m, STEEL)
 
-    # --- голова мачты: гнездо на трубе, ось, фланец SG90 ---
+    # --- голова: хомут на мачте + балка + бобышка оси + фланец SG90 ---
+    # (своя СК: начало — ось консоли A, z — как у робота)
     phi = math.radians((stow + work) / 2.0 + 180.0)      # SG90 — напротив сектора консоли
+    a_m = math.degrees(psi) + 180.0                      # направление от оси консоли к мачте
+    Ml = V(CAM_OFF * math.cos(math.radians(a_m)), CAM_OFF * math.sin(math.radians(a_m)), 0)
     a_c = (CAM_GEAR_HUB + CAM_GEAR_SV) * GEAR_M / 2.0    # межосевое 21.5
     C = V(a_c * math.cos(phi), a_c * math.sin(phi), 0)
     t_ = V(-math.sin(phi), math.cos(phi), 0)
     z_sv = Hb - SG_GEAR_Z                                # z «y_s = 0» серво: шестерня на уровне ступицы
     tab0 = z_sv + SG_TAB_Z0
     sv_pl = App.Placement(C - t_ * SG_AXIS_Y + V(0, 0, z_sv), App.Rotation(V(0, 0, 1), math.degrees(phi)))
-    zc_h = z_t - 15.0
-    b, cuts = mast_clamp(z_t - 30.0, z_t, zc_h)
-    head = b.fuse(cyl(sock_r, z_t, Hb - 0.5)).fuse(cyl(3.75, Hb - 0.6, Hb))   # буртик под внутр. кольцо
+    z_h0 = Hb - 16.0                                     # низ бобышки оси
+    head = cyl(13.0, z_h0, z_s1).fuse(cyl(3.75, z_s1 - 0.1, Hb))   # буртик под внутр. кольцо
+    beam = box(0, CAM_OFF, -8.0, 8.0, z_h0, z_s1)        # балка к мачте
+    beam.rotate(V(0, 0, 0), V(0, 0, 1), a_m)
+    web = box(0, 14.0, -10.0, 10.0, z_h0, tab0)          # перемычка к фланцу SG90
+    web.rotate(V(0, 0, 0), V(0, 0, 1), math.degrees(phi))
+    # хомут на мачте (СК мачты: +x — наружу, от оси консоли): втулка с
+    # разрезом наружу и ушами; две стяжки M3x14 поперёк разреза, головки —
+    # на стороне -y, гайки утоплены в ухо +y
+    ear_x1, ear_hw, ear_sx = rm + 12.0, 7.0, rm + 6.0
+    z_ears = (z_s0 + 10.0, z_s1 - 10.0)
+    sl = cyl(rm + 4.0, z_s0, z_s1).fuse(box(0, ear_x1, -ear_hw, ear_hw, z_s0, z_s1))
+    sl_cut = [cyl(rm + 0.15, z_s0 - 1, z_s1 + 1),
+              box(rm - 1.0, ear_x1 + 1, -1.0, 1.0, z_s0 - 1, z_s1 + 1)]      # разрез
+    for zc in z_ears:
+        sl_cut.append(Part.makeCylinder(M3["hole"] / 2.0, 2 * ear_hw + 2, V(ear_sx, -ear_hw - 1, zc),
+                                        V(0, 1, 0)))
+        hx = hexagon(M3["nut_s"] + 0.3, 0, M3["nut_m"] + 0.5)
+        hx.rotate(V(0, 0, 0), V(1, 0, 0), -90)            # ось гайки -> +Y
+        hx.translate(V(ear_sx, ear_hw - M3["nut_m"] - 0.45, zc))
+        sl_cut.append(hx)
+    sl_rot = App.Rotation(V(0, 0, 1), a_m)
+    for s_ in [sl] + sl_cut:
+        s_.rotate(V(0, 0, 0), V(0, 0, 1), a_m)
+        s_.translate(Ml)
     # фланец SG90 (в координатах серво): лапки ложатся сверху, корпус — в окне
     fl_s = box(-9.5, 7.5, -6.5, 29.5, tab0 - 4.0, tab0)
     fl_s = fl_s.cut(box(-6.2, 6.2, -0.3, 22.8, tab0 - 5, tab0 + 1))
@@ -971,64 +1089,99 @@ def build_camera(doc, d, e):
         fl_s = fl_s.cut(cyl(0.8, tab0 - 5, tab0 + 1, 0, ys))
     fl_s.rotate(V(0, 0, 0), V(0, 0, 1), math.degrees(phi))
     fl_s.translate(V(sv_pl.Base.x, sv_pl.Base.y, 0))
-    head = head.fuse(fl_s).removeSplitter()
-    head = head.cut(cuts)
-    head = head.cut(cyl(2.65, z_t - 1, Hb + 1))           # ось M5
-    zn = z_t + 2.0                                        # гайка M5 в гнезде, паз — наружу от серво
+    head = head.fuse([beam, web, sl, fl_s]).removeSplitter()
+    head = head.cut(sl_cut)
+    head = head.cut(cyl(2.65, z_h0 - 1, Hb + 1))          # ось M5
+    zn = Hb - 10.5                                       # гайка M5 в гнезде бобышки
     a5 = round((math.degrees(phi) + 180.0) / 15.0) * 15.0   # паз — наружу от серво, по сетке 15°
     rot5 = a5 - 90.0                                     # грани гайки вдоль паза
     u5 = V(math.cos(math.radians(a5)), math.sin(math.radians(a5)), 0)
     head = head.cut(nut_pocket(M5, zn, 0, 0, u5, rot=rot5, depth=20))
     head = head.removeSplitter()
-    head.translate(P)
-    feat(doc, part, "CAM_Head", "Голова_мачты_печать", head, PLA)
-    clamp_hw("Head", zc_h, part, "головы")
+    head.translate(A)
+    feat(doc, part, "CAM_Head", "Голова_консоли_печать", head, PLA)
+    for k, zc in enumerate(z_ears):
+        q = A + Ml + sl_rot.multVec(V(ear_sx, 0, 0))
+        o = feat(doc, part, "CAM_HeadScr%d" % (k + 1), "Винт_хомута_головы_M3x14_%d" % (k + 1),
+                 cap_screw(M3, 14), DARK)
+        o.Placement = App.Placement(q + sl_rot.multVec(V(0, -ear_hw, 0)) + V(0, 0, zc),
+                                    sl_rot.multiply(App.Rotation(V(1, 0, 0), 90)))
+        o = feat(doc, part, "CAM_HeadNut%d" % (k + 1), "Гайка_хомута_головы_M3_%d" % (k + 1),
+                 nut(M3, 0.0), STEEL)
+        o.Placement = App.Placement(q + sl_rot.multVec(V(0, ear_hw - M3["nut_m"] - 0.2, 0)) + V(0, 0, zc),
+                                    sl_rot.multiply(App.Rotation(V(1, 0, 0), -90)))
     o = feat(doc, part, "CAM_Servo", "Серво_камеры_SG90", sg90(), SERVO)
-    o.Placement = App.Placement(P + sv_pl.Base, sv_pl.Rotation)
+    o.Placement = App.Placement(A + sv_pl.Base, sv_pl.Rotation)
     for j, ys in enumerate(SG_HOLES_Y):
         sc = cyl(1.0, -6.0, 0.0).fuse(cyl(2.0, 0.0, 1.4))
         pt = sv_pl.Rotation.multVec(V(0, ys, 0)) + sv_pl.Base
         o = feat(doc, part, "CAM_SvScr%d" % (j + 1), "Саморез_SG90_2x6_камера_%d" % (j + 1), sc, DARK)
-        o.Placement.Base = V(P.x + pt.x, P.y + pt.y, tab0 + 2.5)
+        o.Placement.Base = V(A.x + pt.x, A.y + pt.y, tab0 + 2.5)
     # шестерня z13 на шлице: зуб 0 смотрит на ступицу при CamAngle = CamStow,
     # дальше крутится выражением (i = 30/13, навстречу ступице)
     gsv = involute_gear(GEAR_M, CAM_GEAR_SV, GEAR_W, bore=4.9, shift=RTP_SHIFT, z0=Hb,
                         phase=math.degrees(phi) + 180.0)
     o = feat(doc, part, "CAM_GearSv", "Шестерня_SG90_камеры_m1_z%d" % CAM_GEAR_SV, gsv, (0.95, 0.95, 0.95))
-    o.Placement = App.Placement(P + C, App.Rotation(V(0, 0, 1), 0.001))
+    o.Placement = App.Placement(A + C, App.Rotation(V(0, 0, 1), 0.001))
     o.setExpression("Placement.Rotation.Angle",
                     "-(%s.CamAngle - %.4f deg) * %d / %d" % (VE, stow, CAM_GEAR_HUB, CAM_GEAR_SV))
 
     # --- ось: M5 сверху, стопка внутр. колец на буртике головы ---
     zb1, zb2 = Hb, Hb + 13.0                              # низ подшипников
     for k, z0 in enumerate((zb1, zb2)):
-        sh = tube(B5["D"] / 2.0, B5["d"] / 2.0, z0, z0 + B5["B"], P.x, P.y)
+        sh = tube(B5["D"] / 2.0, B5["d"] / 2.0, z0, z0 + B5["B"], A.x, A.y)
         feat(doc, part, "CAM_Brg%d" % (k + 1), "Подшипник_консоли_625ZZ_%d" % (k + 1), sh, STEEL)
     feat(doc, part, "CAM_SpIn", "Втулка_оси_камеры_Ø7/Ø5.2x8",
-         tube(3.5, 2.6, zb1 + B5["B"], zb2, P.x, P.y), STEEL)
+         tube(3.5, 2.6, zb1 + B5["B"], zb2, A.x, A.y), STEEL)
     zh = zb2 + B5["B"] + 1.0
     feat(doc, part, "CAM_SpTop", "Шайба_оси_камеры_Ø7/Ø5.2x1",
-         tube(3.5, 2.6, zb2 + B5["B"], zh, P.x, P.y), STEEL)
+         tube(3.5, 2.6, zb2 + B5["B"], zh, A.x, A.y), STEEL)
     Lax = 30
     o = feat(doc, part, "CAM_AxBolt", "Винт_оси_камеры_M5x%d_ISO4762" % Lax, cap_screw(M5, Lax), DARK)
-    o.Placement.Base = V(P.x, P.y, zh)
+    o.Placement.Base = V(A.x, A.y, zh)
     o = feat(doc, part, "CAM_AxNut", "Гайка_оси_камеры_M5", nut(M5, rot5), STEEL)
-    o.Placement.Base = V(P.x, P.y, zn + 0.2)
+    o.Placement.Base = V(A.x, A.y, zn + 0.2)
     if zh - Lax > zn:
         raise RuntimeError("ось камеры: винт M5x%d не доходит до гайки" % Lax)
+    if zb - BOOM_D / 2.0 - (zh + M5["k"]) < 0.5:
+        raise RuntimeError("консоль ложится на головку оси M5")
 
-    # --- поворотная часть (своя СК: начало — ось мачты, консоль вдоль +X) ---
-    boom_p.Placement = App.Placement(V(P.x, P.y, 0), App.Rotation(V(0, 0, 1), e.CamAngle.Value or 0.001))
+    # --- поворотная часть (своя СК: начало — ось консоли, консоль вдоль +X) ---
+    boom_p.Placement = App.Placement(V(A.x, A.y, 0), App.Rotation(V(0, 0, 1), e.CamAngle.Value or 0.001))
     boom_p.setExpression("Placement.Rotation.Angle", "%s.CamAngle" % VE)
-    hub = cyl(11.0, Hb, Hb + 18.0)
+    # ступица: снизу гнездо 625 №1 и венец z30, сверху — седло хомута консоли.
+    # Гнездо 625 №2 открыто вверх, в жёлоб седла: через него ставят
+    # подшипник, шайбу и винт оси и затягивают его ключом 4 — до того, как
+    # в седло ляжет консоль. Консоль проходит над головкой винта
+    hl, hw = HUB_HL, HUB_HW
+    blk0 = Hb + GEAR_W + 0.5                              # над шестернёй SG90
+    hub = cyl(11.0, Hb, blk0).fuse(box(-hl, hl, -hw, hw, blk0, zb))
     hub = hub.fuse(involute_gear(GEAR_M, CAM_GEAR_HUB, GEAR_W, shift=-RTP_SHIFT, z0=Hb,
                                  phase=math.degrees(phi) - stow + 180.0 / CAM_GEAR_HUB))
-    arm_x1 = 40.0
-    hub = hub.fuse(box(0, arm_x1, -9.0, 9.0, zb - 8.0, zb + 8.0))
-    hub = hub.cut([cyl(B5["D"] / 2.0, Hb - 1, Hb + B5["B"]),
-                   cyl(B5["D"] / 2.0, Hb + 13.0, Hb + 19.0),
-                   cyl(4.25, Hb, Hb + 18.0),
-                   cyl_x(BOOM_D / 2.0 + 0.1, 12.0, arm_x1 + 1, 0, zb)])
+    hcut = [cyl(B5["D"] / 2.0, Hb - 1, Hb + B5["B"]),
+            cyl(4.25, Hb, zb2),
+            cyl(B5["D"] / 2.0, zb2, zb + 1),
+            cyl_x(BOOM_D / 2.0, -hl - 1, hl + 1, 0, zb)]
+    z_hn = zb - 7.0                                       # гнёзда гаек хомута
+    hub_sc = [(xs, s_ * HUB_SY) for xs in (-HUB_SX, HUB_SX) for s_ in (1, -1)]
+    for xs, ys in hub_sc:
+        hcut.append(cyl(M3["hole"] / 2.0, z_hn - 2.0, zb + 1, xs, ys))
+        hcut.append(nut_pocket(M3, z_hn, xs, ys, V(0, 1 if ys > 0 else -1, 0), rot=0.0, depth=12))
+    hub = hub.cut(hcut).removeSplitter()
+    feat(doc, boom_p, "CAM_Hub", "Ступица_консоли_печать", hub, PLA2)
+    capz0, capz1 = zb + HUB_GAP, zb + HUB_CAP
+    hcap = box(-hl, hl, -hw, hw, capz0, capz1).cut(cyl_x(BOOM_D / 2.0, -hl - 1, hl + 1, 0, zb))
+    for xs, ys in hub_sc:
+        hcap = hcap.cut(cyl(M3["hole"] / 2.0, capz0 - 1, capz1 + 1, xs, ys))
+        hcap = hcap.cut(cyl(M3["dk"] / 2.0 + 0.25, capz1 - 3.0, capz1 + 1, xs, ys))
+    feat(doc, boom_p, "CAM_HubCap", "Ступица_консоли_крышка", hcap.removeSplitter(), PLA2)
+    for k, (xs, ys) in enumerate(hub_sc):
+        o = feat(doc, boom_p, "CAM_HubScr%d" % (k + 1), "Винт_хомута_консоли_M3x12_%d" % (k + 1),
+                 cap_screw(M3, 12), DARK)
+        o.Placement.Base = V(xs, ys, capz1 - 3.0)
+        o = feat(doc, boom_p, "CAM_HubNut%d" % (k + 1), "Гайка_хомута_консоли_M3_%d" % (k + 1),
+                 nut(M3, 0.0), STEEL)
+        o.Placement.Base = V(xs, ys, z_hn + 0.2)
 
     def ycross(x, zc, half):
         """Поперечная стяжка по Y: отверстие + гнездо гайки в лыске -Y."""
@@ -1037,12 +1190,14 @@ def build_camera(doc, d, e):
         hx.rotate(V(0, 0, 0), V(1, 0, 0), -90)
         hx.translate(V(x, -half - 0.01, zc))
         return [h, hx]
-    hub = hub.cut(ycross(30.0, zb, 9.0)).removeSplitter()
-    feat(doc, boom_p, "CAM_Hub", "Ступица_консоли_печать", hub, PLA2)
-    L_b = reach
-    bt = cyl_x(BOOM_D / 2.0, 12.0, reach + 12.0, 0, zb).cut(cyl_x(BOOM_D / 2.0 - BOOM_T, 11, reach + 13, 0, zb))
-    bt = bt.cut([Part.makeCylinder(M3["hole"] / 2.0, BOOM_D + 2, V(x, -BOOM_D / 2.0 - 1, zb), V(0, 1, 0))
-                 for x in (30.0, reach - 18.0)])           # сверловка Ø3.4 под стяжки
+    # консоль: передний конец — в кронштейне камеры (сверловка под стяжку),
+    # задний проходит хомут ступицы насквозь; длина — до 10 мм вверх
+    L_b = math.ceil((reach + 12.0 + hl) / 10.0) * 10.0
+    x_b0 = reach + 12.0 - L_b
+    bt = cyl_x(BOOM_D / 2.0, x_b0, reach + 12.0, 0, zb).cut(
+        cyl_x(BOOM_D / 2.0 - BOOM_T, x_b0 - 1, reach + 13, 0, zb))
+    bt = bt.cut(Part.makeCylinder(M3["hole"] / 2.0, BOOM_D + 2, V(reach - 18.0, -BOOM_D / 2.0 - 1, zb),
+                                  V(0, 1, 0)))           # сверловка Ø3.4 под стяжку кронштейна
     feat(doc, boom_p, "CAM_Boom", "Консоль_Al_труба_Ø%gx%g_L%.0f" % (BOOM_D, BOOM_T, L_b), bt, STEEL)
 
     def yhw(tag, x, half, label):
@@ -1051,7 +1206,6 @@ def build_camera(doc, d, e):
         o.Placement = App.Placement(V(x, half, zb), rot)
         o = feat(doc, boom_p, "CAM_%sNut" % tag, "Гайка_%s_M3" % label, nut(M3, 0.0), STEEL)
         o.Placement = App.Placement(V(x, -half + 0.1, zb), rot)
-    yhw("Arm", 30.0, 9.0, "ступицы")
 
     # --- кронштейн камеры на конце консоли ---
     R = reach
@@ -1092,7 +1246,11 @@ def build_camera(doc, d, e):
         o.Placement = App.Placement(V(R + q.x, q.y, z_l1), App.Rotation(V(1, 0, 0), 180))
     doc.recompute()
     h_lens = z_l1 - 15.0 - fl
-    return dict(reach=reach, work=work, stow=stow, h=h_lens, servo=(stow - work) * CAM_GEAR_HUB / CAM_GEAR_SV)
+    if abs(h_lens - e.CamLensH.Value) > 1e-6:
+        raise RuntimeError("объектив на %.2f, а не на CamLensH" % h_lens)
+    return dict(reach=reach, work=work, stow=stow, h=h_lens, L_b=L_b, tail=-x_b0 - hl,
+                mast_up=z_mt - z_s1, off=math.degrees(psi),
+                servo=(stow - work) * CAM_GEAR_HUB / CAM_GEAR_SV)
 
 
 def poly_to_robot(d, e, px, py):
@@ -1153,6 +1311,13 @@ def build_polygon(doc, d, e):
 def main():
     doc = pick_doc()
     d = doc.getObject(VS)
+    if doc.getObject("Poza") is None:
+        # старый документ: углы руки ещё в Drive — перенести в VarSet Poza
+        import os
+        path = os.path.join(os.path.dirname(doc.FileName), "shkiv_param.FCMacro")
+        ns = {"__name__": "shkiv_lib"}
+        exec(compile(open(path, encoding="utf-8").read(), path, "exec"), ns)
+        ns["upgrade_pose"](doc)
     e = ensure_vs(doc)
     doc.recompute()
     build_frame(doc, d, e)
@@ -1163,11 +1328,15 @@ def main():
     print("станина, ремни, рабочий узел, камера, полигон — построены")
     print("  камера: консоль %.1f мм, в работе %.1f°, сложена %.1f° (SG90 %.0f°), объектив %.0f мм над полем"
           % (cam["reach"], cam["work"], cam["stow"], cam["servo"], cam["h"]))
-    print("  ход Z %.1f мм за 180° SG90 (шестерня m1 z%d), магнит от поля +4 до +%.1f"
+    print("  ось консоли вынесена от мачты на %.0f мм (под %.1f°); мачта над головой %.1f мм; "
+          "консоль L%.0f, за хомутом ступицы %.1f мм"
+          % (CAM_OFF, cam["off"], cam["mast_up"], cam["L_b"], cam["tail"]))
+    print("  ход Z %.1f мм за 180° SG90 (шестерня m1 z%d), губы присосок от поля +4 до +%.1f"
           % (Z_STROKE, ZP_TEETH, 4.0 + Z_STROKE))
-    print("  поворот: z%d -> z%d, i = %.1f: 180° серво = %.0f° магнита"
+    print("  поворот: z%d -> z%d, i = %.1f: 180° серво = %.0f° захвата"
           % (RTP_TEETH, SPG_TEETH, SPG_TEETH / float(RTP_TEETH), 180.0 * SPG_TEETH / RTP_TEETH))
-    print("  вылет захвата от оси локтя %.1f мм" % SPINDLE_X)
+    print("  вылет захвата от оси локтя %.1f мм; захват — %d присоски DP8 на R%.1f, винт шпинделя %s"
+          % (SPINDLE_X, CUP_N, CUP_RC, doc.getObject("CR_Screw").Label))
     bad = [(o.Name, o.State) for o in doc.Objects if "Invalid" in o.State]
     if bad:
         print("  !! невалидные объекты:", bad)

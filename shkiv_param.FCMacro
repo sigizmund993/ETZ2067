@@ -24,6 +24,7 @@
 # Запуск: FreeCAD -> Макросы... -> shkiv_param.FCMacro
 
 import math
+import re
 
 import FreeCAD as App
 
@@ -33,6 +34,7 @@ BODY_NAME  = "Body003"     # тело шкива (существующее, пе
 CAP_NAME   = "Body_Cap"    # тело крышки (создаётся)
 PROST_NAME = "Body_Prost"  # тело проставки под второй шкив (создаётся)
 VS_NAME    = "Drive"
+POSE_NAME  = "Poza"       # поза руки: углы плеча, локтя и рычага (отдельно от Drive)
 
 PULLEY_LABEL = "Шкив_ведомый"
 CAP_LABEL    = "Крышка_хомута"
@@ -175,9 +177,6 @@ INPUTS = [
      "Толщина рычага. Он висит ПОД нижним фланцем, в полосу ремня не лезет"),
     ("LeverHoleD",     "App::PropertyLength",  "4 Рычаг", 3.2,
      "Ø отверстия на конце рычага (3.2 = свободный M3)"),
-    ("LeverAngle",    "App::PropertyAngle",   "4 Рычаг", -90.0,
-     "Куда смотрит рычаг. 0 = вдоль руки. Поворачивает весь второй шкив, "
-     "поэтому спица окна остаётся под рычагом"),
 
     ("TubeLen",       "App::PropertyLength",  "3 Рука", 150.0,
      "Длина трубы руки от начала хомута наружу"),
@@ -212,8 +211,6 @@ INPUTS = [
      "На сколько поднять предплечье над минимумом. Без подъёма угол "
      "хомута 2 (R17) при диагональных углах в локте на 2 мм заходит по "
      "высоте в крышку хомута 1"),
-    ("Tube2Angle",    "App::PropertyAngle",   "3 Локоть", 90.0,
-     "Угол предплечья в шарнире. Поворачивает хомут 2, крышку и саму трубу"),
 
     ("RodThk",        "App::PropertyLength",  "4 Тяга", 4.0,
      "Толщина тяги = ширина подшипника 623ZZ (PivotBrgW): он запрессован "
@@ -441,25 +438,6 @@ DERIVED = [
      "{V}.LeverZ - {V}.RodStandoff - {V}.RodThk",
      "Низ тяги. Тяга висит под рычагом и проушиной на втулках RodStandoff "
      "— ниже хомутов предплечья, поэтому не задевает их ни при каком угле"),
-    ("RodAX",        "App::PropertyLength", "6 Производные 2",
-     "{V}.LeverLen * cos({V}.LeverAngle)",
-     "X отверстия рычага от оси шкивов (= первый палец тяги)"),
-    ("RodAY",        "App::PropertyLength", "6 Производные 2",
-     "{V}.LeverLen * sin({V}.LeverAngle)", "Y отверстия рычага"),
-    ("RodBX",        "App::PropertyLength", "6 Производные 2",
-     "{V}.PivotX - {V}.LeverLen * cos({V}.Tube2Angle)",
-     "X пальца на шарнире тяги: вылет LeverLen от оси локтя, повёрнутый "
-     "на Tube2Angle"),
-    ("RodBY",        "App::PropertyLength", "6 Производные 2",
-     "-{V}.LeverLen * sin({V}.Tube2Angle)", "Y пальца на шарнире тяги"),
-    ("RodLen",       "App::PropertyLength", "6 Производные 2",
-     "sqrt((({V}.RodBX - {V}.RodAX) ^ 2 + ({V}.RodBY - {V}.RodAY) ^ 2)"
-     " / 1mm^2) * 1mm",
-     "МЕЖЦЕНТРОВОЕ тяги. При замкнутом параллелограмме равно PivotX"),
-    ("RodAngle",     "App::PropertyAngle",  "6 Производные 2",
-     "atan2({V}.RodBY - {V}.RodAY; {V}.RodBX - {V}.RodAX)",
-     "Куда смотрит тяга. Считается из обоих углов, поэтому тяга сама "
-     "поворачивается за рычагом и предплечьем"),
     ("JointEyeR",    "App::PropertyLength", "6 Производные 2",
      "max({V}.LeverHoleD / 2 + {V}.JointWall; {V}.LeverWidth / 2)",
      "Радиус проушины тяги. Не меньше глаза рычага, чтобы оба конца тяги "
@@ -530,6 +508,50 @@ DERIVED = [
 
 
 # ---------------------------------------------------------------------------
+# ПОЗА — отдельный VarSet «Poza». Углы не живут в Drive нарочно: FreeCAD
+# пересчитывает КАЖДЫЙ объект, ссылающийся на изменённый VarSet, а на
+# Drive ссылаются все тела, включая шкивы со 100-120 зубьями — поворот
+# руки стоил 10 с пересчёта. На Poza ссылаются только Placement'ы и тяга,
+# поэтому поворот почти бесплатный (и руку можно таскать мышью, см.
+# ruka_mysh.FCMacro). Углы плеча и рычага — абсолютные (от +X), угол
+# предплечья — относительно плеча.
+POSE_INPUTS = [
+    ("ShoulderAngle", "App::PropertyAngle", "Поза", 0.0,
+     "Угол плеча (шкив 1 + рука) от +X. Поворачивает шкив 1, хомут, трубу "
+     "и всё, что на ней"),
+    ("Tube2Angle",    "App::PropertyAngle", "Поза", 90.0,
+     "Угол предплечья в шарнире ОТНОСИТЕЛЬНО плеча. Поворачивает хомут 2, "
+     "крышку и саму трубу"),
+    ("LeverAngle",    "App::PropertyAngle", "Поза", -90.0,
+     "Куда смотрит рычаг (шкив 2), абсолютный, от +X. Поворачивает весь "
+     "второй шкив, поэтому спица окна остаётся под рычагом. Параллелограмм "
+     "замкнут при LeverAngle = ShoulderAngle + Tube2Angle - 180"),
+]
+POSE_DERIVED = [
+    ("RodAX",        "App::PropertyLength", "Поза: тяга",
+     "{V}.LeverLen * cos(({P}.LeverAngle - {P}.ShoulderAngle))",
+     "X отверстия рычага в СК руки (Part_Tube) (= первый палец тяги)"),
+    ("RodAY",        "App::PropertyLength", "Поза: тяга",
+     "{V}.LeverLen * sin(({P}.LeverAngle - {P}.ShoulderAngle))", "Y отверстия рычага"),
+    ("RodBX",        "App::PropertyLength", "Поза: тяга",
+     "{V}.PivotX - {V}.LeverLen * cos({P}.Tube2Angle)",
+     "X пальца на шарнире тяги: вылет LeverLen от оси локтя, повёрнутый "
+     "на Tube2Angle"),
+    ("RodBY",        "App::PropertyLength", "Поза: тяга",
+     "-{V}.LeverLen * sin({P}.Tube2Angle)", "Y пальца на шарнире тяги"),
+    ("RodLen",       "App::PropertyLength", "Поза: тяга",
+     "sqrt((({P}.RodBX - {P}.RodAX) ^ 2 + ({P}.RodBY - {P}.RodAY) ^ 2)"
+     " / 1mm^2) * 1mm",
+     "МЕЖЦЕНТРОВОЕ тяги. При замкнутом параллелограмме равно PivotX"),
+    ("RodAngle",     "App::PropertyAngle",  "Поза: тяга",
+     "atan2({P}.RodBY - {P}.RodAY; {P}.RodBX - {P}.RodAX)",
+     "Куда смотрит тяга. Считается из обоих углов, поэтому тяга сама "
+     "поворачивается за рычагом и предплечьем"),
+]
+POSE_MOVED = [n for n, *_ in POSE_INPUTS + POSE_DERIVED]
+
+
+# ---------------------------------------------------------------------------
 def pick_doc():
     act = App.ActiveDocument
     if act is not None and act.getObject(BODY_NAME) is not None:
@@ -559,7 +581,7 @@ def ensure_varset(doc):
         if not hasattr(vs, name):
             vs.addProperty(typ, name, grp, doc_str)
         # выражение переустанавливаем всегда — формула принадлежит макросу
-        vs.setExpression(name, expr.format(V=VS_NAME))
+        vs.setExpression(name, expr.format(V=VS_NAME, P=POSE_NAME))
     # пересчёт ОДИН раз в конце, а не после каждого выражения: на двух телах
     # со 120 зубьями полный пересчёт идёт минуты, и сорок пересчётов подряд
     # вешали FreeCAD наглухо. Порядок в DERIVED всё равно обязателен —
@@ -567,6 +589,73 @@ def ensure_varset(doc):
     # setExpression не нужно.
     doc.recompute()
     return vs, created
+
+
+def ensure_pose(doc):
+    """VarSet позы «Poza»: создать/дополнить, НЕ затирая значения. Если
+    документ старый (углы и тяга жили в Drive) — перенести значения,
+    переписать все выражения с Drive.X на Poza.X и убрать X из Drive.
+    Вызывать ДО ensure_varset."""
+    vs = doc.getObject(VS_NAME)
+    ps = doc.getObject(POSE_NAME)
+    if ps is None:
+        ps = doc.addObject("App::VarSet", POSE_NAME)
+        ps.Label = "Поза"
+    for name, typ, grp, default, doc_str in POSE_INPUTS:
+        if not hasattr(ps, name):
+            ps.addProperty(typ, name, grp, doc_str)
+            old = getattr(vs, name, None) if vs is not None else None
+            setattr(ps, name, old if old is not None else default)
+    for name, typ, grp, expr, doc_str in POSE_DERIVED:
+        if not hasattr(ps, name):
+            ps.addProperty(typ, name, grp, doc_str)
+        ps.setExpression(name, expr.format(V=VS_NAME, P=POSE_NAME))
+    if vs is not None and any(hasattr(vs, n) for n in POSE_MOVED):
+        # сначала перепривязать ВСЕ ссылки, потом удалять: сломанное
+        # выражение отравляет весь документ
+        pat = re.compile(r"\b%s\.(%s)\b" % (VS_NAME, "|".join(POSE_MOVED)))
+        n_ex = 0
+        for o in doc.Objects:
+            if o is vs or o is ps:
+                continue
+            for path, ex in list(o.ExpressionEngine):
+                nex = pat.sub(POSE_NAME + r".\1", ex)
+                if nex != ex:
+                    o.setExpression(path.lstrip("."), nex)
+                    n_ex += 1
+        for n in POSE_MOVED:
+            if hasattr(vs, n):
+                vs.setExpression(n, None)
+        for n in POSE_MOVED:
+            if hasattr(vs, n):
+                vs.removeProperty(n)
+        print("поза перенесена из %s в %s: выражений %d" % (VS_NAME, POSE_NAME, n_ex))
+    return ps
+
+
+def upgrade_pose(doc=None):
+    """Перевести ГОТОВЫЙ документ на VarSet позы без пересборки: перенести
+    углы из Drive в Poza и привязать к ShoulderAngle шкив 1, крышку
+    хомута, его винты и трубу руки (то же, что делают build_* при сборке
+    с нуля). Пересчёт — один, в конце."""
+    doc = doc or pick_doc()
+    ps = ensure_pose(doc)
+    for n in (BODY_NAME, CAP_NAME, TUBE_PART):
+        o = doc.getObject(n)
+        if o is not None:
+            setx(o, "Placement.Rotation.Angle", "{P}.ShoulderAngle")
+    for o in doc.Objects:
+        if not o.Name.startswith("HW_"):
+            continue
+        ex = dict((k.lstrip("."), v) for k, v in o.ExpressionEngine)
+        bx, by = ex.get("Placement.Base.x", ""), ex.get("Placement.Base.y", "")
+        if "ShoulderAngle" in bx or not bx:
+            continue
+        setx(o, "Placement.Base.x", "(%s) * cos({P}.ShoulderAngle) - (%s) * sin({P}.ShoulderAngle)" % (bx, by))
+        setx(o, "Placement.Base.y", "(%s) * sin({P}.ShoulderAngle) + (%s) * cos({P}.ShoulderAngle)" % (bx, by))
+        setx(o, "Placement.Rotation.Angle", "{P}.ShoulderAngle")
+    doc.recompute()
+    return ps
 
 
 def show_tip(body):
@@ -585,7 +674,7 @@ def show_tip(body):
 
 
 def setx(obj, prop, expr):
-    obj.setExpression(prop, expr.format(V=VS_NAME))
+    obj.setExpression(prop, expr.format(V=VS_NAME, P=POSE_NAME))
 
 
 def add(doc, body, kind, name, exprs=None, rot=None, **props):
@@ -642,6 +731,7 @@ def purge_orphans(doc):
 
 def build_pulley(doc, body):
     wipe(doc, body)
+    setx(body, "Placement.Rotation.Angle", "{P}.ShoulderAngle")     # шкив 1 = плечо
     zax = [o for o in body.Origin.OriginFeatures if o.Name.startswith("Z_Axis")][0]
 
     add(doc, body, "AdditiveCylinder", "P_Flange1",
@@ -768,6 +858,7 @@ def build_cap(doc, part):
     body = doc.addObject("PartDesign::Body", CAP_NAME)
     part.addObject(body)
     body.Label = CAP_LABEL
+    setx(body, "Placement.Rotation.Angle", "{P}.ShoulderAngle")     # крышка — с плечом
 
     add(doc, body, "AdditiveBox", "K_Body",
         {"Length": "{V}.ClampLen", "Width": "2 * {V}.SaddleHalfW",
@@ -903,7 +994,7 @@ def build_pulley2(doc, part):
 
     # рычаг смотрит вдоль +X; направление задаётся поворотом всего тела,
     # поэтому спица окна остаётся ровно под рычагом
-    setx(body, "Placement.Rotation.Angle", "{V}.LeverAngle")
+    setx(body, "Placement.Rotation.Angle", "{P}.LeverAngle")
     doc.recompute()
     show_tip(body)
     return body
@@ -944,6 +1035,7 @@ def build_tube(doc):
     setx(part, "Placement.Base.x", "{V}.PulleyAxisX")
     setx(part, "Placement.Base.y", "{V}.ArmAxisY")
     setx(part, "Placement.Base.z", "{V}.BeltPlaneZ - {V}.FlangeThk")
+    setx(part, "Placement.Rotation.Angle", "{P}.ShoulderAngle")     # плечо
     doc.recompute()
     show_tip(body)
     return body
@@ -1118,7 +1210,7 @@ def build_elbow(doc, part):
                   "-{V}.ElbowBot", "{V}.ElbowBot + 2 mm")
     setx(b, "Placement.Base.x", "{V}.PivotX")
     setx(b, "Placement.Base.z", "{V}.Tube2Z")
-    setx(b, "Placement.Rotation.Angle", "{V}.Tube2Angle")
+    setx(b, "Placement.Rotation.Angle", "{P}.Tube2Angle")
     doc.recompute()
     show_tip(b)
 
@@ -1127,7 +1219,7 @@ def build_elbow(doc, part):
                       ["{V}.Elbow2ScrewX", "-{V}.Elbow2ScrewX"])
     setx(bcap, "Placement.Base.x", "{V}.PivotX")
     setx(bcap, "Placement.Base.z", "{V}.Tube2Z")
-    setx(bcap, "Placement.Rotation.Angle", "{V}.Tube2Angle")
+    setx(bcap, "Placement.Rotation.Angle", "{P}.Tube2Angle")
 
     # ---------- вторая труба, в том же локальном фрейме что хомут 2 ----------
     t2 = doc.addObject("PartDesign::Body", TUBE2_NAME)
@@ -1142,7 +1234,7 @@ def build_elbow(doc, part):
          "Placement.Base.x": "{V}.Tube2X0 - 1 mm"}, rot=ROT_X)
     setx(t2, "Placement.Base.x", "{V}.PivotX")
     setx(t2, "Placement.Base.z", "{V}.Tube2Z")
-    setx(t2, "Placement.Rotation.Angle", "{V}.Tube2Angle")
+    setx(t2, "Placement.Rotation.Angle", "{P}.Tube2Angle")
     doc.recompute()
     show_tip(t2)
     return a, acap, b, bcap, t2
@@ -1212,7 +1304,7 @@ def build_rod_joint(doc, part):
         Radius1=CSK_R1, Radius2=CSK_R2 + 0.5, Height=CSK_H + 0.5)
     setx(j, "Placement.Base.x", "{V}.PivotX")
     setx(j, "Placement.Base.z", "{V}.Tube2Z")
-    setx(j, "Placement.Rotation.Angle", "{V}.Tube2Angle")
+    setx(j, "Placement.Rotation.Angle", "{P}.Tube2Angle")
     doc.recompute()
     show_tip(j)
 
@@ -1220,7 +1312,7 @@ def build_rod_joint(doc, part):
                       "{V}.Tube2X0", "{V}.JointGrip", xs, pfx="RdC")
     setx(jcap, "Placement.Base.x", "{V}.PivotX")
     setx(jcap, "Placement.Base.z", "{V}.Tube2Z")
-    setx(jcap, "Placement.Rotation.Angle", "{V}.Tube2Angle")
+    setx(jcap, "Placement.Rotation.Angle", "{P}.Tube2Angle")
     return j, jcap
 
 
@@ -1256,13 +1348,13 @@ def build_rod(doc, part, vs):
     part.addObject(b)
     b.Label = ROD_LABEL
     add(doc, b, "AdditiveBox", "Tg_Bar",
-        {"Length": "{V}.RodLen", "Width": "{V}.RodBarW",
+        {"Length": "{P}.RodLen", "Width": "{V}.RodBarW",
          "Height": "{V}.RodThk", "Placement.Base.y": "-{V}.RodBarW / 2"})
     add(doc, b, "AdditiveCylinder", "Tg_EyeA",
         {"Radius": "{V}.RodEyeR", "Height": "{V}.RodThk"})
     add(doc, b, "AdditiveCylinder", "Tg_EyeB",
         {"Radius": "{V}.RodEyeR", "Height": "{V}.RodThk",
-         "Placement.Base.x": "{V}.RodLen"})
+         "Placement.Base.x": "{P}.RodLen"})
     # гнёзда 623ZZ насквозь: подшипник запрессован заподлицо (RodThk = его
     # ширина), внутреннее кольцо зажато пальцем между втулкой и шайбой
     add(doc, b, "SubtractiveCylinder", "Tg_HoleA",
@@ -1270,11 +1362,11 @@ def build_rod(doc, part, vs):
          "Placement.Base.z": "-1 mm"})
     add(doc, b, "SubtractiveCylinder", "Tg_HoleB",
         {"Radius": "{V}.PivotBrgOD / 2", "Height": "{V}.RodThk + 2 mm",
-         "Placement.Base.x": "{V}.RodLen", "Placement.Base.z": "-1 mm"})
-    setx(b, "Placement.Base.x", "{V}.RodAX")
-    setx(b, "Placement.Base.y", "{V}.RodAY")
+         "Placement.Base.x": "{P}.RodLen", "Placement.Base.z": "-1 mm"})
+    setx(b, "Placement.Base.x", "{P}.RodAX")
+    setx(b, "Placement.Base.y", "{P}.RodAY")
     setx(b, "Placement.Base.z", "{V}.RodZ")
-    setx(b, "Placement.Rotation.Angle", "{V}.RodAngle")
+    setx(b, "Placement.Rotation.Angle", "{P}.RodAngle")
     doc.recompute()
     show_tip(b)
 
@@ -1302,8 +1394,8 @@ def build_rod(doc, part, vs):
          "{V}.RodZ - %s mm - %s mm" % (WASHER_T, NUT_H), (0.55, 0.56, 0.58)),
     )
     made = 0
-    for tag, xe, ye in (("A", "{V}.RodAX", "{V}.RodAY"),
-                        ("B", "{V}.RodBX", "{V}.RodBY")):
+    for tag, xe, ye in (("A", "{P}.RodAX", "{P}.RodAY"),
+                        ("B", "{P}.RodBX", "{P}.RodBY")):
         for kind, label, shape, zexpr, color in parts_:
             if shape is None:
                 print("  тяга: нет детали %s, пропускаю" % label)
@@ -1405,9 +1497,9 @@ def build_pivot_hw(doc, part, vs):
 ELBOW_CLAMPS = (
     ("E1", ("-{V}.ElbowScrewX1", "-{V}.ElbowScrewX2"), "{V}.TubeAxisZ", "0 deg"),
     ("E2", ("{V}.Elbow2ScrewX", "-{V}.Elbow2ScrewX"), "{V}.Tube2Z",
-     "{V}.Tube2Angle"),
+     "{P}.Tube2Angle"),
     ("RJ", ("{V}.JointMidX + {V}.JointScrewX", "{V}.JointMidX - {V}.JointScrewX"),
-     "{V}.Tube2Z", "{V}.Tube2Angle"),
+     "{V}.Tube2Z", "{P}.Tube2Angle"),
 )
 ELBOW_CLAMP_LABELS = {"E1": "локоть_1", "E2": "локоть_2", "RJ": "тяга"}
 
@@ -1689,9 +1781,13 @@ def build_hardware(doc, part, vs):
                 pl = o.Placement
                 pl.Rotation = rot
                 o.Placement = pl
-            setx(o, "Placement.Base.x", "{V}." + sx)
-            setx(o, "Placement.Base.y", ey)
+            # хомут крутится с плечом: положение — поворот (x, y) на ShoulderAngle
+            setx(o, "Placement.Base.x", "{V}.%s * cos({P}.ShoulderAngle) - (%s) * sin({P}.ShoulderAngle)"
+                 % (sx, ey))
+            setx(o, "Placement.Base.y", "{V}.%s * sin({P}.ShoulderAngle) + (%s) * cos({P}.ShoulderAngle)"
+                 % (sx, ey))
             setx(o, "Placement.Base.z", zexpr)
+            setx(o, "Placement.Rotation.Angle", "{P}.ShoulderAngle")
             o.ViewObject.ShapeColor = color
             o.ViewObject.DiffuseColor = [color]
             made += 1
@@ -1705,6 +1801,7 @@ def main():
     part = doc.getObject(PART_NAME)
     print("документ:", doc.Name, "|", doc.FileName)
 
+    ps = ensure_pose(doc)
     vs, created = ensure_varset(doc)
     print("набор переменных '%s' %s" % (vs.Label, "создан" if created else "найден, значения сохранены"))
 
@@ -1814,7 +1911,7 @@ def main():
     print("  рычаг      R%.0f..%.0f до отверстия Ø%.1f, %.0f x %.0f мм, "
           "часть фланца, угол %.0f°"
           % (vs.LeverR0, vs.LeverLen, vs.LeverHoleD, vs.LeverWidth,
-             vs.LeverThk, vs.LeverAngle))
+             vs.LeverThk, ps.LeverAngle))
     tv = tube.Shape.Volume / 1000.0
     print("  труба      Ø%.1f x %.0f мм, стенка %.1f | отдельный парт «%s» | %.1f см3"
           % (vs.TubeOD, vs.TubeLen, vs.TubeWall, TUBE_PLABEL, tv))
@@ -1832,11 +1929,11 @@ def main():
           % (vs.CapThk.Value - vs.CapWall.Value + vs.ElbowBot.Value - vs.NutThk.Value))
     print("  труба 2    Ø%.1f x %.0f мм насквозь через хомут 2, угол %.0f° | "
           "вылет %.0f + рабочая %.0f | %.1f см3"
-          % (vs.TubeOD, vs.Tube2Full, vs.Tube2Angle,
+          % (vs.TubeOD, vs.Tube2Full, ps.Tube2Angle,
              vs.LeverLen.Value - vs.JointReach.Value, vs.Tube2Len, t2v))
     jv = (joint.Shape.Volume + jcap.Shape.Volume) / 1000.0
-    la = math.radians(vs.LeverAngle.Value)
-    ta = math.radians(vs.Tube2Angle.Value)
+    la = math.radians(ps.LeverAngle.Value - ps.ShoulderAngle.Value)   # в СК руки
+    ta = math.radians(ps.Tube2Angle.Value)
     hx = vs.LeverLen.Value * math.cos(la)
     hy = vs.LeverLen.Value * math.sin(la)
     px = vs.PivotX.Value - vs.LeverLen.Value * math.cos(ta)
@@ -1871,14 +1968,14 @@ def main():
     rv = rod.Shape.Volume / 1000.0
     print("  тяга       межцентровое %.2f мм, планка %.1f x %.1f, глаза R%.1f "
           "под 623ZZ, угол %.1f° | %.1f см3"
-          % (vs.RodLen, vs.RodBarW, vs.RodThk, vs.RodEyeR, vs.RodAngle, rv))
+          % (ps.RodLen, vs.RodBarW, vs.RodThk, vs.RodEyeR, ps.RodAngle, rv))
     print("             висит на втулках %.1f мм ПОД рычагом и проушиной, z %.1f..%.1f; "
           "параллелограмм замкнут при RodLen == PivotX (%.2f)"
           % (vs.RodStandoff, vs.RodZ, vs.RodZ.Value + vs.RodThk.Value, vs.PivotX))
-    if abs(vs.RodLen.Value - vs.PivotX.Value) > 0.01:
+    if abs(ps.RodLen.Value - vs.PivotX.Value) > 0.01:
         print("  !! тяга (%.2f) не равна плечу (%.2f) — параллелограмм "
               "разомкнут: проверьте LeverAngle и Tube2Angle"
-              % (vs.RodLen, vs.PivotX))
+              % (ps.RodLen, vs.PivotX))
     if rod_len:
         print("             шарниры тяги %d деталей: потайной M3x%d заподлицо, "
               "втулка, 623ZZ, шайба, гайка" % (rod_n, rod_len))

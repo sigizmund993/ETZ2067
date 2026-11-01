@@ -231,14 +231,30 @@ def group_of(n):
     return r
 
 
+def SPINDLE_AXIS(holder):
+    """x оси шпинделя во фрейме предплечья: центр держателя присосок без
+    штуцера трубки (он торчит вбок и сдвигает центр габарита)."""
+    import Part as _P
+    sol = max(holder.Shape.Solids, key=lambda s_: s_.Volume)
+    cyl_faces = [f for f in sol.Faces if f.Surface.__class__.__name__ == "Cylinder"
+                 and abs(f.Surface.Axis.z) > 0.99]
+    big = max(cyl_faces, key=lambda f: f.Surface.Radius)
+    return big.Surface.Center.x
+
+
 def geom():
     d = D().getObject("Drive")
     S = V(d.PulleyAxisX.Value, d.ArmAxisY.Value, 0)
     L1 = d.PivotX.Value
     lev = d.LeverLen.Value
     # вылет захвата — ось магнита в фрейме предплечья (от оси локтя)
-    Le = D().getObject("CR_Magnet").Shape.BoundBox.Center.x
-    return dict(S=S, L1=L1, lev=lev, t1_0=0.0, t2_0=d.Tube2Angle.Value, lv_0=d.LeverAngle.Value,
+    grip = D().getObject("CR_CupHolder") or D().getObject("CR_Magnet")   # присоски / прежний магнит
+    Le = grip.Shape.BoundBox.Center.x if grip.Name == "CR_Magnet" else SPINDLE_AXIS(grip)
+    # поза документа — VarSet Poza (углы плеча и рычага абсолютные, предплечья —
+    # от плеча); в старых документах углы жили в Drive и плечо было на 0
+    ps = D().getObject("Poza") or d
+    t1_0 = ps.ShoulderAngle.Value if hasattr(ps, "ShoulderAngle") else 0.0
+    return dict(S=S, L1=L1, lev=lev, t1_0=t1_0, t2_0=t1_0 + ps.Tube2Angle.Value, lv_0=ps.LeverAngle.Value,
                 Le=Le)
 
 
@@ -265,7 +281,7 @@ def rz(shape, c, ang):
 def pose(base, g, t1, t2):
     """Детали в позе (t1 — угол плеча, t2 — абсолютный угол предплечья, град)."""
     S = g["S"]
-    P0 = S + V(g["L1"], 0, 0)
+    P0 = S + V(g["L1"] * math.cos(math.radians(g["t1_0"])), g["L1"] * math.sin(math.radians(g["t1_0"])), 0)
     P1 = S + V(g["L1"] * math.cos(math.radians(t1)), g["L1"] * math.sin(math.radians(t1)), 0)
     A0 = S + V(g["lev"] * math.cos(math.radians(g["lv_0"])), g["lev"] * math.sin(math.radians(g["lv_0"])), 0)
     lv = t2 + 180.0
@@ -523,7 +539,7 @@ def sweep_cells(report=True):
     fz = e.FloorZ.Value
     old = set_magnet(5.0)
     base = parts()
-    low_ok = ("CR_Magnet", "CR_Ext", "CR_Screw")
+    low_ok = ("CR_Magnet", "CR_Cup", "CR_HolderNut", "CR_Ext", "CR_Screw")
     issues = []
     worst = 1e9
     worst_n = None
@@ -796,6 +812,7 @@ def park(report=True):
 
 CAM_FOV = (60.0, 47.0)          # IMX179 AF: по длинной стороне кадра (вдоль Y полигона), по короткой
 CAM_FOV_MARGIN = 2.0            # град — запас у края кадра
+MAST_EXTRA = 150.0              # мачта может торчать выше головы: проверка на столько
 
 
 def cam(report=True):
@@ -874,14 +891,20 @@ def cam(report=True):
     # 4. в работе всё подвижное руки ниже камеры (высоты от позы не зависят)
     cam_low = min(s_.BoundBox.ZMin for n, s_ in P.items() if n.startswith(("CAM_Lens", "CAM_Board",
                                                                          "CAM_Bracket", "CAM_Boom",
-                                                                         "CAM_Hub", "CAM_Arm", "CAM_Br")))
+                                                                         "CAM_Hub", "CAM_Br")))
     arm_hi = max(s_.BoundBox.ZMax for n, s_ in P.items() if group_of(n) != "static")
     lines.append("консоль с камерой от z %.0f, рука до z %.0f: зазор %.0f мм в любой позе"
                  % (cam_low, arm_hi, cam_low - arm_hi))
     if cam_low - arm_hi < 10.0:
         issues.append("консоль камеры ближе 10 мм к руке по высоте")
-    # 5. поворот консоли stow -> work без касаний (шаг 4°), гнутся только поворотные детали
+    # 5. поворот консоли stow -> work без касаний (шаг 4°), гнутся только поворотные детали.
+    #    Голова на мачте ставится на любую высоту, поэтому мачта может торчать
+    #    выше неё — проверяем и с мачтой, продлённой на MAST_EXTRA вверх
     boom = [o.Name for o in doc.getObject("Part_CamBoom").Group]
+    mb = P["CAM_Mast"].BoundBox
+    mast_x = Part.makeCylinder(mb.XLength / 2.0, MAST_EXTRA,
+                               V((mb.XMin + mb.XMax) / 2.0, (mb.YMin + mb.YMax) / 2.0, mb.ZMax))
+    mast_gap = 1e9
     n_ok = 0
     a = stow
     while True:
@@ -889,6 +912,10 @@ def cam(report=True):
         Q = parts()
         mv = {n: s_ for n, s_ in Q.items() if n in boom}
         rest = {n: s_ for n, s_ in Q.items() if n not in boom}
+        rest["мачта +%g мм" % MAST_EXTRA] = mast_x
+        for n, s_ in mv.items():
+            if box_hit(s_.BoundBox, mast_x.BoundBox, 30.0):
+                mast_gap = min(mast_gap, s_.distToShape(mast_x)[0])
         for x, y, v in collide(mv, rest):
             issues.append("поворот консоли %.0f°: %s <-> %s" % (a, label(x), label(y)))
         n_ok += 1
@@ -897,6 +924,10 @@ def cam(report=True):
         a = max(work, a - 4.0)
     lines.append("консоль: сложена %.1f° -> в работе %.1f° (поворот %.1f°, SG90 %.0f° через z13 -> z30), "
                  "проверено положений %d" % (stow, work, stow - work, (stow - work) * 30.0 / 13.0, n_ok))
+    lines.append("мачта, продлённая на %g мм выше головы: до поворотных деталей не ближе %.1f мм"
+                 % (MAST_EXTRA, mast_gap))
+    if mast_gap < 3.0:
+        issues.append("мачта выше головы ближе 3 мм к консоли (%.1f мм)" % mast_gap)
     set_cam(oc)
     if report:
         print("CAM:")
@@ -918,9 +949,10 @@ def bearings(report=True):
         ("локоть", "623ZZ (PV_Brg)", "наружное кольцо в хомуте 2, внутреннее под винтом"),
         ("тяга — рычаг (A)", "623ZZ (RD_BrgA)", "в глазу тяги; втулка+шайба по внутр. кольцу"),
         ("тяга — шарнир тяги (B)", "623ZZ (RD_BrgB)", "то же"),
-        ("шпиндель магнита", "625ZZ x2 (CR_Brg1/2)", "стопка внутр. колец стянута винтом M5"),
+        ("шпиндель захвата", "625ZZ x2 (CR_Brg1/2)", "стопка внутр. колец стянута винтом M5 в гайку держателя"),
         ("каретка Z", "MGN9H на рельсе MGN9", "покупная шариковая линейная направляющая"),
-        ("консоль камеры", "625ZZ x2 (CAM_Brg1/2)", "ось M5 неподвижна, внутр. кольца на буртике головы"),
+        ("консоль камеры", "625ZZ x2 (CAM_Brg1/2)", "ось M5 неподвижна, сбоку от мачты; внутр. кольца "
+                                                     "на буртике головы"),
     ]
     issues = []
     # вращающиеся детали касаются только наружных колец: размеры
@@ -961,7 +993,8 @@ STEPS = [
           "EF_RailScr")),
     (65, ("EF_ServoZ", "EF_SvScrZ")),
     (66, ("CR_Block",)),                                  # каретка MGN9H на рельсе
-    (70, ("CR_Carriage", "CR_Brg", "CR_InnerSp", "CR_Ext", "CR_Magnet", "CR_GearSp", "CR_Screw",
+    (70, ("CR_Carriage", "CR_Brg", "CR_InnerSp", "CR_Ext", "CR_Magnet", "CR_Cup", "CR_HolderNut",
+          "CR_GearSp", "CR_Screw",
           "CR_ServoR", "CR_SvScr")),
     (71, ("CR_GearRt",)),
     (72, ("CR_BlkScr",)),                                 # плита каретки к MGN9H спереди
@@ -970,9 +1003,12 @@ STEPS = [
     (90, ("Body_Rod", "RD_")),
     # камера: стойка мачты — вместе с остальными стойками (шаг 33)
     (93, ("CAM_Mast", "CAM_FootScr", "CAM_FootNut")),
+    # голова надевается на мачту и зажимается на нужной высоте
     (94, ("CAM_Head", "CAM_HeadScr", "CAM_HeadNut", "CAM_AxNut", "CAM_Servo", "CAM_SvScr")),
-    (95, ("CAM_Hub", "CAM_Brg", "CAM_SpIn", "CAM_SpTop", "CAM_AxBolt")),
-    (96, ("CAM_Boom", "CAM_ArmScr", "CAM_ArmNut")),
+    # ступица: гайки хомута в пазы, 625ZZ, ось M5 — ключом сверху через
+    # открытое гнездо, пока консоли нет
+    (95, ("CAM_Hub", "CAM_HubNut", "CAM_Brg", "CAM_SpIn", "CAM_SpTop", "CAM_AxBolt")),
+    (96, ("CAM_Boom", "CAM_HubCap", "CAM_HubScr")),
     (97, ("CAM_Bracket", "CAM_BrScr", "CAM_BrNut", "CAM_Board", "CAM_Lens", "CAM_BoardScr")),
     (98, ("CAM_GearSv",)),                                # шестерня на шлиц — консоль сложена
 ]
@@ -1004,7 +1040,7 @@ SCREWS = [
     ("EF_RailScr", 1.5, 2.75, True), ("CR_BlkScr", 1.5, 2.75, True),
     ("CAM_BaseScr", 1.5, 3.1, True), ("CAM_FootScr", 1.5, 2.75, True),
     ("CAM_HeadScr", 1.5, 2.75, True), ("CAM_AxBolt", 2.3, 4.25, True),
-    ("CAM_ArmScr", 1.5, 2.75, True), ("CAM_BrScr", 1.5, 2.75, True),
+    ("CAM_HubScr", 1.5, 2.75, True), ("CAM_BrScr", 1.5, 2.75, True),
     ("CAM_SvScr", 1.5, 2.0, True), ("CAM_BoardScr", 1.5, 1.9, True),
 ]
 
@@ -1092,8 +1128,8 @@ def screws(report=True):
 SCREWS_SERVICE = ("FR_PlScr",)
 
 
-NUTS_CAPTIVE = ("FR_PlNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut",
-                "CAM_FootNut", "CAM_HeadNut", "CAM_AxNut", "CAM_ArmNut", "CAM_BrNut")
+NUTS_CAPTIVE = ("CR_HolderNut", "FR_PlNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut",
+                "CAM_FootNut", "CAM_HeadNut", "CAM_AxNut", "CAM_HubNut", "CAM_BrNut")
 NUTS_OPEN = ("RD_Gayka",)
 
 
@@ -1104,7 +1140,7 @@ def _holder(P, n, sh):
     for m, x in P.items():
         if m == n or m.startswith(("FR_PlScr", "FR_ShaftBolt", "HW_Vint", "EH_Vint", "PV_Screw",
                                     "EF_ClScr", "CAM_FootScr", "CAM_HeadScr", "CAM_AxBolt",
-                                    "CAM_ArmScr", "CAM_BrScr", "CAM_Mast", "CAM_Boom")):
+                                    "CAM_HubScr", "CAM_BrScr", "CAM_Mast", "CAM_Boom")):
             continue
         if not bb_hit(x, big):
             continue
@@ -1146,9 +1182,15 @@ def nuts(report=True):
             e1 = ax.cross(u); e1.normalize()
             e2 = ax.cross(e1)
             ok = False
-            for k in range(24):
-                a = math.radians(15 * k)
-                dv = e1 * math.cos(a) + e2 * math.sin(a)
+            # направления: сетка 15° и вдоль граней/на вершины самой гайки —
+            # паз всегда идёт по её граням, а гнездо может быть повёрнуто
+            # вместе с деталью на любой угол (консоль камеры)
+            rn = global_shape(D().getObject(n)).Placement.Rotation
+            dirs = [e1 * math.cos(math.radians(15 * k)) + e2 * math.sin(math.radians(15 * k))
+                    for k in range(24)]
+            dirs += [rn.multVec(V(math.cos(math.radians(30 * k)), math.sin(math.radians(30 * k)), 0))
+                     for k in range(12)]
+            for dv in dirs:
                 free = True
                 for step in [0.5 * i for i in range(1, 41)]:
                     m = moved(sh, App.Placement(dv * step, App.Rotation()))
@@ -1212,12 +1254,14 @@ RUB_PAIRS = [
     ("Body_Rod", ["RD_VtulA", "RD_VtulB", "RD_ShaybaA", "RD_ShaybaB", "RD_GaykaA", "RD_GaykaB",
                   "RD_VintA", "RD_VintB", "Body_Pulley2", "Body_RodJoint", "Body_Cap",
                   "Body_ElbowCap", "Body_Elbow2"]),
-    ("CR_GearSp", ["CR_Carriage"]), ("CR_Ext", ["CR_Carriage"]), ("CR_Magnet", ["CR_Carriage"]),
+    ("CR_GearSp", ["CR_Carriage"]), ("CR_Ext", ["CR_Carriage"]), ("CR_CupHolder", ["CR_Carriage", "CR_ServoR"]),
     ("CR_InnerSp", ["CR_Carriage"]), ("CR_Screw", ["CR_Carriage"]),
     ("CR_Carriage", ["EF_Bracket", "EF_ServoZ", "EF_Rail", "EF_RailScr"]),
     ("CR_Block", ["EF_Bracket", "EF_RailScr"]),
     ("CAM_Hub", ["CAM_Head", "CAM_SpIn", "CAM_SpTop", "CAM_AxBolt", "CAM_Mast", "CAM_Servo",
-                 "CAM_SvScr"]),
+                 "CAM_SvScr", "CAM_HeadScr1", "CAM_HeadScr2"]),
+    ("CAM_HubCap", ["CAM_Mast"]),
+    ("CAM_Boom", ["CAM_AxBolt", "CAM_SpTop", "CAM_Mast"]),
 ]
 
 
@@ -1280,12 +1324,12 @@ def gears(report=True):
 # ---------------------------------------------------------------------------
 MASS_FIXED = {"Body": 280.0, "Body001": 280.0, "EF_ServoZ": 9.0, "CR_ServoR": 9.0,
               "CAM_Servo": 9.0, "CAM_Board": 12.0, "CAM_Lens": 6.0,
-              "CR_Magnet": 45.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
+              "CR_Magnet": 45.0, "CR_Cup1": 1.0, "CR_Cup2": 1.0, "CR_Cup3": 1.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
 RHO = [(("FR_Base",), 0.65),                          # фанера берёзовая
        (("FR_Post", "FR_Column", "FR_Plate", "CAM_Foot", "CAM_Head", "CAM_Hub", "CAM_Bracket",
          "CAM_GearSv", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
          "Body_Cap", "Body_Elbow", "Body_RodJoint", "Body_Rod", "EF_BracketCap", "CR_Gear",
-         "EF_Gear", "Body_Prost"), 1.24 * 0.6),       # печать, заполнение ~60 %
+         "EF_Gear", "Body_Prost", "CR_CupHolder"), 1.24 * 0.6),       # печать, заполнение ~60 %
        (("Body_Tube", "CAM_Mast", "CAM_Boom"), 2.7)]                          # алюминиевые трубы
 
 
