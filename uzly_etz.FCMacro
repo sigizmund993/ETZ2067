@@ -59,13 +59,8 @@ INPUTS = [
      "Высота рабочей грани захвата (губы присоски) над полем. 5 = касается "
      "шашки, лежащей на поле (4 — поджата на 1 мм); 25 = верх стопки из 5"),
     ("BaseT", "App::PropertyLength", "3 Станина", 6.0, "Толщина основания"),
-    ("WallT", "App::PropertyLength", "3 Станина", 10.0,
-     "Толщина стенок станины. 10 мм — чтобы гнездо гайки M3 помещалось "
-     "внутри стенки, а паз выходил наружу: гайку заводят снаружи"),
-    ("PlateAT", "App::PropertyLength", "3 Станина", 8.0,
-     "Толщина плиты мотора 1 — она же опора вала шкивов"),
-    ("PlateBT", "App::PropertyLength", "3 Станина", 6.0,
-     "Толщина плиты мотора 2 (ограничена снизу: над ней ходят рычаг и тяга)"),
+    ("PlateAT", "App::PropertyLength", "3 Станина", 6.0,
+     "Толщина плиты мотора 1 — фанера (плита мотора 2 — Drive.Plate2T)"),
     ("BaseX0", "App::PropertyDistance", "3 Станина", -75.0,
      "Задний край основания (x робота). Чем дальше назад — тем устойчивее"),
     ("BaseFront", "App::PropertyLength", "3 Станина", 45.0,
@@ -74,7 +69,7 @@ INPUTS = [
     ("BaseY0", "App::PropertyDistance", "3 Станина", -90.0, "Левый край основания"),
     ("BaseY1", "App::PropertyDistance", "3 Станина", 135.0, "Правый край основания"),
     ("TensionSlot", "App::PropertyLength", "3 Станина", 2.0,
-     "Ход натяжения ремня в каждую сторону (пазы под винты моторов)"),
+     "Ход натяжения ремня в каждую сторону (пазы плит под винты стоек)"),
     ("CamPivotX", "App::PropertyLength", "4 Камера", 139.0,
      "Ось мачты камеры на ПОЛИГОНЕ: задний угол фанеры, вне хода руки"),
     ("CamPivotY", "App::PropertyLength", "4 Камера", 142.0, "Ось мачты камеры, y полигона"),
@@ -278,6 +273,23 @@ def csk_screw(m, L):
     return head.fuse(cyl(m["d"] / 2.0, -L, -CSK_K + 0.01)).removeSplitter()
 
 
+BTN_DK, BTN_K, BTN_S = 5.7, 1.65, 2.0   # ISO 7380 M3: полукруглая головка, ключ 2
+
+
+def button_screw(m, L):
+    """ISO 7380 (головка упрощена до цилиндра): опорная грань на z = 0,
+    головка вверх, стержень вниз. Только M3."""
+    head = cyl(BTN_DK / 2.0, 0.0, BTN_K).cut(hexagon(BTN_S, BTN_K - 1.0, BTN_K + 0.1))
+    return head.fuse(cyl(m["d"] / 2.0, -L, 0.0)).removeSplitter()
+
+
+# латунная стойка M3 «мама-мама» и шайба DIN 125
+STD_S, STD_BORE = 5.5, 2.5          # под ключ 5.5; резьба M3 (в модели — Ø2.5 под метчик)
+STD_THREAD = 4.0                    # минимум резьбы винта в стойке
+STD_L = (5, 6, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50)
+WASH_D, WASH_S = 7.0, 0.5
+
+
 def nut(m, rot=0.0):
     """ISO 4032: низ на z = 0. rot как у hexagon()."""
     return hexagon(m["nut_s"], 0.0, m["nut_m"], rot=rot).cut(cyl(m["d"] / 2.0, -1, m["nut_m"] + 1))
@@ -433,6 +445,7 @@ def container(doc, name, label, parent=None):
 
 PLA = (0.93, 0.55, 0.15)       # печатные детали станины
 PLY = (0.86, 0.74, 0.52)       # фанера
+BRASS = (0.85, 0.70, 0.30)     # латунные стойки
 PLA2 = (0.25, 0.55, 0.85)      # печатные детали рабочего узла
 STEEL = (0.62, 0.64, 0.67)
 DARK = (0.30, 0.32, 0.35)
@@ -444,12 +457,13 @@ SERVO = (0.15, 0.35, 0.80)
 # Станина
 # ---------------------------------------------------------------------------
 def build_frame(doc, d, e):
-    """Основание (фанера) и печатные стойки, плиты моторов, вал шкивов. Глобальные координаты.
+    """Основание и плиты моторов (фанера), латунные стойки, стойка вала. Глобальные координаты.
 
-    Моторы ПЕРЕВЁРНУТЫ: стоят фланцем вниз на плитах, валы смотрят вниз,
-    ведущие шкивы — под плитами, на уровне венцов ведомых. Так вся стопка
-    шкивов и рука опущены к основанию (Drive.BeltPlaneZ), а корпуса
-    моторов торчат вверх, позади руки.
+    Левый мотор ПЕРЕВЁРНУТ: стоит фланцем вниз на плите 1, вал вниз,
+    ведущий шкив под плитой на уровне венца ведомого. Правый — валом
+    ВВЕРХ: висит под плитой 2 на своих 4 винтах, шкив над плитой на
+    уровне венца шкива 2. Обе плиты лежат на покупных латунных стойках
+    M3, привинченных к основанию снизу.
     """
     purge(doc, ("FR_",))
     part = container(doc, FRAME_PART, "Станина")
@@ -461,17 +475,9 @@ def build_frame(doc, d, e):
     face1, face2 = d.Motor1FaceZ.Value, d.Motor2FaceZ.Value
     fl = e.FloorZ.Value
     top = fl + e.BaseT.Value                               # верх основания
-    wt = e.WallT.Value
-    tA, tB = e.PlateAT.Value, e.PlateBT.Value
-    zA0, zA1 = face1 - tA, face1                           # плита 1 под фланцем мотора 1
-    zB0, zB1 = face2 - tB, face2
-    gap = 4.0                                              # мотор <-> стенка (ход натяжения)
-    xr1 = -NEMA_HALF - gap                                 # задняя стенка, внутр. грань
-    xr0 = xr1 - wt
-    yl1 = -NEMA_HALF - gap                                 # левая стенка
-    yl0 = yl1 - wt
-    yr0 = M2.y + NEMA_HALF + gap                           # правая стенка
-    yr1 = yr0 + wt
+    tA, tB = e.PlateAT.Value, d.Plate2T.Value
+    zA0, zA1 = face1 - tA, face1                           # плита 1 ПОД фланцем мотора 1
+    zB0, zB1 = face2, face2 + tB                           # плита 2 НАД фланцем мотора 2
     ymid = (M1.y + NEMA_HALF + M2.y - NEMA_HALF) / 2.0     # середина щели между моторами
     u1 = (S - M1); u1.normalize()                          # направление натяжения ремня 1
     u2 = (S - M2); u2.normalize()
@@ -480,62 +486,47 @@ def build_frame(doc, d, e):
     col_top = Z0 - bush_lo                                 # колонна вала: до нижней втулки
     # над плитами ходит глаз тяги: R57.5 от оси шкивов + 4 мм + ход натяжения
     rod_keep = 61.5 + slot_h
+    PARK_T1_MAX, PARK_KEEP = 140.0, 7.0    # плечо на парковке 136 ± 2 (+2 запаса); R трубы 5 + 2
 
     # --- ОСНОВАНИЕ — ФАНЕРА 6 мм (лобзик/фрезер, сверловка по шаблону).
-    #     На ней — небольшие печатные стойки: 5 стоек под винты плит
-    #     моторов (вместо прежних сплошных стенок) и стойка вала.
-    #     Каждая стоит на подошве с резьбовыми вставками M3 снизу и
-    #     притянута к фанере потайными M3x10 СНИЗУ (головки утоплены в
+    #     На ней — латунные стойки плит моторов и печатная стойка вала.
+    #     Всё притянуто СНИЗУ потайными винтами (головки утоплены в
     #     зенковки, низ фанеры гладкий — робот стоит на полигоне ровно).
     base = rounded_rect(e.BaseX0.Value, S.x + e.BaseFront.Value, e.BaseY0.Value, e.BaseY1.Value,
                         fl, top, 8.0)
-    foot_t = 7.0                                           # подошва стоек: вставка 5 + 2
-    ext = 10.0                                             # подошва длиннее стойки с торцов
-    hw = wt / 2.0
-    hl = 9.0                                               # полудлина стойки вдоль стенки
-    ymA, ymB = ymid - 10.0, ymid + 10.0                    # винты плит у задней стенки
-    xw, ylw, yrw = xr0 + hw, yl0 + hw, yr0 + hw
-    posts = []      # (имя, [(x0, x1, y0, y1, z верха)], подошва (x0, x1, y0, y1), вставки [(x, y)])
-
-    def post_y(name, x, y, zt):        # стойка вдоль Y (задняя стенка)
-        posts.append((name, [(x - hw, x + hw, y - hl, y + hl, zt)],
-                      (x - hw, x + hw, y - hl - ext, y + hl + ext),
-                      [(x, y - hl - ext + 5.0), (x, y + hl + ext - 5.0)]))
-
-    def post_x(name, x, y, zt):        # стойка вдоль X (боковые стенки)
-        posts.append((name, [(x - hl, x + hl, y - hw, y + hw, zt)],
-                      (x - hl - ext, x + hl + ext, y - hw, y + hw),
-                      [(x - hl - ext + 5.0, y), (x + hl + ext - 5.0, y)]))
-
-    post_y("FR_Post1", xw, ylw, zA0)                       # зад-лево, плита 1
-    post_x("FR_Post2", 12.0, ylw, zA0)                     # лево, плита 1
-    # задняя средняя — общая для обеих плит, ступенькой: слева до плиты 1,
-    # справа до плиты 2
-    posts.append(("FR_Post3", [(xr0, xr1, ymA - hl, ymid, zA0), (xr0, xr1, ymid, ymB + hl, zB0)],
-                  (xr0, xr1, ymA - hl - ext, ymB + hl + ext),
-                  [(xw, ymA - hl - ext + 5.0), (xw, ymid), (xw, ymB + hl + ext - 5.0)]))
-    post_y("FR_Post4", xw, yrw, zB0)                       # зад-право, плита 2
-    post_x("FR_Post5", 10.0, yrw, zB0)                     # право, плита 2
-
+    foot_t = 7.0                                           # подошва стойки вала: вставка 5 + 2
     col_r = 12.0
     col_f = 17.0                                           # полуширина подошвы стойки вала
     col_ins = [(S.x + sx * 12.0, S.y + sy * 12.0) for sx in (-1, 1) for sy in (-1, 1)]
 
-    # винты плит: по оси стойки, гайка в гнезде внутри стенки, паз — НАРУЖУ
-    padA = [(V(xw, ylw, 0), V(-1, 0, 0)), (V(xw, ymA, 0), V(-1, 0, 0)),
-            (V(12.0, ylw, 0), V(0, -1, 0))]
-    padB = [(V(xw, ymB, 0), V(-1, 0, 0)), (V(xw, yrw, 0), V(-1, 0, 0)),
-            (V(10.0, yrw, 0), V(0, 1, 0))]
-    L_plate = 16.0
-    holes = []
-    nuts_ = []
-    for pads, ztop, t in ((padA, zA0, tA), (padB, zB0, tB)):
-        for p, sl in pads:
-            rot = 90.0 if sl.x else 0.0
-            zn = ztop - (L_plate - t) + 1.5                 # конец винта на 1.5 ниже гайки
-            holes.append(cyl(M3["hole"] / 2.0, ztop - (L_plate - t) - 2, ztop + 1, p.x, p.y))
-            holes.append(nut_pocket(M3, zn, p.x, p.y, sl, rot=rot, depth=12))
-            nuts_.append((p, zn, ztop + t, rot))
+    # --- стойки плит: покупные латунные шестигранные M3 «мама-мама»
+    #     (под ключ 5.5) стандартной длины; недостающее до плиты добирают
+    #     шайбы DIN 125 под стойкой. Снизу — потайной винт сквозь фанеру,
+    #     сверху — винт с полукруглой головкой ISO 7380 сквозь паз плиты.
+    #     Стойки 1 — те же точки, что винты прежних печатных стенок (над
+    #     ними тяга проходит с запасом); стойки 2 — вокруг корпуса мотора 2,
+    #     он висит под плитой между ними. Передняя стойка 2 — между ремнём 2
+    #     (иначе к её винту не подлезть ключом) и трубой плеча на парковке.
+    stA = [V(-30.1, -30.1, 0), V(12.0, -30.1, 0), V(-30.1, 12.65, 0)]
+    stB = [V(-20.0, 30.0, 0), V(-20.0, 74.0, 0), V(12.0, 74.0, 0), V(41.0, 59.0, 0)]
+
+    def stack(h):
+        """Стойка стандартной длины + 0..2 шайбы 0.5 под ней — ровно h."""
+        for L in sorted(STD_L, reverse=True):
+            n = int(round((h - L) / WASH_S))
+            if 0 <= n <= 2 and abs(h - L - n * WASH_S) < 0.01:
+                return L, n
+        raise RuntimeError("стойка %.2f мм: не набирается из стандартных длин" % h)
+
+    def screw_len(need):
+        return next(L for L in (6, 8, 10, 12, 16, 20) if L >= need)
+
+    stands = []        # (точка, высота стойки, шайб, паз вдоль, плита: z низа, толщина)
+    for pts, z0p, t, u in ((stA, zA0, tA, u1), (stB, zB0, tB, u2)):
+        L, nw = stack(z0p - top)
+        for p in pts:
+            stands.append((p, L, nw, u, z0p, t))
+
     # вал M8: болт сверху, гайка в гнезде колонны (паз открыт вперёд, +X).
     # Длина — самая короткая стандартная, при которой над гайкой остаётся
     # >= 4 мм пластика стойки вала: за этот «потолок» гайка тянет всю стопку
@@ -549,85 +540,97 @@ def build_frame(doc, d, e):
     if bolt_L is None:
         raise RuntimeError("вал M8: колонна %.1f мм — гайка не помещается" % (col_top - top))
     z_nut = zb_head - bolt_L + 2.0
-    holes.append(cyl(M8["hole"] / 2.0, z_nut - 4, col_top + 1, S.x, S.y))
-    holes.append(nut_pocket(M8, z_nut, S.x, S.y, V(1, 0, 0), rot=90.0, depth=20))
-    # --- печатные стойки: тело + подошва, гнёзда гаек плит и вставки снизу ---
-    ins_all = []
-    for name, cores, (fx0, fx1, fy0, fy1), ins in posts:
-        sh = rounded_rect(fx0, fx1, fy0, fy1, top, top + foot_t, 2.0)
-        sh = sh.fuse([rounded_rect(x0, x1, y0, y1, top, zt, 2.0) for x0, x1, y0, y1, zt in cores])
-        sh = sh.cut(holes + [cyl(INSERT_D / 2.0, top - 1, top + INSERT_L + 0.5, x, y) for x, y in ins])
-        feat(doc, part, name, "Стойка_плиты_%s_печать" % name[-1], sh.removeSplitter(), PLA)
-        ins_all += ins
+    holes = [cyl(M8["hole"] / 2.0, z_nut - 4, col_top + 1, S.x, S.y),
+             nut_pocket(M8, z_nut, S.x, S.y, V(1, 0, 0), rot=90.0, depth=20)]
     col = rounded_rect(S.x - col_f, S.x + col_f, S.y - col_f, S.y + col_f, top, top + foot_t, 4.0)
     col = col.fuse(cyl(col_r, top, col_top, S.x, S.y))
     col = col.cut(holes + [cyl(INSERT_D / 2.0, top - 1, top + INSERT_L + 0.5, x, y) for x, y in col_ins])
     feat(doc, part, "FR_Column", "Стойка_вала_печать", col.removeSplitter(), PLA)
-    ins_all += col_ins
 
     # фанера: отверстия под потайные винты (зенковка снизу), под кончик болта вала
+    csk_pts = col_ins + [(p.x, p.y) for p, _, _, _, _, _ in stands]
     pcuts = [cyl(4.5, fl - 1, top + 1, S.x, S.y)]
-    for x, y in ins_all:
+    for x, y in csk_pts:
         pcuts += [cyl(M3["hole"] / 2.0, fl - 1, top + 1, x, y),
                   cyl(CSK_DK / 2.0 + 0.2, fl - 1, fl + CSK_SINK, x, y),
                   Part.makeCone(CSK_DK / 2.0 + 0.2, M3["hole"] / 2.0, CSK_K, V(x, y, fl + CSK_SINK))]
     base = soften(base, 1.5, (top,), "основание").cut(pcuts).removeSplitter()
     feat(doc, part, "FR_Base", "Основание_фанера_6мм", base, PLY)
-    for i, (x, y) in enumerate(ins_all):
+    down = App.Rotation(V(1, 0, 0), 180)
+    for i, (x, y) in enumerate(col_ins):
         o = feat(doc, part, "FR_BaseIns%d" % (i + 1), "Вставка_резьбовая_M3x5_осн_%d" % (i + 1),
                  tube(INSERT_D / 2.0, 1.5, 0, INSERT_L), (0.80, 0.62, 0.20))
         o.Placement.Base = V(x, y, top)
         o = feat(doc, part, "FR_BaseScr%d" % (i + 1), "Винт_осн_M3x%d_ISO10642_%d" % (CSK_L, i + 1),
                  csk_screw(M3, CSK_L), DARK)
-        o.Placement = App.Placement(V(x, y, fl + CSK_SINK), App.Rotation(V(1, 0, 0), 180))
+        o.Placement = App.Placement(V(x, y, fl + CSK_SINK), down)
 
-    # --- плиты моторов: мотор стоит на плите фланцем вниз, вал и ступица
-    #     шкива проходят сквозь неё, буртик Ø22 — в выборке сверху.
+    # стойки, шайбы, винты снизу и сверху
+    k = len(col_ins)
+    for i, (p, L, nw, u, z0p, t) in enumerate(stands):
+        tag = "%s%d" % ("A" if z0p == zA0 else "B", i + 1 if z0p == zA0 else i + 1 - len(stA))
+        zs = top + nw * WASH_S                              # низ стойки
+        for j in range(nw):
+            o = feat(doc, part, "FR_StdWash%s_%d" % (tag, j + 1), "Шайба_M3_DIN125_стойки_%s_%d" % (tag, j + 1),
+                     tube(WASH_D / 2.0, 1.6, 0, WASH_S), STEEL)
+            o.Placement.Base = V(p.x, p.y, top + j * WASH_S)
+        sh = hexagon(STD_S, zs, zs + L, p.x, p.y, 90.0).cut(cyl(STD_BORE / 2.0, zs - 1, zs + L + 1, p.x, p.y))
+        feat(doc, part, "FR_Std%s" % tag, "Стойка_латунь_M3x%d_ВВ_плита_%s" % (L, tag), sh, BRASS)
+        k += 1
+        Lb = screw_len(e.BaseT.Value - CSK_SINK + nw * WASH_S + STD_THREAD)
+        o = feat(doc, part, "FR_BaseScr%d" % k, "Винт_осн_M3x%d_ISO10642_стойка_%s" % (Lb, tag),
+                 csk_screw(M3, Lb), DARK)
+        o.Placement = App.Placement(V(p.x, p.y, fl + CSK_SINK), down)
+        Lt = screw_len(t + STD_THREAD)
+        o = feat(doc, part, "FR_PlScr%s" % tag, "Винт_плиты_M3x%d_ISO7380_%s" % (Lt, tag),
+                 button_screw(M3, Lt), DARK)
+        o.Placement.Base = V(p.x, p.y, z0p + t)
+
+    # --- плиты моторов — фанера 6 мм. Мотор центрируется буртиком Ø22 в
+    #     сквозном отверстии Ø23 (в него же входит ступица шкива 1).
     #     НАТЯЖЕНИЕ РЕМНЯ — сдвигом всей плиты с мотором вдоль ремня: пазы
-    #     ±TensionSlot под винтами плиты к стенкам (их крутят сверху).
+    #     ±TensionSlot под винтами плиты к стойкам (их крутят сверху).
     #     Винты мотора к плите — простые отверстия: мотор крепят на столе
     #     до ремня. Под ближним к центру винтом мотора проходит ветвь
     #     ремня, на собранном роботе к нему не подлезть — поэтому
     #     натягивать сдвигом мотора по плите нельзя.
-    def motor_plate(outline, z0, z1, M, u, pads, name):
-        cuts = [cyl((NEMA_BOSS + 1.0) / 2.0, z1 - 2.5, z1 + 1, M.x, M.y),
-                cyl(9.0, z0 - 1, z1 + 1, M.x, M.y)]
+    def motor_plate(outline, z0, z1, M, u, pts, name):
+        cuts = [cyl((NEMA_BOSS + 1.0) / 2.0, z0 - 1, z1 + 1, M.x, M.y)]
         for sx in (-1, 1):
             for sy in (-1, 1):
                 cuts.append(cyl(M3["hole"] / 2.0, z0 - 1, z1 + 1,
                                 M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2))
-        for p, _ in pads:
+        for p in pts:
             cuts.append(slot(M3["hole"] / 2.0, z0 - 1, z1 + 1, p, u, slot_h))
         return soften(outline, 1.0, (z1,), name).cut(cuts)
 
-    plA = rounded_rect(xr0, NEMA_HALF + 5.0, yl0, ymid - 0.5, zA0, zA1, 4.0)
+    plA = rounded_rect(-37.5, NEMA_HALF + 5.0, -37.5, ymid - 0.5, zA0, zA1, 4.0)
     plA = plA.cut(cyl(rod_keep, zA0 - 1, zA1 + 1, S.x, S.y))
-    feat(doc, part, "FR_PlateA", "Плита_мотора_1",
-         motor_plate(plA, zA0, zA1, M1, u1, padA, "плита 1"), PLA)
-    xB1 = M2.x + NEMA_HALF + 5.0    # по мотору 2; к оси шкивов не ближе rod_keep (вырез ниже)
-    plB = rounded_rect(xr0, xB1, ymid + 0.5, yr1, zB0, zB1, 4.0)
+    feat(doc, part, "FR_PlateA", "Плита_мотора_1_фанера_6мм",
+         motor_plate(plA, zA0, zA1, M1, u1, stA, "плита 1"), PLY)
+    plB = rounded_rect(-28.0, 48.0, ymid + 0.5, 80.0, zB0, zB1, 4.0)
     plB = plB.cut(cyl(rod_keep, zB0 - 1, zB1 + 1, S.x, S.y))
-    feat(doc, part, "FR_PlateB", "Плита_мотора_2",
-         motor_plate(plB, zB0, zB1, M2, u2, padB, "плита 2"), PLA)
+    # плита 2 — на высоте верха трубы плеча, и на парковке (плечо 136 ± 2°)
+    # труба проходит под её передним углом: срезать всё ближе PARK_KEEP к
+    # оси трубы при плече PARK_T1_MAX
+    park = box(-50.0, 400.0, -400.0, PARK_KEEP, zB0 - 1, zB1 + 1)
+    park.rotate(V(0, 0, 0), V(0, 0, 1), PARK_T1_MAX)
+    park.translate(S)
+    plB = plB.cut(park)
+    feat(doc, part, "FR_PlateB", "Плита_мотора_2_фанера_6мм",
+         motor_plate(plB, zB0, zB1, M2, u2, stB, "плита 2"), PLY)
 
-    # --- крепёж плит и моторов ---
-    i = 0
-    for p, zn, zseat, rot in nuts_:
-        i += 1
-        o = feat(doc, part, "FR_PlScr%d" % i, "Винт_плиты_M3x%d_%d" % (L_plate, i),
-                 cap_screw(M3, L_plate), DARK)
-        o.Placement.Base = V(p.x, p.y, zseat)
-        o = feat(doc, part, "FR_PlNut%d" % i, "Гайка_плиты_M3_%d" % i, nut(M3, rot), STEEL)
-        o.Placement.Base = V(p.x, p.y, zn + 0.2)
-    # винты моторов — СНИЗУ сквозь плиту в резьбу фланца (головка под плитой)
-    down = App.Rotation(V(1, 0, 0), 180)
-    for tag, M, zseat, L in (("A", M1, zA0, int(tA + 4)), ("B", M2, zB0, int(tB + 4))):
+    # винты моторов: мотор 1 — СНИЗУ сквозь плиту в резьбу фланца (головка
+    # под плитой), мотор 2 висит под плитой — винты СВЕРХУ
+    for tag, M, zseat, t, rot, shp in (("A", M1, zA0, tA, down, cap_screw),
+                                       ("B", M2, zB1, tB, App.Rotation(), button_screw)):
+        L = screw_len(t + 4.0)
         for k, (sx, sy) in enumerate(((-1, -1), (-1, 1), (1, -1), (1, 1))):
             o = feat(doc, part, "FR_MotScr%s%d" % (tag, k + 1),
-                     "Винт_мотора_%s_M3x%d_%d" % ("1" if tag == "A" else "2", L, k + 1),
-                     cap_screw(M3, L), DARK)
-            o.Placement = App.Placement(V(M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2, zseat),
-                                        down)
+                     "Винт_мотора_%s_M3x%d_%s_%d" % ("1" if tag == "A" else "2", L,
+                                                    "ISO4762" if tag == "A" else "ISO7380", k + 1),
+                     shp(M3, L), DARK)
+            o.Placement = App.Placement(V(M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2, zseat), rot)
 
     # --- вал: болт M8 сверху, втулки по внутренним кольцам, гайка в колонне ---
     feat(doc, part, "FR_ShaftBushLo", "Втулка_вала_нижняя_Ø12/Ø8.2x%.1f" % bush_lo,

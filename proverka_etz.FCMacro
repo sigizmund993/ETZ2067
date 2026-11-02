@@ -97,6 +97,8 @@ ALLOWED = [
     ("EF_SvScrZ", "EF_Bracket"), ("CR_SvScr", "CR_Carriage"),
     ("CAM_SvScr", "CAM_Head"), ("CAM_BoardScr", "CAM_Bracket"),
     ("CAM_Servo", "CAM_GearSv"),
+    # резьба латунных стоек не смоделирована (отверстие Ø2.5 под метчик)
+    ("FR_PlScr", "FR_Std"), ("FR_BaseScr", "FR_Std"),
 ]
 
 
@@ -977,13 +979,13 @@ def bearings(report=True):
 # с шагом <= шага винта (собранных к этому моменту).
 STEPS = [
     (20, ("FR_PlateA", "Body", "FR_MotScrA")),            # мотор 1 к плите на столе
-    (21, ("FR_PlateB", "Body001", "FR_MotScrB")),
+    (21, ("FR_PlateB", "Body001", "FR_MotScrB")),            # мотор 2 под плитой, винты сверху
     (30, ("Pulley", "Driver2")),
-    (33, ("FR_Base", "FR_Post", "FR_Column", "FR_BaseIns", "FR_BaseScr",
+    (33, ("FR_Base", "FR_Std", "FR_Column", "FR_BaseIns", "FR_BaseScr",
           "CAM_Foot", "CAM_BaseIns", "CAM_BaseScr")),  # стойки на фанеру снизу
-    (35, ("FR_PlNut", "FR_ShaftNut")),                    # гайки в стойки
-    (40, ("FR_PlScr1", "FR_PlScr2", "FR_PlScr3")),
-    (41, ("FR_PlScr4", "FR_PlScr5", "FR_PlScr6")),
+    (35, ("FR_ShaftNut",)),                               # гайка M8 в стойку вала
+    (40, ("FR_PlScrA",)),                                 # плита 1 на латунные стойки
+    (41, ("FR_PlScrB",)),
     (50, ("FR_ShaftBushLo", "Body003", "BRG_1", "FR_Belt1", "Body_Tube", "Body_Cap", "HW_")),
     (60, ("Body_Elbow", "Body_ElbowCap", "EH_Vint_E1", "EH_Gayka_E1")),
     (61, ("PV_Brg", "Body_Elbow2", "PV_Nut", "PV_Screw")),
@@ -1031,7 +1033,8 @@ def step_of(n):
 # головкой в карман хомута 2 СНИЗУ, до запрессовки подшипника, — для него
 # проверяется только проход ключа через технологическое отверстие.
 SCREWS = [
-    ("FR_MotScr", 1.5, 2.75, True), ("FR_PlScr", 1.5, 2.75, True),
+    ("FR_MotScrB", 1.2, 2.85, True), ("FR_PlScr", 1.2, 2.85, True),   # ISO 7380, ключ 2
+    ("FR_MotScr", 1.5, 2.75, True),
     ("FR_ShaftBolt", 3.5, 6.5, True), ("FR_BaseScr", 1.5, 3.1, True),
     ("HW_Vint", 1.5, 2.75, True), ("EH_Vint", 1.5, 2.75, True),
     ("PV_Screw", 1.5, 2.75, False), ("RD_Vint", 1.1, 3.4, True),
@@ -1124,11 +1127,11 @@ def screws(report=True):
 
 
 # винты, которые крутят на собранном роботе: натяжение ремней — сдвигом
-# плиты с мотором по пазам, винты плит к стенкам
+# плиты с мотором по пазам, винты плит к латунным стойкам
 SCREWS_SERVICE = ("FR_PlScr",)
 
 
-NUTS_CAPTIVE = ("CR_HolderNut", "FR_PlNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut",
+NUTS_CAPTIVE = ("CR_HolderNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut",
                 "CAM_FootNut", "CAM_HeadNut", "CAM_AxNut", "CAM_HubNut", "CAM_BrNut")
 NUTS_OPEN = ("RD_Gayka",)
 
@@ -1325,8 +1328,9 @@ def gears(report=True):
 MASS_FIXED = {"Body": 280.0, "Body001": 280.0, "EF_ServoZ": 9.0, "CR_ServoR": 9.0,
               "CAM_Servo": 9.0, "CAM_Board": 12.0, "CAM_Lens": 6.0,
               "CR_Magnet": 45.0, "CR_Cup1": 1.0, "CR_Cup2": 1.0, "CR_Cup3": 1.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
-RHO = [(("FR_Base",), 0.65),                          # фанера берёзовая
-       (("FR_Post", "FR_Column", "FR_Plate", "CAM_Foot", "CAM_Head", "CAM_Hub", "CAM_Bracket",
+RHO = [(("FR_Base", "FR_Plate"), 0.65),              # фанера берёзовая
+       (("FR_Std",), 8.5),                            # латунные стойки
+       (("FR_Column", "CAM_Foot", "CAM_Head", "CAM_Hub", "CAM_Bracket",
          "CAM_GearSv", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
          "Body_Cap", "Body_Elbow", "Body_RodJoint", "Body_Rod", "EF_BracketCap", "CR_Gear",
          "EF_Gear", "Body_Prost", "CR_CupHolder"), 1.24 * 0.6),       # печать, заполнение ~60 %

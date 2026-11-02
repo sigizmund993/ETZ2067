@@ -21,3 +21,9 @@ _varset_values.json
 
 # рабочие копии документа для headless-прогонов
 .work/
+
+# промежуточный вывод OrcaSlicer CLI
+print/orca/out_*/
+print/orca/*.log
+print/orca/result.json
+print/orca/*_raw.3mf
