@@ -1,0 +1,367 @@
+# -*- coding: utf-8 -*-
+"""Электроника в ETZ_Robot: плата приводов (STEP из KiCad), Arduino Mega,
+макетная плата, органы управления, помпа и клапан, датчики, аккумулятор и
+двухъярусная полка на мачте камеры.
+
+Запускать ПОСЛЕ uzly_etz.FCMacro (берёт мачту, шкивы, плиту 2). Детали —
+Part::Feature с префиксом EL_ в App::Part «Электроника» (Part_Elec).
+
+Где что стоит и почему:
+- Выше z ~ 140 рука не заходит ни в одной позе (верх кронштейна Z — 134),
+  поэтому всё крупное — на полке на мачте камеры: нижний ярус z 150
+  (Mega, помпа, клапан, датчик вакуума), верхний z 194 (плата приводов,
+  макетка 400, кнопка останова, «Старт», выключатель, индикаторы).
+  Полка — только над зоной 1 (x <= 45, см. proverka park) и в стороне от
+  лучей камеры на поле (proverka cam).
+- Аккумулятор 3S низко на фанере (z до 20): ниже всего, что носит рука (27),
+  и спереди-справа — противовес полке в заднем углу.
+- Датчики Холла: плечо — снизу под шкивом 1 на печатной стойке, магнит на
+  нижнем фланце шкива 1; предплечье — над шкивом 2 на печатном кронштейне
+  с плиты 2, магнит на верхнем фланце шкива 2. Магниты стоят против датчиков
+  в позе парковки (плечо 136°, рычаг 56°).
+"""
+import math, os
+import FreeCAD as App
+import Part
+
+V = App.Vector
+DOC = "ETZ_Robot"
+HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() else "/home/fedoz/ETZ2067"
+STEP = os.path.join(HERE, "elektronika", "etz_plata.step")
+
+PLY = (0.85, 0.70, 0.45)
+PRINT = (0.20, 0.45, 0.85)
+BRASS = (0.80, 0.62, 0.20)
+DARK = (0.12, 0.12, 0.12)
+STEEL = (0.75, 0.75, 0.78)
+
+# полка
+SH_X0, SH_X1, SH_Y0, SH_Y1 = -75.0, 45.0, -95.0, 135.0
+L1_Z, L2_Z, PLY_T = 150.0, 194.0, 4.0           # низ фанеры ярусов
+STD_XY = [(-68.0, 125.0), (-68.0, -25.0), (10.0, -91.0), (44.0, -60.0)]
+# плата приводов (130 x 99): KiCad (u вправо, v вниз) -> x = 45 - v, y = 133 - u
+PCB_X0, PCB_Y0 = 45.0, 133.0
+PCB_STD = 10.0
+PCB_HOLES = [(4, 3.8), (126, 4), (4, 95), (126, 95)]
+# органы управления на верхнем ярусе
+ESTOP = (28.0, -75.0)
+START = (-6.0, -85.0)
+SWITCH = (-6.0, -66.0)
+LED_G = (-25.0, -84.0)
+LED_R = (-25.0, -68.0)
+# Холл
+HALL_R = 25.7
+PARK_SHOULDER, PARK_LEVER = 136.0, 56.0
+
+
+def box(x0, x1, y0, y1, z0, z1):
+    return Part.makeBox(x1 - x0, y1 - y0, z1 - z0, V(x0, y0, z0))
+
+
+def cyl(r, z0, z1, x=0.0, y=0.0):
+    return Part.makeCylinder(r, z1 - z0, V(x, y, z0))
+
+
+def cyl_y(r, y0, y1, x, z):
+    return Part.makeCylinder(r, y1 - y0, V(x, y0, z), V(0, 1, 0))
+
+
+def D():
+    return App.getDocument(DOC)
+
+
+def container(doc, name, label, parent=None):
+    o = doc.getObject(name)
+    if o is None:
+        o = doc.addObject("App::Part", name)
+        if parent is not None:
+            parent.addObject(o)
+    o.Label = label
+    return o
+
+
+def feat(doc, parent, name, label, shape, color=None):
+    o = doc.getObject(name)
+    if o is None:
+        o = doc.addObject("Part::Feature", name)
+        parent.addObject(o)
+    o.Label = label
+    o.Shape = shape
+    if color is not None and App.GuiUp:
+        o.ViewObject.ShapeColor = tuple(float(c) for c in color)
+    return o
+
+
+def purge(doc):
+    for o in list(doc.Objects):
+        if o.Name.startswith("EL_"):
+            doc.removeObject(o.Name)
+
+
+def global_pl(o):
+    pl = App.Placement()
+    g = o.getParentGeoFeatureGroup()
+    while g is not None:
+        pl = g.Placement.multiply(pl)
+        g = g.getParentGeoFeatureGroup()
+    return pl
+
+
+# ---------------------------------------------------------------- плата из KiCad
+def load_board():
+    """STEP платы -> (форма в координатах робота, цвета граней или None)."""
+    shapes, colors = [], []
+    if App.GuiUp:
+        import ImportGui
+        tmp = App.newDocument("EL_tmp")
+        try:
+            ImportGui.insert(STEP, tmp.Name)
+            tmp.recompute()
+            for o in tmp.Objects:
+                if not hasattr(o, "Shape") or o.TypeId == "App::Part" or o.Shape.isNull():
+                    continue
+                if o.InList and any(p.TypeId == "Part::Feature" for p in o.InList):
+                    continue
+                if not o.Shape.Faces:
+                    continue
+                s = Part.getShape(o, "", needSubElement=False, refine=False, transform=True)
+                pl = global_pl(o)
+                s = s.copy()
+                s.Placement = pl.multiply(s.Placement)
+                dc = list(o.ViewObject.DiffuseColor) if hasattr(o.ViewObject, "DiffuseColor") else []
+                if len(dc) != len(s.Faces):
+                    c = o.ViewObject.ShapeColor
+                    dc = [c] * len(s.Faces)
+                # только тела: в STEP есть и отдельные грани (медь, шелкография) —
+                # у части из них бесконечный габарит
+                col = {f.hashCode(): c for f, c in zip(s.Faces, dc)}
+                for so in s.Solids:
+                    shapes.append(so)
+                    colors += [col.get(f.hashCode(), dc[0]) for f in so.Faces]
+        finally:
+            App.closeDocument(tmp.Name)
+    else:
+        shapes = Part.read(STEP).Solids
+    comp = Part.makeCompound(shapes)
+    # подложка: самое большое тело толщиной ~1.6
+    sols = [s for s in comp.Solids if 1.4 < s.BoundBox.ZLength < 1.8 and s.BoundBox.XLength > 100]
+    sub = max(sols, key=lambda s: s.BoundBox.XLength * s.BoundBox.YLength)
+    bb = sub.BoundBox
+    # KiCad STEP: X = u + X0, Y = -v + Y0  ->  робот: x = PCB_X0 - v, y = PCB_Y0 - u
+    comp.rotate(V(0, 0, 0), V(0, 0, 1), -90)
+    # после поворота: x = Y, y = -X; совмещаем край u=0 (X = bb.XMin) и v=0 (Y = bb.YMax)
+    dz = L2_Z + PLY_T + PCB_STD - bb.ZMin
+    comp.translate(V(PCB_X0 - bb.YMax, PCB_Y0 + bb.XMin, dz))
+    return comp, (colors if colors and len(colors) == len(comp.Faces) else None)
+
+
+def uv(u, v, z=0.0):
+    return V(PCB_X0 - v, PCB_Y0 - u, z)
+
+
+def board_extras(doc, P):
+    """Чего нет в библиотеке 3D KiCad: модули TMC2209 и вилка XT30."""
+    ztop = L2_Z + PLY_T + PCB_STD + 1.6
+    for k, (fu, fv) in enumerate(((48.0, 12.0), (72.0, 12.0))):
+        # посадочное место повёрнуто на 270: модуль u fu-19.05..fu+1.27, v fv-1.25..fv+13.95
+        u0, u1, v0, v1 = fu - 19.05, fu + 1.27, fv - 1.25, fv + 13.95
+        a, b = uv(u0, v0), uv(u1, v1)
+        x0, x1 = sorted((a.x, b.x)); y0, y1 = sorted((a.y, b.y))
+        z0 = ztop + 8.5                       # гнёзда PBS 8.5 мм
+        m = box(x0, x1, y0, y1, z0, z0 + 1.6)
+        c = uv((u0 + u1) / 2, (v0 + v1) / 2)
+        m = m.fuse(box(c.x - 4.5, c.x + 4.5, c.y - 4.5, c.y + 4.5, z0 + 1.6, z0 + 6.6))   # радиатор
+        feat(doc, P, "EL_Drv%d" % (k + 1), "Модуль_TMC2209_%d" % (k + 1), m, (0.55, 0.05, 0.05))
+    a, b = uv(1.4, 7.3), uv(17.2, 21.7)
+    x0, x1 = sorted((a.x, b.x)); y0, y1 = sorted((a.y, b.y))
+    feat(doc, P, "EL_XT30", "Вилка_XT30PW-M", box(x0, x1, y0, y1, ztop, ztop + 8.0), (0.95, 0.80, 0.10))
+
+
+# ---------------------------------------------------------------- полка
+def shelf(doc, P, mast_c):
+    mx, my = mast_c
+    hole = cyl(8.25, 0, 1, mx, my)
+    for lvl, z in ((1, L1_Z), (2, L2_Z)):
+        pl = box(SH_X0, SH_X1, SH_Y0, SH_Y1, z, z + PLY_T)
+        cuts = [cyl(8.25, z - 1, z + PLY_T + 1, mx, my)]
+        cuts += [cyl(1.7, z - 1, z + PLY_T + 1, x, y) for x, y in STD_XY]
+        if lvl == 2:
+            cuts.append(cyl(11.25, z - 1, z + PLY_T + 1, *ESTOP))
+            cuts.append(cyl(8.1, z - 1, z + PLY_T + 1, *START))
+            cuts.append(box(SWITCH[0] - 9.5, SWITCH[0] + 9.5, SWITCH[1] - 6.5, SWITCH[1] + 6.5, z - 1, z + PLY_T + 1))
+            cuts += [cyl(4.0, z - 1, z + PLY_T + 1, *p) for p in (LED_G, LED_R)]
+            cuts += [cyl(1.7, z - 1, z + PLY_T + 1, uv(u, v).x, uv(u, v).y) for u, v in PCB_HOLES]
+        pl = pl.cut(cuts)
+        feat(doc, P, "EL_Shelf%d" % lvl, "Полка_электроники_%d_фанера_4мм" % lvl, pl, PLY)
+        # хомут на мачте под ярусом: втулка Ø32 x 20, фланец Ø50 x 4, разрез и ухо M3
+        zc = z - 20.0
+        cl = cyl(16.0, zc, z, mx, my).fuse(cyl(25.0, z - 4.0, z, mx, my))
+        ear = box(mx - 16.0 - 9.0, mx - 13.0, my - 5.0, my + 5.0, zc, zc + 12.0)
+        cl = cl.fuse(ear).cut([cyl(8.1, zc - 1, z + 1, mx, my),
+                               box(mx - 26.0, mx - 7.0, my - 0.75, my + 0.75, zc - 1, zc + 13.0),
+                               Part.makeCylinder(1.7, 12.0, V(mx - 20.5, my - 6.0, zc + 6.0), V(0, 1, 0))])
+        feat(doc, P, "EL_Clamp%d" % lvl, "Хомут_полки_%d_печать" % lvl, cl, PRINT)
+        sc = Part.makeCylinder(1.5, 12.0, V(mx - 20.5, my + 5.0, zc + 6.0), V(0, -1, 0)).fuse(
+            Part.makeCylinder(2.75, 3.0, V(mx - 20.5, my + 5.0, zc + 6.0), V(0, 1, 0)))
+        feat(doc, P, "EL_ClampScr%d" % lvl, "Винт_хомута_полки_M3x12_%d" % lvl, sc, DARK)
+        nt = Part.makeCylinder(3.2, 2.4, V(mx - 20.5, my - 5.0, zc + 6.0), V(0, -1, 0)).cut(
+            Part.makeCylinder(1.5, 2.4, V(mx - 20.5, my - 5.0, zc + 6.0), V(0, -1, 0)))
+        feat(doc, P, "EL_ClampNut%d" % lvl, "Гайка_хомута_полки_M3_%d" % lvl, nt, STEEL)
+    for i, (x, y) in enumerate(STD_XY):
+        s = cyl(2.75, L1_Z + PLY_T, L2_Z, x, y).cut(cyl(1.25, L1_Z + PLY_T - 1, L2_Z + 1, x, y))
+        feat(doc, P, "EL_Std%d" % (i + 1), "Стойка_латунь_M3x40_ВВ_полка_%d" % (i + 1), s, BRASS)
+        for z0, sgn, nm in ((L2_Z + PLY_T, 1, "в"), (L1_Z, -1, "н")):
+            h = cyl(2.75, z0, z0 + 2.4 * sgn, x, y) if sgn > 0 else cyl(2.75, z0 - 2.4, z0, x, y)
+            feat(doc, P, "EL_StdScr%d%s" % (i + 1, "a" if sgn > 0 else "b"),
+                 "Винт_полки_M3x8_ISO7380_%d%s" % (i + 1, nm), h, DARK)
+
+
+# ---------------------------------------------------------------- верхний ярус
+def level2(doc, P):
+    z = L2_Z + PLY_T
+    for i, (u, v) in enumerate(PCB_HOLES):
+        c = uv(u, v)
+        s = cyl(2.75, z, z + PCB_STD, c.x, c.y).cut(cyl(1.25, z - 1, z + PCB_STD + 1, c.x, c.y))
+        feat(doc, P, "EL_PcbStd%d" % (i + 1), "Стойка_латунь_M3x10_ВВ_плата_%d" % (i + 1), s, BRASS)
+    # макетная плата 400 точек (ЕТЗ п. 3.6) — рядом с разъёмами А, Б, В
+    bbx0, bby0 = -37.0, -54.0
+    bbd = box(bbx0, bbx0 + 82.5, bby0, bby0 + 54.5, z, z + 8.5)
+    feat(doc, P, "EL_Breadboard", "Макетная_плата_400_точек", bbd, (0.95, 0.95, 0.93))
+    # кнопка останова 22 мм с фиксацией (грибок Ø40)
+    ex, ey = ESTOP
+    es_top = cyl(15.0, z, z + 4.0, ex, ey).fuse(cyl(11.0, z + 4.0, z + 12.0, ex, ey))
+    feat(doc, P, "EL_EStopBody", "Кнопка_останова_корпус", es_top.fuse(cyl(11.0, z - PLY_T, z, ex, ey))
+         .fuse(cyl(13.5, L2_Z - 30.0, L2_Z, ex, ey)), (0.95, 0.80, 0.10))
+    feat(doc, P, "EL_EStopHead", "Кнопка_останова_грибок_Ø40", cyl(20.0, z + 12.0, z + 24.0, ex, ey), (0.85, 0.05, 0.05))
+    sx, sy = START
+    st = cyl(9.5, z, z + 2.0, sx, sy).fuse(cyl(8.0, z - PLY_T, z, sx, sy)).fuse(cyl(8.0, L2_Z - 25.0, L2_Z, sx, sy))
+    feat(doc, P, "EL_StartBody", "Кнопка_Старт_16мм_корпус", st, DARK)
+    feat(doc, P, "EL_StartCap", "Кнопка_Старт_16мм_толкатель", cyl(6.0, z + 2.0, z + 6.0, sx, sy), (0.10, 0.65, 0.20))
+    wx, wy = SWITCH
+    sw = box(wx - 10.5, wx + 10.5, wy - 7.5, wy + 7.5, z, z + 3.0).fuse(
+        box(wx - 9.25, wx + 9.25, wy - 6.25, wy + 6.25, L2_Z - 20.0, z))
+    sw = sw.fuse(box(wx - 8.0, wx + 8.0, wy - 5.0, wy + 5.0, z + 3.0, z + 7.0))
+    feat(doc, P, "EL_Switch", "Выключатель_KCD1_21x15", sw, DARK)
+    for nm, (lx, ly), col in (("EL_LedG", LED_G, (0.10, 0.80, 0.20)), ("EL_LedR", LED_R, (0.90, 0.10, 0.10))):
+        led = cyl(5.0, z, z + 2.0, lx, ly).fuse(cyl(4.0, L2_Z - 18.0, z, lx, ly))
+        led = led.fuse(cyl(3.5, z + 2.0, z + 6.0, lx, ly))
+        feat(doc, P, nm, "Индикатор_8мм_" + ("зелёный_приводы" if nm.endswith("G") else "красный_программа"),
+             led, col)
+
+
+# ---------------------------------------------------------------- нижний ярус
+def level1(doc, P):
+    z = L1_Z + PLY_T
+    # Arduino Mega 2560: 101.6 x 53.3, длинной стороной вдоль y, USB к +y
+    mx0, my0, zs = -50.0, 30.0, 6.0
+    zb = z + zs
+    mega = box(mx0, mx0 + 53.3, my0, my0 + 101.6, zb, zb + 1.6)
+    mega = mega.fuse(box(mx0 + 30.0, mx0 + 42.0, my0 + 95.6, my0 + 111.6, zb + 1.6, zb + 12.6))     # USB-B
+    mega = mega.fuse(box(mx0 + 3.0, mx0 + 12.0, my0 + 88.0, my0 + 102.0, zb + 1.6, zb + 12.6))      # гнездо питания
+    mega = mega.fuse(box(mx0 + 1.0, mx0 + 3.5, my0 + 10.0, my0 + 86.0, zb + 1.6, zb + 10.1))        # гребёнки
+    mega = mega.fuse(box(mx0 + 49.8, mx0 + 52.3, my0 + 4.0, my0 + 88.0, zb + 1.6, zb + 10.1))
+    mega = mega.fuse(box(mx0 + 5.0, mx0 + 48.0, my0 + 1.0, my0 + 6.0, zb + 1.6, zb + 10.1))
+    mega = mega.fuse(box(mx0 + 18.0, mx0 + 32.0, my0 + 30.0, my0 + 44.0, zb + 1.6, zb + 2.8))       # ATmega2560
+    feat(doc, P, "EL_Mega", "Arduino_Mega_2560", mega, (0.0, 0.45, 0.65))
+    for i, (hx, hy) in enumerate(((2.5, 14.0), (50.7, 15.3), (7.6, 66.1), (35.5, 66.1), (50.7, 90.2), (2.5, 96.5))):
+        x, y = mx0 + hx, my0 + hy
+        s = cyl(2.75, z, zb, x, y).cut(cyl(1.25, z - 1, zb + 1, x, y))
+        feat(doc, P, "EL_MegaStd%d" % (i + 1), "Стойка_латунь_M3x6_Mega_%d" % (i + 1), s, BRASS)
+    # вакуумная помпа 6 В: мотор Ø24 x 32 + головка 27 x 27 x 27, лёжа вдоль y
+    px, pz = 28.5, z + 13.5
+    pump = cyl_y(12.0, 40.0, 72.0, px, pz).fuse(box(px - 13.5, px + 13.5, 72.0, 99.0, z, z + 27.0))
+    for dx in (-5.0, 5.0):
+        pump = pump.fuse(cyl_y(2.0, 99.0, 107.0, px + dx, z + 20.0))
+    feat(doc, P, "EL_Pump", "Помпа_вакуумная_6В", pump, DARK)
+    # клапан сброса 6 В, нормально открытый
+    vl = box(15.0, 45.0, 10.0, 23.0, z, z + 13.0).fuse(cyl(6.0, z + 13.0, z + 26.0, 30.0, 16.5))
+    vl = vl.fuse(cyl_y(2.0, 2.0, 10.0, 22.0, z + 6.5)).fuse(cyl_y(2.0, 23.0, 31.0, 38.0, z + 6.5))
+    feat(doc, P, "EL_Valve", "Клапан_6В_НО", vl, (0.30, 0.30, 0.32))
+    # датчик вакуума XGZP6847A на модуле
+    vs = box(15.0, 35.0, -15.0, 1.0, z, z + 1.6).fuse(box(19.0, 31.0, -13.0, -1.0, z + 1.6, z + 8.6))
+    vs = vs.fuse(cyl(1.5, z + 8.6, z + 14.6, 25.0, -7.0))
+    feat(doc, P, "EL_VacSensor", "Датчик_вакуума_XGZP6847A", vs, (0.10, 0.35, 0.15))
+
+
+# ---------------------------------------------------------------- аккумулятор
+def battery(doc, P, base_top):
+    x0, y0 = 26.0, -70.0
+    hol = box(x0, x0 + 78.0, y0, y0 + 58.0, base_top, base_top + 21.0)
+    cells = [cyl_y(9.25, y0 + 3.0, y0 + 55.0, x0 + 12.0 + 19.5 * k, base_top + 11.25) for k in range(3)]
+    hol = hol.cut(box(x0 + 1.5, x0 + 76.5, y0 + 1.5, y0 + 56.5, base_top + 2.0, base_top + 22.0))
+    feat(doc, P, "EL_BatHolder", "Аккумулятор_3S_держатель", hol, DARK)
+    c = cells[0].fuse(cells[1:])
+    feat(doc, P, "EL_BatCells", "Аккумулятор_3S_18650x3", c, (0.15, 0.35, 0.80))
+
+
+# ---------------------------------------------------------------- датчики Холла
+def hall(doc, P):
+    d = doc
+    part2 = d.getObject("Part002")
+    ax, ay, az = part2.Placement.Base.x, part2.Placement.Base.y, part2.Placement.Base.z
+    # плечо: датчик снизу под шкивом 1 на оси +X от вала
+    hx, hy = ax + HALL_R, ay
+    post = box(hx - 4.0, hx + 4.0, hy - 5.0, hy + 5.0, -1.0, az - 5.0)
+    feat(d, P, "EL_HallPost1", "Стойка_датчика_Холла_плеча_печать", post, PRINT)
+    to92 = lambda x, y, z0: box(x - 2.25, x + 2.25, y - 2.0, y + 2.0, z0, z0 + 2.5)
+    feat(d, P, "EL_Hall1", "Датчик_Холла_A3144_плечо", to92(hx, hy, az - 5.0), DARK)
+    # магниты 3x1 — в Part002, поворачиваются вместе со своими шкивами
+    phi = math.radians(-PARK_SHOULDER)           # в парковке над датчиком (угол 0)
+    m1 = cyl(1.5, -1.0, 0.0, HALL_R * math.cos(phi), HALL_R * math.sin(phi))
+    o = feat(d, part2, "EL_MagS", "Магнит_3x1_шкив_1", m1, STEEL)
+    o.setExpression(".Placement.Rotation.Angle", "Poza.ShoulderAngle")
+    # предплечье: датчик над шкивом 2 со стороны моторов (угол 180)
+    sh2 = d.getObject("Body_Pulley2").Shape
+    z2 = sh2.BoundBox.ZMax                       # верх шкива 2 в координатах Part002
+    phi2 = math.radians(180.0 - PARK_LEVER)
+    m2 = cyl(1.5, z2, z2 + 1.0, HALL_R * math.cos(phi2), HALL_R * math.sin(phi2))
+    o = feat(d, part2, "EL_MagL", "Магнит_3x1_шкив_2", m2, STEEL)
+    o.setExpression(".Placement.Rotation.Angle", "Poza.LeverAngle")
+    gz = az + z2                                  # верх шкива 2 в глобальных
+    sx, sy = ax - HALL_R, ay
+    feat(d, P, "EL_Hall2", "Датчик_Холла_A3144_предплечье", to92(sx, sy, gz + 2.0), DARK)
+    pb = d.getObject("FR_PlateB")
+    pbb = pb.Shape.BoundBox if pb.getParentGeoFeatureGroup() is None else None
+    if pbb is None:
+        s = pb.Shape.copy()
+        s.Placement = global_pl(pb).multiply(s.Placement)
+        pbb = s.BoundBox
+    # кронштейн: лапа на плите 2 у её правого края, стойка, полка над шкивом 2
+    fx1 = pbb.XMax - 1.0
+    foot = box(fx1 - 10.0, fx1, sy + 6.0, sy + 16.0, pbb.ZMax, pbb.ZMax + 3.0)
+    riser = box(fx1 - 6.0, fx1, sy + 6.0, sy + 16.0, pbb.ZMax, gz + 7.5)
+    arm = box(fx1 - 6.0, sx + 4.0, sy - 4.0, sy + 16.0, gz + 4.5, gz + 7.5)
+    feat(d, P, "EL_HallBr2", "Кронштейн_датчика_Холла_предплечья_печать", foot.fuse([riser, arm]), PRINT)
+
+
+def main():
+    doc = D()
+    purge(doc)
+    P = container(doc, "Part_Elec", "Электроника")
+    mast = doc.getObject("CAM_Mast")
+    ms = mast.Shape.copy()
+    ms.Placement = global_pl(mast).multiply(ms.Placement)
+    mc = ms.BoundBox.Center
+    base = doc.getObject("FR_Base")
+    bs = base.Shape.copy()
+    bs.Placement = global_pl(base).multiply(bs.Placement)
+    shelf(doc, P, (mc.x, mc.y))
+    comp, colors = load_board()
+    App.setActiveDocument(doc.Name)
+    o = feat(doc, P, "EL_Board", "Плата_приводов_ETZ_v1", comp, (0.10, 0.40, 0.15))
+    if colors and App.GuiUp:
+        try:
+            o.ViewObject.DiffuseColor = colors
+        except Exception:
+            pass
+    board_extras(doc, P)
+    level2(doc, P)
+    level1(doc, P)
+    battery(doc, P, bs.BoundBox.ZMax)
+    hall(doc, P)
+    doc.recompute()
+    print("Электроника: %d деталей" % len([x for x in doc.Objects if x.Name.startswith("EL_")]))
+
+
+if __name__ in ("__main__", "elek"):
+    main()

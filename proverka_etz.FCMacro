@@ -208,9 +208,9 @@ def collide(sa, sb, skip_allowed=True, ba=None, bb=None):
 # ---------------------------------------------------------------------------
 # (точные имена тел, префиксы деталей)
 GROUPS = {
-    "shoulder": ({"Body003", "Body_Cap", "Body_Tube", "Body_Elbow", "Body_ElbowCap"},
+    "shoulder": ({"Body003", "Body_Cap", "Body_Tube", "Body_Elbow", "Body_ElbowCap", "EL_MagS"},
                  ("HW_", "PV_", "EH_Vint_E1", "EH_Gayka_E1")),
-    "lever": ({"Body_Pulley2"}, ("RD_VintA", "RD_VtulA", "RD_BrgA", "RD_ShaybaA", "RD_GaykaA")),
+    "lever": ({"Body_Pulley2", "EL_MagL"}, ("RD_VintA", "RD_VtulA", "RD_BrgA", "RD_ShaybaA", "RD_GaykaA")),
     "forearm": ({"Body_Elbow2", "Body_Elbow2Cap", "Body_Tube2", "Body_RodJoint", "Body_RodJointCap"},
                 ("EH_Vint_E2", "EH_Gayka_E2", "EH_Vint_RJ", "EH_Gayka_RJ", "RD_VintB", "RD_VtulB",
                  "RD_BrgB", "RD_ShaybaB", "RD_GaykaB", "EF_", "CR_")),
@@ -1327,9 +1327,16 @@ def gears(report=True):
 # ---------------------------------------------------------------------------
 MASS_FIXED = {"Body": 280.0, "Body001": 280.0, "EF_ServoZ": 9.0, "CR_ServoR": 9.0,
               "CAM_Servo": 9.0, "CAM_Board": 12.0, "CAM_Lens": 6.0,
-              "CR_Magnet": 45.0, "CR_Cup1": 1.0, "CR_Cup2": 1.0, "CR_Cup3": 1.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0}
-RHO = [(("FR_Base", "FR_Plate"), 0.65),              # фанера берёзовая
-       (("FR_Std",), 8.5),                            # латунные стойки
+              "CR_Magnet": 45.0, "CR_Cup1": 1.0, "CR_Cup2": 1.0, "CR_Cup3": 1.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0,
+              # электроника (elektronika_etz.FCMacro) — по паспортам/весам, г
+              "EL_Board": 55.0, "EL_Drv1": 6.0, "EL_Drv2": 6.0, "EL_XT30": 3.0, "EL_Mega": 37.0,
+              "EL_Breadboard": 30.0, "EL_EStopBody": 35.0, "EL_EStopHead": 10.0, "EL_StartBody": 8.0,
+              "EL_StartCap": 1.0, "EL_Switch": 5.0, "EL_LedG": 3.0, "EL_LedR": 3.0, "EL_Pump": 60.0,
+              "EL_Valve": 20.0, "EL_VacSensor": 4.0, "EL_BatCells": 141.0, "EL_BatHolder": 25.0,
+              "EL_Hall1": 1.0, "EL_Hall2": 1.0, "EL_MagS": 0.1, "EL_MagL": 0.1}
+RHO = [(("FR_Base", "FR_Plate", "EL_Shelf"), 0.65),  # фанера берёзовая
+       (("FR_Std", "EL_Std", "EL_PcbStd", "EL_MegaStd"), 8.5),   # латунные стойки
+       (("EL_Clamp", "EL_HallPost", "EL_HallBr"), 1.24 * 0.6),
        (("FR_Column", "CAM_Foot", "CAM_Head", "CAM_Hub", "CAM_Bracket",
          "CAM_GearSv", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
          "Body_Cap", "Body_Elbow", "Body_RodJoint", "Body_Rod", "EF_BracketCap", "CR_Gear",
@@ -1395,7 +1402,7 @@ def mass(report=True):
         issues.append("запас устойчивости %.1f мм (край %s, поза t1=%d q2=%d) — мало"
                       % (worst[0], worst[1][0], worst[1][1], worst[1][2]))
     if report:
-        print("MASS: всего ~%.0f г (без электроники и аккумулятора)" % total)
+        print("MASS: всего ~%.0f г (с электроникой и аккумулятором)" % total)
         print("   худший запас ЦМ до края основания с учётом разгона 0.3g: %.1f мм (%s, t1=%d, q2=%d)"
               % (worst[0], worst[1][0], worst[1][1], worst[1][2]))
         for i in issues:

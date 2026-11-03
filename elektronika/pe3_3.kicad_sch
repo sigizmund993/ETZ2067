@@ -1,0 +1,958 @@
+(kicad_sch
+  (version 20250114)
+  (generator "eeschema")
+  (generator_version "9.0")
+  (uuid "7c80877e-4414-5348-a4a2-51174d9c6592")
+  (paper "A4" portrait)
+  (lib_symbols)
+  (polyline
+    (pts (xy 20 5) (xy 205 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "f95016f0-fe48-57b0-b964-31b02b9cf256"))
+  (polyline
+    (pts (xy 205 5) (xy 205 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "f8f72527-688e-5d63-bd8d-43d845cdf289"))
+  (polyline
+    (pts (xy 205 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "ac4d57a5-34af-5305-9250-4787b31123c3"))
+  (polyline
+    (pts (xy 20 292) (xy 20 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "a0013a7c-4c2d-5068-ad27-38420b363f83"))
+  (polyline
+    (pts (xy 20 277) (xy 205 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "582e621f-6032-533b-a7ad-cb2fcd32e10c"))
+  (polyline
+    (pts (xy 205 277) (xy 205 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "59feac92-5542-530b-aba6-179dae1e27b0"))
+  (polyline
+    (pts (xy 205 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "691affff-5f99-5b79-a6bb-0541e7885dec"))
+  (polyline
+    (pts (xy 20 292) (xy 20 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "10279aee-6417-5db6-8be3-f27178b4e297"))
+  (polyline
+    (pts (xy 27 277) (xy 27 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "82776669-9036-58b3-b179-2cf2b3f8fa87"))
+  (polyline
+    (pts (xy 37 277) (xy 37 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "1280b2de-c724-517a-9b90-13d01ab8bfa6"))
+  (polyline
+    (pts (xy 60 277) (xy 60 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "4e378109-dcae-5573-94f7-994db5bea113"))
+  (polyline
+    (pts (xy 75 277) (xy 75 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "308cc542-6905-542b-88cf-27d8520d89d3"))
+  (polyline
+    (pts (xy 85 277) (xy 85 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "dcc98891-a751-54fe-a238-e19c56e94d4f"))
+  (polyline
+    (pts (xy 20 282) (xy 85 282))
+    (stroke (width 0.25) (type solid))
+    (uuid "86f0ebbc-bd42-5903-8277-c16db50ec341"))
+  (polyline
+    (pts (xy 20 287) (xy 85 287))
+    (stroke (width 0.5) (type solid))
+    (uuid "78226d57-d2d7-5621-9464-42e6a1d3c6d7"))
+  (polyline
+    (pts (xy 195 277) (xy 195 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "f46ffb88-bf5a-5000-99ca-9261ee4e1772"))
+  (polyline
+    (pts (xy 195 284) (xy 205 284))
+    (stroke (width 0.25) (type solid))
+    (uuid "cd3c3024-6086-52ae-a30e-99a39df60c24"))
+  (polyline
+    (pts (xy 8 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "ae92721a-26bf-5ddf-b246-48ea167ec684"))
+  (polyline
+    (pts (xy 8 267) (xy 20 267))
+    (stroke (width 0.5) (type solid))
+    (uuid "8e9cf050-7f30-5769-acc7-20e8424e3750"))
+  (polyline
+    (pts (xy 8 232) (xy 20 232))
+    (stroke (width 0.5) (type solid))
+    (uuid "384a0956-00e4-5018-a400-607ca0bbf797"))
+  (polyline
+    (pts (xy 8 207) (xy 20 207))
+    (stroke (width 0.5) (type solid))
+    (uuid "caedf517-c437-5310-8ee5-97436fec98c6"))
+  (polyline
+    (pts (xy 8 182) (xy 20 182))
+    (stroke (width 0.5) (type solid))
+    (uuid "680e5049-bda6-5735-96a4-b708c3c92008"))
+  (polyline
+    (pts (xy 8 147) (xy 20 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "d377bc5c-592e-505e-870e-74bbd65dfa63"))
+  (polyline
+    (pts (xy 8 292) (xy 8 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "b0782cec-f9b7-5795-832d-3179b7094646"))
+  (polyline
+    (pts (xy 13 292) (xy 13 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "7056856f-cfbd-5ea9-bf9c-b04d3f92f29f"))
+  (polyline
+    (pts (xy 8 5) (xy 20 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "35e7761f-6075-57a3-aacb-dc4f9c9f40d5"))
+  (polyline
+    (pts (xy 20 5) (xy 20 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "ca6fc1ee-ddbc-58b8-a417-fbd205ecffaa"))
+  (polyline
+    (pts (xy 20 65) (xy 8 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "9c490c52-b93e-5030-a527-7b6e379c08d2"))
+  (polyline
+    (pts (xy 8 65) (xy 8 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "bc0bdc84-90cc-5ebc-acd1-701fc4adfdd0"))
+  (polyline
+    (pts (xy 13 5) (xy 13 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "307651bf-4f54-58b2-85dc-0b473d763077"))
+  (polyline
+    (pts (xy 8 65) (xy 20 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "56fbd2f9-590c-5c97-837f-974e2cac6eaf"))
+  (polyline
+    (pts (xy 20 65) (xy 20 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "fb9ef1bf-a451-5d34-9ee1-0db326d14e66"))
+  (polyline
+    (pts (xy 20 125) (xy 8 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "15488e83-5929-5e6c-94b1-04995667a1cc"))
+  (polyline
+    (pts (xy 8 125) (xy 8 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "66c2a067-aaf8-5600-91a4-ed228b9f6f3e"))
+  (polyline
+    (pts (xy 13 65) (xy 13 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "49e37e6f-63e6-5a23-bfc8-2b2342d01211"))
+  (polyline
+    (pts (xy 40 5) (xy 40 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "1fd64049-c3a4-5e72-9724-714e232ed58f"))
+  (polyline
+    (pts (xy 150 5) (xy 150 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "1af457a7-d49e-5c59-a0f5-66e3ea140dcf"))
+  (polyline
+    (pts (xy 160 5) (xy 160 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "70a6d8ed-2bf4-5bf8-a8f4-f8fe1659edd6"))
+  (polyline
+    (pts (xy 20 20) (xy 205 20))
+    (stroke (width 0.5) (type solid))
+    (uuid "4713c87f-a948-50c7-9bfa-66e34fd02695"))
+  (polyline
+    (pts (xy 20 28) (xy 205 28))
+    (stroke (width 0.25) (type solid))
+    (uuid "b63a7aee-cb0f-5391-b328-63ef79342b38"))
+  (polyline
+    (pts (xy 20 36) (xy 205 36))
+    (stroke (width 0.25) (type solid))
+    (uuid "d5bd1ce5-864f-5ef5-8d0d-9fb542d8a95d"))
+  (polyline
+    (pts (xy 20 44) (xy 205 44))
+    (stroke (width 0.25) (type solid))
+    (uuid "87988bf6-1a80-5ae3-8f96-9452e98c5d41"))
+  (polyline
+    (pts (xy 20 52) (xy 205 52))
+    (stroke (width 0.25) (type solid))
+    (uuid "b005fb4b-8a5c-5839-9032-3658213349d8"))
+  (polyline
+    (pts (xy 20 60) (xy 205 60))
+    (stroke (width 0.25) (type solid))
+    (uuid "51532c1f-9220-55bb-b785-9bdf9ef10ac0"))
+  (polyline
+    (pts (xy 20 68) (xy 205 68))
+    (stroke (width 0.25) (type solid))
+    (uuid "ee7ebb02-d665-5d03-9003-72aa84a1e4f9"))
+  (polyline
+    (pts (xy 20 76) (xy 205 76))
+    (stroke (width 0.25) (type solid))
+    (uuid "6c5590fd-0663-5d20-a082-af3d4c5207b7"))
+  (polyline
+    (pts (xy 20 84) (xy 205 84))
+    (stroke (width 0.25) (type solid))
+    (uuid "993e19e6-2a51-5af7-9af2-20cf0fcbdd04"))
+  (polyline
+    (pts (xy 20 92) (xy 205 92))
+    (stroke (width 0.25) (type solid))
+    (uuid "059f2e85-30ef-5684-8506-3142c1041e3d"))
+  (polyline
+    (pts (xy 20 100) (xy 205 100))
+    (stroke (width 0.25) (type solid))
+    (uuid "1df5d42a-4f80-5e64-a27a-ff9815a60a61"))
+  (polyline
+    (pts (xy 20 108) (xy 205 108))
+    (stroke (width 0.25) (type solid))
+    (uuid "f1b76e49-2603-5555-b842-44c09dfea828"))
+  (polyline
+    (pts (xy 20 116) (xy 205 116))
+    (stroke (width 0.25) (type solid))
+    (uuid "66c05610-9b20-5abd-89c6-d939ecefa61f"))
+  (polyline
+    (pts (xy 20 124) (xy 205 124))
+    (stroke (width 0.25) (type solid))
+    (uuid "3c582dc4-9b00-53e4-994a-0c9eec823a3f"))
+  (polyline
+    (pts (xy 20 132) (xy 205 132))
+    (stroke (width 0.25) (type solid))
+    (uuid "97ae77f4-4586-54b8-adf2-473a1b1cbb04"))
+  (polyline
+    (pts (xy 20 140) (xy 205 140))
+    (stroke (width 0.25) (type solid))
+    (uuid "3ff5cb8b-3e87-529e-9d70-837a2f315f0f"))
+  (polyline
+    (pts (xy 20 148) (xy 205 148))
+    (stroke (width 0.25) (type solid))
+    (uuid "119df9eb-e53f-5cf5-985c-8f0f91a5a35e"))
+  (polyline
+    (pts (xy 20 156) (xy 205 156))
+    (stroke (width 0.25) (type solid))
+    (uuid "acec6eaa-bf9f-5dbf-ba88-56b006a65996"))
+  (polyline
+    (pts (xy 20 164) (xy 205 164))
+    (stroke (width 0.25) (type solid))
+    (uuid "17fa8598-48be-574d-8c45-3f551676ee93"))
+  (polyline
+    (pts (xy 20 172) (xy 205 172))
+    (stroke (width 0.25) (type solid))
+    (uuid "e6bb30f9-014d-5b5d-8386-fe1b4d56951a"))
+  (polyline
+    (pts (xy 20 180) (xy 205 180))
+    (stroke (width 0.25) (type solid))
+    (uuid "400f65de-eea2-523b-927d-0b425d996f28"))
+  (polyline
+    (pts (xy 20 188) (xy 205 188))
+    (stroke (width 0.25) (type solid))
+    (uuid "1f5f57a6-9635-5b30-9586-54bb6b583235"))
+  (polyline
+    (pts (xy 20 196) (xy 205 196))
+    (stroke (width 0.25) (type solid))
+    (uuid "6d820d91-64c5-5d70-9a51-d444319a76dc"))
+  (polyline
+    (pts (xy 20 204) (xy 205 204))
+    (stroke (width 0.25) (type solid))
+    (uuid "2b5a6011-9bf6-5433-9d15-a280d50b8f4a"))
+  (polyline
+    (pts (xy 20 212) (xy 205 212))
+    (stroke (width 0.25) (type solid))
+    (uuid "fb30eb59-e0f9-525f-90df-20cfd48edee8"))
+  (polyline
+    (pts (xy 20 220) (xy 205 220))
+    (stroke (width 0.25) (type solid))
+    (uuid "102d2e4d-59bf-5a5d-a620-f100db956672"))
+  (polyline
+    (pts (xy 20 228) (xy 205 228))
+    (stroke (width 0.25) (type solid))
+    (uuid "9c6c571e-3d27-5803-875a-42e0a04b7a0f"))
+  (polyline
+    (pts (xy 20 236) (xy 205 236))
+    (stroke (width 0.25) (type solid))
+    (uuid "08bd5480-12e0-573d-9036-9a6bd47eef7e"))
+  (polyline
+    (pts (xy 20 244) (xy 205 244))
+    (stroke (width 0.25) (type solid))
+    (uuid "ef554b89-cbe6-5360-b3ff-4b2ae23f646c"))
+  (polyline
+    (pts (xy 20 252) (xy 205 252))
+    (stroke (width 0.25) (type solid))
+    (uuid "6012182c-dd2e-5aed-aa3d-f25186131d58"))
+  (polyline
+    (pts (xy 20 260) (xy 205 260))
+    (stroke (width 0.25) (type solid))
+    (uuid "a387f1cc-7095-53db-88c4-6655e8a19968"))
+  (polyline
+    (pts (xy 20 268) (xy 205 268))
+    (stroke (width 0.25) (type solid))
+    (uuid "2c9e5b69-9578-547a-87d9-13099db2c3b3"))
+  (polyline
+    (pts (xy 20 276) (xy 205 276))
+    (stroke (width 0.25) (type solid))
+    (uuid "f0dcc048-7e2e-5bec-83f6-c01d60489061"))
+  (text
+    "Изм."
+    (exclude_from_sim no)
+    (at 23.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "046cc0c8-48be-5894-a50d-7c2f64b658de"))
+  (text
+    "Лист"
+    (exclude_from_sim no)
+    (at 32 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "370d513b-591e-5e09-9d4c-03556947a1bd"))
+  (text
+    "N докум."
+    (exclude_from_sim no)
+    (at 48.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "0c9121d0-f801-5ff8-bcb3-7ee026f63062"))
+  (text
+    "Подп."
+    (exclude_from_sim no)
+    (at 67.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "bf8686bd-3f4f-56eb-9083-ecec55b84dbc"))
+  (text
+    "Дата"
+    (exclude_from_sim no)
+    (at 80 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "de17ae1b-f1ac-5dfd-9dd5-41d071954b6d"))
+  (text
+    "Лист"
+    (exclude_from_sim no)
+    (at 200 280.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "5028d7de-f442-58bc-956f-388c5d3679b8"))
+  (text
+    "3"
+    (exclude_from_sim no)
+    (at 200 288 0)
+    (effects (font (size 3.5 3.5)))
+    (uuid "f6e07225-84d6-5826-9778-8233a6fc5401"))
+  (text
+    "ЕТЗ.467000.001 ПЭ3"
+    (exclude_from_sim no)
+    (at 140 284.5 0)
+    (effects (font (size 6 6)))
+    (uuid "fad462ad-332f-5571-9c14-29a3aa90aa14"))
+  (text
+    "Инв. N подл."
+    (exclude_from_sim no)
+    (at 10.5 279.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "27f62498-cc0e-52f2-92e2-967ad487ea7c"))
+  (text
+    "Подп. и дата"
+    (exclude_from_sim no)
+    (at 10.5 249.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "c00f08dc-32ce-5480-a71a-9103ae9a8efe"))
+  (text
+    "Взам. инв. N"
+    (exclude_from_sim no)
+    (at 10.5 219.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "9f9699fd-ecdd-5249-94ef-3bb52c23fb74"))
+  (text
+    "Инв. N дубл."
+    (exclude_from_sim no)
+    (at 10.5 194.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "01db6fb3-0712-504a-ac0e-10f1abd9b595"))
+  (text
+    "Подп. и дата"
+    (exclude_from_sim no)
+    (at 10.5 164.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "5fe985e4-4196-52e8-8c51-aa0d36d4b28f"))
+  (text
+    "Перв. примен."
+    (exclude_from_sim no)
+    (at 10.5 35 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "acaf1a5f-299a-5ca9-9d63-71b9b5cceaaf"))
+  (text
+    "Справ. N"
+    (exclude_from_sim no)
+    (at 10.5 95 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "7b2a0b8c-13af-5f0d-b06a-f36d2f36a32c"))
+  (text
+    "Поз."
+    (exclude_from_sim no)
+    (at 30 9 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "06f9f8f1-dcef-51c9-8fca-230410cd9da8"))
+  (text
+    "обозна-"
+    (exclude_from_sim no)
+    (at 30 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "4ff59de2-e3ce-51c6-ac21-d1008cd1f7f3"))
+  (text
+    "чение"
+    (exclude_from_sim no)
+    (at 30 16 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "067152ec-2af7-540a-9575-3d72cdfef242"))
+  (text
+    "Наименование"
+    (exclude_from_sim no)
+    (at 95 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "24f75e9c-88fd-548a-9469-602c7e84c8ff"))
+  (text
+    "Кол."
+    (exclude_from_sim no)
+    (at 155 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "3f6c4bb6-8693-53db-a2b7-5b54bc55f5fa"))
+  (text
+    "Примечание"
+    (exclude_from_sim no)
+    (at 182.5 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "85ca4a77-a000-5e1c-95bf-fbd70ec2da07"))
+  (text
+    "Соединители"
+    (exclude_from_sim no)
+    (at 95 24 0)
+    (effects (font (size 3 3)))
+    (uuid "8fd4acb8-c8ac-5837-9bcc-ef21fde7e6c3"))
+  (text
+    "X1"
+    (exclude_from_sim no)
+    (at 21.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "b84f067b-a665-56d6-90b0-395f78b2a179"))
+  (text
+    "Вилка IDC-34MS 2x17 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "32c0c1d5-417c-5f1f-8bc5-78a92a2851b4"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 32 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "83666506-16d0-54d3-815b-0c0412a19eb8"))
+  (text
+    "Контроллер"
+    (exclude_from_sim no)
+    (at 161.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "62ec4b4a-7fa2-54bf-b66b-87a5503cd09a"))
+  (text
+    "X2"
+    (exclude_from_sim no)
+    (at 21.5 40 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "518ccb8e-989a-5372-bbe4-5ddc3157905b"))
+  (text
+    "Вилка XT30PW-M"
+    (exclude_from_sim no)
+    (at 41.5 40 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ddacc155-09dd-5aba-81df-fafeb40b40f9"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 40 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "37eb5331-da87-5e49-9c05-24356f3df990"))
+  (text
+    "АКБ 3S"
+    (exclude_from_sim no)
+    (at 161.5 40 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "00e04c73-22b5-5a0d-baa0-14f9e04b5201"))
+  (text
+    "X3"
+    (exclude_from_sim no)
+    (at 21.5 48 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "577dcd9f-81a6-5d95-b1fd-af09f66aecf9"))
+  (text
+    "Клеммник винтовой 2 конт. 5,08 мм"
+    (exclude_from_sim no)
+    (at 41.5 48 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "33fe25c5-6176-5ec5-96dc-392cde7dfbfd"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 48 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "4e302daf-02a8-537f-b906-4e77e7511459"))
+  (text
+    "Выключатель"
+    (exclude_from_sim no)
+    (at 161.5 48 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "471a3c70-926f-592b-8648-68881dd84e75"))
+  (text
+    "X4"
+    (exclude_from_sim no)
+    (at 21.5 56 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "9c704500-9b3c-56d6-9691-4b053b964190"))
+  (text
+    "Клеммник винтовой 2 конт. 5,08 мм"
+    (exclude_from_sim no)
+    (at 41.5 56 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "76e5b2e5-0b18-53e3-a0cb-d291873c7639"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 56 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "be6e2783-e084-56b0-96e0-3e6ac4cffd7c"))
+  (text
+    "Кнопка останова"
+    (exclude_from_sim no)
+    (at 161.5 56 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e34ab1a2-81a8-5a59-82f0-316c61e2c886"))
+  (text
+    "X5"
+    (exclude_from_sim no)
+    (at 21.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "5029aba1-ddb0-5b0a-ab47-6bed51b395b4"))
+  (text
+    "Вилка JST XH 2 конт."
+    (exclude_from_sim no)
+    (at 41.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "3ef4103b-edfa-56ab-8067-b0f4e453d0ad"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 64 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "d60f5850-b0b7-5b45-aacf-d792ccd06a8f"))
+  (text
+    "Зелёный индикатор"
+    (exclude_from_sim no)
+    (at 161.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "90cab89d-9b01-51cd-9221-cf22bd350d4d"))
+  (text
+    "X6"
+    (exclude_from_sim no)
+    (at 21.5 72 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "6c6e9391-67dc-5262-ae1b-56ca4d6c507e"))
+  (text
+    "Вилка JST XH 4 конт."
+    (exclude_from_sim no)
+    (at 41.5 72 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "a0f88c02-c363-5003-a035-b577c4401244"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 72 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "968454f3-c60d-52c9-824d-87df29b58356"))
+  (text
+    "Мотор плеча"
+    (exclude_from_sim no)
+    (at 161.5 72 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "88b01d58-0408-5c1a-b834-9a2d5a3c1312"))
+  (text
+    "X7"
+    (exclude_from_sim no)
+    (at 21.5 80 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "15cca4be-0b6c-5cc8-acbf-5c589d528c3c"))
+  (text
+    "Вилка JST XH 4 конт."
+    (exclude_from_sim no)
+    (at 41.5 80 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ea0dbaff-1114-5cf5-a87a-b6e3df1dbccc"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 80 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "5e803793-7d25-584d-a7e0-8b41c0df26e6"))
+  (text
+    "Мотор предплечья"
+    (exclude_from_sim no)
+    (at 161.5 80 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "06b4ef47-286c-5ca6-847c-3b79da0c3559"))
+  (text
+    "X8, X9"
+    (exclude_from_sim no)
+    (at 21.5 88 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "b1427a22-1213-55e9-ac53-cf4278ee743d"))
+  (text
+    "Вилка штыревая 2x2 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 88 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "cb6255ab-57dc-5629-a467-1859511c3638"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 88 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "3000bac1-e7f4-57ae-ac33-218b22d883fe"))
+  (text
+    "Шаг 1/8 без"
+    (exclude_from_sim no)
+    (at 161.5 88 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "c499511e-a36e-505d-8eb1-6e2f298314c7"))
+  (text
+    "перемычек"
+    (exclude_from_sim no)
+    (at 161.5 96 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "69e189e6-25c8-5f33-9265-dcb263e942f7"))
+  (text
+    "X10"
+    (exclude_from_sim no)
+    (at 21.5 104 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "560e406a-bde4-5aed-aa22-faf2b13e3ad0"))
+  (text
+    "Вилка штыревая 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 104 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ef92a598-1677-5634-8fad-32ac311c223d"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 104 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "a3c687c0-6bff-57b7-a4d3-6b52722357fe"))
+  (text
+    "Серво Z"
+    (exclude_from_sim no)
+    (at 161.5 104 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ac53232e-de3f-538e-b75c-e18cdc1d411c"))
+  (text
+    "X11"
+    (exclude_from_sim no)
+    (at 21.5 112 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "92942dcc-e566-5701-970e-8c3c29cb7329"))
+  (text
+    "Вилка штыревая 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 112 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "4420eb97-e569-5358-b9bb-8b2d74cb12bc"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 112 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "bf900c1d-d242-5d72-8526-e03e0a0a6a48"))
+  (text
+    "Серво поворота"
+    (exclude_from_sim no)
+    (at 161.5 112 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "c01ad119-61fa-5a2d-873b-89c48bd4f61d"))
+  (text
+    "X12"
+    (exclude_from_sim no)
+    (at 21.5 120 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "f2d2f200-1701-57cb-81f8-e280b465e263"))
+  (text
+    "Вилка штыревая 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 120 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "9e0397c3-67f0-5a5e-8ace-e443378760ff"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 120 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "1e134cff-3df6-5749-953b-803797b37ed9"))
+  (text
+    "Серво камеры"
+    (exclude_from_sim no)
+    (at 161.5 120 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "c5ae8a8b-0d63-58b8-8339-6453b4a6fd87"))
+  (text
+    "X13"
+    (exclude_from_sim no)
+    (at 21.5 128 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "1a3d8372-749d-52f0-9ebd-6c0797ce815b"))
+  (text
+    "Вилка JST XH 2 конт."
+    (exclude_from_sim no)
+    (at 41.5 128 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "67e3945a-1768-56ea-8991-0575b7ed6920"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 128 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "c7aaa748-ea09-521b-9f19-719aa6fe4fc5"))
+  (text
+    "Помпа 6 В"
+    (exclude_from_sim no)
+    (at 161.5 128 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "146081f6-6556-517b-8594-187323f96b40"))
+  (text
+    "X14"
+    (exclude_from_sim no)
+    (at 21.5 136 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "cbe16d7c-9f46-5873-bd92-367cfc98da71"))
+  (text
+    "Вилка JST XH 2 конт."
+    (exclude_from_sim no)
+    (at 41.5 136 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "6b92d301-501d-5a14-aa0f-87e008c5f732"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 136 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "e2af9a83-4581-52f2-82a0-3b1b4058fdc6"))
+  (text
+    "Клапан 6 В (НО)"
+    (exclude_from_sim no)
+    (at 161.5 136 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "34753e52-337a-5268-8772-a33b741f4c9f"))
+  (text
+    "X15"
+    (exclude_from_sim no)
+    (at 21.5 144 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "bc7ab9be-35d9-5555-a399-d7dbac9949ac"))
+  (text
+    "Вилка JST XH 2 конт."
+    (exclude_from_sim no)
+    (at 41.5 144 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "afb34499-99e5-5208-9ffc-d260b24cbdd6"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 144 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "bb537602-559c-53e3-864e-fcfb9da0794f"))
+  (text
+    "Красный индикатор"
+    (exclude_from_sim no)
+    (at 161.5 144 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ed28f727-98c0-5f91-a900-dbf2365043dc"))
+  (text
+    "X16"
+    (exclude_from_sim no)
+    (at 21.5 152 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "270aa2b6-bf9c-5724-8efb-c42697ee8cf7"))
+  (text
+    "Вилка JST XH 2 конт."
+    (exclude_from_sim no)
+    (at 41.5 152 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "f4b11853-9a0a-57c4-b9a2-5d9bbd5c3580"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 152 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "c25e9b17-8ad8-5ebb-abf8-edb0bdb5eaa4"))
+  (text
+    "Кнопка «Старт»"
+    (exclude_from_sim no)
+    (at 161.5 152 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "31ef14ac-23c4-52d3-9f52-5e7b3fa0a2a5"))
+  (text
+    "X17"
+    (exclude_from_sim no)
+    (at 21.5 160 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "078f94a7-2d6f-5253-b7de-cfc72874fbc9"))
+  (text
+    "Вилка JST XH 3 конт."
+    (exclude_from_sim no)
+    (at 41.5 160 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "00883f72-56c3-5564-9a72-b74e4ffabed8"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 160 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "bd44bcf1-4e47-5a68-9d41-9705766df78f"))
+  (text
+    "Холл плеча"
+    (exclude_from_sim no)
+    (at 161.5 160 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "b4004aa3-eebb-5371-96ab-be8ea7de1112"))
+  (text
+    "X18"
+    (exclude_from_sim no)
+    (at 21.5 168 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "d4838ea1-8e75-53ee-8358-da6212eced06"))
+  (text
+    "Вилка JST XH 3 конт."
+    (exclude_from_sim no)
+    (at 41.5 168 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e40b8424-2582-5512-9ea9-c20a6c8b7ca3"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 168 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "ae55731f-f6ab-5309-acec-0b6de8ae3299"))
+  (text
+    "Холл предплечья"
+    (exclude_from_sim no)
+    (at 161.5 168 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "3b4ac98b-ff5a-5be5-93dd-a5c895b243c6"))
+  (text
+    "X19"
+    (exclude_from_sim no)
+    (at 21.5 176 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "10e2f16d-8899-574b-bbfd-ce1b28ac5abb"))
+  (text
+    "Вилка JST XH 3 конт."
+    (exclude_from_sim no)
+    (at 41.5 176 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "7a947c86-6818-59a9-b157-004255fdafd0"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 176 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "0f7ed739-5df3-587c-a420-c0cbbfd9cabd"))
+  (text
+    "Датчик вакуума"
+    (exclude_from_sim no)
+    (at 161.5 176 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "afc8195c-de33-5ca1-b6fb-179ea612ecfe"))
+  (text
+    "X20"
+    (exclude_from_sim no)
+    (at 21.5 184 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "992ba673-6683-578d-b068-1daed8ab68f0"))
+  (text
+    "Вилка штыревая 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 184 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "4e660522-be52-5d5c-ab96-98384ba82220"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 184 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "70d72090-5058-5432-8d38-a7bede4f281c"))
+  (text
+    "Разъём «А»"
+    (exclude_from_sim no)
+    (at 161.5 184 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "0c1abea6-fe57-53b7-b132-6f748b8ded81"))
+  (text
+    "X21"
+    (exclude_from_sim no)
+    (at 21.5 192 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "32677222-9fff-5278-9261-b4f356696451"))
+  (text
+    "Вилка штыревая 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 192 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "569f7f12-08ca-5238-b422-d7d52d058f5c"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 192 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "61274759-9f6f-553b-85c9-5873c38f8b05"))
+  (text
+    "Разъём «Б»"
+    (exclude_from_sim no)
+    (at 161.5 192 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "d71f4669-f7bb-549d-9de1-76eaf0bc9b99"))
+  (text
+    "X22"
+    (exclude_from_sim no)
+    (at 21.5 200 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "edc3a163-c30e-5083-986d-0b0180e69e67"))
+  (text
+    "Вилка штыревая 1x4 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 200 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "bd6772f0-0d18-5920-be9d-f865b25cbd9c"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 200 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "56c05fbf-d2bc-55b7-aaf9-d03cd209084f"))
+  (text
+    "Разъём «В»"
+    (exclude_from_sim no)
+    (at 161.5 200 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "11b7af75-4fb5-5de6-bfee-ed419aaa7aa5"))
+  (text
+    "X23"
+    (exclude_from_sim no)
+    (at 21.5 208 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e7ad2d9b-5550-5860-8f93-dd21917dcaa0"))
+  (text
+    "Вилка штыревая 1x4 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 208 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e23c5281-d044-54ee-be0f-6b130b3b7b39"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 208 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "b048e4ab-e969-55e4-9825-8a614e093d96"))
+  (text
+    "Резерв"
+    (exclude_from_sim no)
+    (at 161.5 208 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "63c4a4a7-0364-5e74-8580-6e2a58acb6c7"))
+  (embedded_fonts no))

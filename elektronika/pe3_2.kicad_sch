@@ -1,0 +1,900 @@
+(kicad_sch
+  (version 20250114)
+  (generator "eeschema")
+  (generator_version "9.0")
+  (uuid "e5d67979-e223-5dae-9156-7c366fbbd9f6")
+  (paper "A4" portrait)
+  (lib_symbols)
+  (polyline
+    (pts (xy 20 5) (xy 205 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "e8c20a58-9398-57bc-92ca-a7bb6d79e60d"))
+  (polyline
+    (pts (xy 205 5) (xy 205 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "10d116ee-be6d-5590-bd2f-516295946253"))
+  (polyline
+    (pts (xy 205 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "f6ef621b-0262-595b-82b3-e5267545d630"))
+  (polyline
+    (pts (xy 20 292) (xy 20 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "7dfa1566-f5c0-5161-8ddc-6dd02b38882d"))
+  (polyline
+    (pts (xy 20 277) (xy 205 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "d091d618-6af5-5d31-8458-c488cf208efd"))
+  (polyline
+    (pts (xy 205 277) (xy 205 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "0d333d81-8b12-5c5b-80f1-47dcf72f3627"))
+  (polyline
+    (pts (xy 205 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "9893e41c-06ec-57d1-8e51-412aeaa72528"))
+  (polyline
+    (pts (xy 20 292) (xy 20 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "3131bc81-abbc-5be7-b175-d71aaf8253eb"))
+  (polyline
+    (pts (xy 27 277) (xy 27 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "d25e2870-6fc4-5238-b09d-07c9c4bda50e"))
+  (polyline
+    (pts (xy 37 277) (xy 37 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "b27cb90d-21aa-5bda-b78f-94385087947c"))
+  (polyline
+    (pts (xy 60 277) (xy 60 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "4a21e2fa-4276-50e7-9185-5790762b89af"))
+  (polyline
+    (pts (xy 75 277) (xy 75 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "1f955a7c-27bc-550b-b4c4-4af24f9f0937"))
+  (polyline
+    (pts (xy 85 277) (xy 85 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "7b1c7324-f4d2-5ed6-9b8f-698100b56965"))
+  (polyline
+    (pts (xy 20 282) (xy 85 282))
+    (stroke (width 0.25) (type solid))
+    (uuid "9153793e-7fca-5e3b-9257-a0adb36bbf82"))
+  (polyline
+    (pts (xy 20 287) (xy 85 287))
+    (stroke (width 0.5) (type solid))
+    (uuid "d47ec899-cbd6-5ec9-9d86-e27e7588d4c3"))
+  (polyline
+    (pts (xy 195 277) (xy 195 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "391fbd8e-3b6e-5c61-b850-ecc5d2637db0"))
+  (polyline
+    (pts (xy 195 284) (xy 205 284))
+    (stroke (width 0.25) (type solid))
+    (uuid "79b77cbc-6932-57b7-a79e-4050eddc4e16"))
+  (polyline
+    (pts (xy 8 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "7edbf6f6-518a-5631-ba98-d3b1bccb4781"))
+  (polyline
+    (pts (xy 8 267) (xy 20 267))
+    (stroke (width 0.5) (type solid))
+    (uuid "e39571a0-2a61-56a0-a388-c5b0590fd0e3"))
+  (polyline
+    (pts (xy 8 232) (xy 20 232))
+    (stroke (width 0.5) (type solid))
+    (uuid "779df35c-5650-5992-8706-07d70f2aeec9"))
+  (polyline
+    (pts (xy 8 207) (xy 20 207))
+    (stroke (width 0.5) (type solid))
+    (uuid "e5508459-0279-5a5a-bf26-e5101d6025ba"))
+  (polyline
+    (pts (xy 8 182) (xy 20 182))
+    (stroke (width 0.5) (type solid))
+    (uuid "5fc0fa3f-b557-5808-8c48-cc70cf16cde2"))
+  (polyline
+    (pts (xy 8 147) (xy 20 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "3712286d-fab2-55c0-833a-ef32f36cba15"))
+  (polyline
+    (pts (xy 8 292) (xy 8 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "bbe92287-e387-5d9b-811c-e88d26e42a3c"))
+  (polyline
+    (pts (xy 13 292) (xy 13 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "21aafa7e-d3f0-569c-9906-100520119031"))
+  (polyline
+    (pts (xy 8 5) (xy 20 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "1faa24d6-3215-5a02-b180-b7506db740f8"))
+  (polyline
+    (pts (xy 20 5) (xy 20 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "f69c274a-48ae-5140-8621-dee6d204a312"))
+  (polyline
+    (pts (xy 20 65) (xy 8 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "d2be5a31-071c-57a4-b79c-de6d48ca7bf4"))
+  (polyline
+    (pts (xy 8 65) (xy 8 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "efd3c252-f3f6-5cfd-89c9-4ebaec8dc80f"))
+  (polyline
+    (pts (xy 13 5) (xy 13 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "2fe5a847-09ba-5f8e-8b62-03c0a804cd71"))
+  (polyline
+    (pts (xy 8 65) (xy 20 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "e84192b1-7385-5698-b5bc-aeb699efe87a"))
+  (polyline
+    (pts (xy 20 65) (xy 20 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "00d4bf67-c84c-50cd-b756-c5470257b46e"))
+  (polyline
+    (pts (xy 20 125) (xy 8 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "e0fe82c7-ae8e-55e8-be28-3d6406f38036"))
+  (polyline
+    (pts (xy 8 125) (xy 8 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "1d9c855a-5fe0-58c8-8114-989521a8f4ed"))
+  (polyline
+    (pts (xy 13 65) (xy 13 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "27e6e3b8-e79d-5280-a7c6-f0a9cb0625ab"))
+  (polyline
+    (pts (xy 40 5) (xy 40 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "6ac63be9-53f4-5a86-acd6-3def750f353d"))
+  (polyline
+    (pts (xy 150 5) (xy 150 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "0110bf98-95ba-5e0b-8e50-b3673d263860"))
+  (polyline
+    (pts (xy 160 5) (xy 160 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "045f5541-ddb5-50bb-9f23-c4670d66cb69"))
+  (polyline
+    (pts (xy 20 20) (xy 205 20))
+    (stroke (width 0.5) (type solid))
+    (uuid "fb735085-37a9-529a-a40c-5f77f10a29c3"))
+  (polyline
+    (pts (xy 20 28) (xy 205 28))
+    (stroke (width 0.25) (type solid))
+    (uuid "9d7671df-bb55-5256-8c9a-87f26ab339f4"))
+  (polyline
+    (pts (xy 20 36) (xy 205 36))
+    (stroke (width 0.25) (type solid))
+    (uuid "e70a21e9-6dc7-5150-8ba0-598105379106"))
+  (polyline
+    (pts (xy 20 44) (xy 205 44))
+    (stroke (width 0.25) (type solid))
+    (uuid "f1f44bb5-a4e8-53ca-bb26-fcba2d159ce3"))
+  (polyline
+    (pts (xy 20 52) (xy 205 52))
+    (stroke (width 0.25) (type solid))
+    (uuid "96c51bf0-b897-52fc-81d1-0dec4c2abbf0"))
+  (polyline
+    (pts (xy 20 60) (xy 205 60))
+    (stroke (width 0.25) (type solid))
+    (uuid "e9b1c023-cd51-5adc-abaa-85c769e7abd5"))
+  (polyline
+    (pts (xy 20 68) (xy 205 68))
+    (stroke (width 0.25) (type solid))
+    (uuid "47d38dfb-2a1a-58a2-8170-2432c51d7ce5"))
+  (polyline
+    (pts (xy 20 76) (xy 205 76))
+    (stroke (width 0.25) (type solid))
+    (uuid "53d5b851-3ed1-574f-af9d-a85eef357082"))
+  (polyline
+    (pts (xy 20 84) (xy 205 84))
+    (stroke (width 0.25) (type solid))
+    (uuid "2e490549-f592-5ef2-85ee-31a741046b8d"))
+  (polyline
+    (pts (xy 20 92) (xy 205 92))
+    (stroke (width 0.25) (type solid))
+    (uuid "05b0ce1f-45b6-5893-9bc3-26e4d631c2b8"))
+  (polyline
+    (pts (xy 20 100) (xy 205 100))
+    (stroke (width 0.25) (type solid))
+    (uuid "e76f5ff2-25dc-54aa-addc-5fb0084be303"))
+  (polyline
+    (pts (xy 20 108) (xy 205 108))
+    (stroke (width 0.25) (type solid))
+    (uuid "5f949890-c3b5-57ba-93ef-19220e8d8a8e"))
+  (polyline
+    (pts (xy 20 116) (xy 205 116))
+    (stroke (width 0.25) (type solid))
+    (uuid "b8681375-bf91-59ff-89f8-49cb7d288427"))
+  (polyline
+    (pts (xy 20 124) (xy 205 124))
+    (stroke (width 0.25) (type solid))
+    (uuid "466c0320-6e6a-5670-8e6a-ef8c506767e4"))
+  (polyline
+    (pts (xy 20 132) (xy 205 132))
+    (stroke (width 0.25) (type solid))
+    (uuid "82e773f9-9d8a-57c7-9083-c4c4475b9946"))
+  (polyline
+    (pts (xy 20 140) (xy 205 140))
+    (stroke (width 0.25) (type solid))
+    (uuid "94ab79ed-0d20-5ff8-ae7e-a49c1f725bc3"))
+  (polyline
+    (pts (xy 20 148) (xy 205 148))
+    (stroke (width 0.25) (type solid))
+    (uuid "9c5ab140-87e4-5cc2-86a8-3748e7b81fd5"))
+  (polyline
+    (pts (xy 20 156) (xy 205 156))
+    (stroke (width 0.25) (type solid))
+    (uuid "5132a9e4-b97e-5efe-b250-769576d6ef03"))
+  (polyline
+    (pts (xy 20 164) (xy 205 164))
+    (stroke (width 0.25) (type solid))
+    (uuid "af43c4c7-6d37-54c2-b1be-14149e780978"))
+  (polyline
+    (pts (xy 20 172) (xy 205 172))
+    (stroke (width 0.25) (type solid))
+    (uuid "113903bc-4df2-53f4-b3b1-ba0fa3de90a1"))
+  (polyline
+    (pts (xy 20 180) (xy 205 180))
+    (stroke (width 0.25) (type solid))
+    (uuid "0d784384-661f-55ac-8f5b-04d17be74458"))
+  (polyline
+    (pts (xy 20 188) (xy 205 188))
+    (stroke (width 0.25) (type solid))
+    (uuid "be461094-4527-5826-a6df-744bb2a891e5"))
+  (polyline
+    (pts (xy 20 196) (xy 205 196))
+    (stroke (width 0.25) (type solid))
+    (uuid "478ba040-0e9d-54c9-92f9-78eea0d2863e"))
+  (polyline
+    (pts (xy 20 204) (xy 205 204))
+    (stroke (width 0.25) (type solid))
+    (uuid "3d8e9269-ca59-59eb-b9a7-908aa9f3948a"))
+  (polyline
+    (pts (xy 20 212) (xy 205 212))
+    (stroke (width 0.25) (type solid))
+    (uuid "7ab59471-bfe0-5201-bece-d69c666cb1ba"))
+  (polyline
+    (pts (xy 20 220) (xy 205 220))
+    (stroke (width 0.25) (type solid))
+    (uuid "6aac9c7b-f9ed-5129-acd7-9db8f7d799e7"))
+  (polyline
+    (pts (xy 20 228) (xy 205 228))
+    (stroke (width 0.25) (type solid))
+    (uuid "b119534d-cc61-5af3-9a24-fc8e57f0de69"))
+  (polyline
+    (pts (xy 20 236) (xy 205 236))
+    (stroke (width 0.25) (type solid))
+    (uuid "8a6a512e-eaa0-5033-8ce9-cd9a7790777a"))
+  (polyline
+    (pts (xy 20 244) (xy 205 244))
+    (stroke (width 0.25) (type solid))
+    (uuid "8e6b8e4a-c0e2-5fb7-bb36-865a1e03e23f"))
+  (polyline
+    (pts (xy 20 252) (xy 205 252))
+    (stroke (width 0.25) (type solid))
+    (uuid "651245b4-6663-5a51-b1b9-ce6860e7b723"))
+  (polyline
+    (pts (xy 20 260) (xy 205 260))
+    (stroke (width 0.25) (type solid))
+    (uuid "00e24ad6-90c1-5f81-8726-54a46245a745"))
+  (polyline
+    (pts (xy 20 268) (xy 205 268))
+    (stroke (width 0.25) (type solid))
+    (uuid "0dafda4c-cf86-5b1c-9c59-61974191a357"))
+  (polyline
+    (pts (xy 20 276) (xy 205 276))
+    (stroke (width 0.25) (type solid))
+    (uuid "5b2aa974-a5cd-53ce-b772-ddc0a491f8f4"))
+  (text
+    "Изм."
+    (exclude_from_sim no)
+    (at 23.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "a78aeaba-2581-5baf-8b9c-21e5e3eb3817"))
+  (text
+    "Лист"
+    (exclude_from_sim no)
+    (at 32 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "0163dd87-6a87-5674-8a98-97ea0ba6be4c"))
+  (text
+    "N докум."
+    (exclude_from_sim no)
+    (at 48.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "5c11da47-9286-512e-8780-dbdaecd77607"))
+  (text
+    "Подп."
+    (exclude_from_sim no)
+    (at 67.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "9cc6afc6-25a2-5b7d-998d-56515b2d2213"))
+  (text
+    "Дата"
+    (exclude_from_sim no)
+    (at 80 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "056b4414-e979-58ef-972b-806805123f58"))
+  (text
+    "Лист"
+    (exclude_from_sim no)
+    (at 200 280.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "eedd169c-572c-5f11-aa34-c523cce0f38b"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 200 288 0)
+    (effects (font (size 3.5 3.5)))
+    (uuid "58524a65-c727-5c7f-8475-e084d9a88e2b"))
+  (text
+    "ЕТЗ.467000.001 ПЭ3"
+    (exclude_from_sim no)
+    (at 140 284.5 0)
+    (effects (font (size 6 6)))
+    (uuid "cb27b60a-ed85-5e49-bc73-054bc3713de6"))
+  (text
+    "Инв. N подл."
+    (exclude_from_sim no)
+    (at 10.5 279.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "cf0cd9b3-4e8e-5857-9448-58a7604f8b88"))
+  (text
+    "Подп. и дата"
+    (exclude_from_sim no)
+    (at 10.5 249.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "9db7da9f-a282-59ff-aada-fc15437e3bb9"))
+  (text
+    "Взам. инв. N"
+    (exclude_from_sim no)
+    (at 10.5 219.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "a5361e79-06df-5741-b571-8d25e834c714"))
+  (text
+    "Инв. N дубл."
+    (exclude_from_sim no)
+    (at 10.5 194.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "87bf53eb-3a81-568f-a564-fa044fb7a5a6"))
+  (text
+    "Подп. и дата"
+    (exclude_from_sim no)
+    (at 10.5 164.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "f00da709-abf8-525d-86a9-90962f6d8165"))
+  (text
+    "Перв. примен."
+    (exclude_from_sim no)
+    (at 10.5 35 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "3fe43e15-2125-5b43-9d50-0ea2e0c46e9d"))
+  (text
+    "Справ. N"
+    (exclude_from_sim no)
+    (at 10.5 95 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "234273db-3b8f-5ee7-8e95-2b82307cc1f2"))
+  (text
+    "Поз."
+    (exclude_from_sim no)
+    (at 30 9 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "1d695e04-5509-5000-8abb-8804fd91ffda"))
+  (text
+    "обозна-"
+    (exclude_from_sim no)
+    (at 30 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "066a7019-3d5d-5461-bd7a-bd5478bcc059"))
+  (text
+    "чение"
+    (exclude_from_sim no)
+    (at 30 16 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "ca5dd4df-c3aa-5055-940a-b50e2904d981"))
+  (text
+    "Наименование"
+    (exclude_from_sim no)
+    (at 95 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "6dc8d881-a84d-559d-bdc6-277cff7d397f"))
+  (text
+    "Кол."
+    (exclude_from_sim no)
+    (at 155 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "ff100f5f-8e1b-55d3-9424-138d956cf1b6"))
+  (text
+    "Примечание"
+    (exclude_from_sim no)
+    (at 182.5 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "e2e8ec04-c435-5636-a135-9291f48dc837"))
+  (text
+    "Дроссели"
+    (exclude_from_sim no)
+    (at 95 24 0)
+    (effects (font (size 3 3)))
+    (uuid "53e346c3-e9e4-57bb-b4a2-c11c48b737f0"))
+  (text
+    "L1, L2"
+    (exclude_from_sim no)
+    (at 21.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "72971c17-191a-5bad-b4bf-c577f9ff1bdd"))
+  (text
+    "Дроссель SRR1260-330M 33 мкГн 4 А"
+    (exclude_from_sim no)
+    (at 41.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ed23a586-5213-5383-8acd-485e32dc3835"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 32 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "6720b5c2-ed32-55cc-90b2-356cda2c4457"))
+  (text
+    "Резисторы"
+    (exclude_from_sim no)
+    (at 95 48 0)
+    (effects (font (size 3 3)))
+    (uuid "ecf2e479-2db7-5b00-8d46-cba1c9ea0cb2"))
+  (text
+    "R1"
+    (exclude_from_sim no)
+    (at 21.5 56 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "3421bd59-8fdb-5a03-a2f9-1ddc2ec264f5"))
+  (text
+    "Резистор 0805 2,2 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 56 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "774cd4ec-f426-5c93-a38f-a089364b45fd"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 56 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "dfc5c3a8-5999-5087-a966-f6ff3fe8ba7b"))
+  (text
+    "R2"
+    (exclude_from_sim no)
+    (at 21.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "66bbf254-7017-5df8-97c1-ffe208beaf61"))
+  (text
+    "Резистор 0805 10 кОм ±1%"
+    (exclude_from_sim no)
+    (at 41.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "1ede5307-dee3-5524-9dfe-e429c8638e24"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 64 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "08842fd7-be47-5233-a1a2-594f52e4d4e9"))
+  (text
+    "R3"
+    (exclude_from_sim no)
+    (at 21.5 72 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "9e326624-32b8-50dc-8235-a003c55a137f"))
+  (text
+    "Резистор 0805 2,7 кОм ±1%"
+    (exclude_from_sim no)
+    (at 41.5 72 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "18536299-abcf-5b12-ae43-1b57460302cc"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 72 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "bb7962c9-7c17-505c-b20d-9bf29ab897b0"))
+  (text
+    "R4"
+    (exclude_from_sim no)
+    (at 21.5 80 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "f5c03223-d3a3-5de6-b726-afcd61bc9c25"))
+  (text
+    "Резистор 0805 3,9 кОм ±1%"
+    (exclude_from_sim no)
+    (at 41.5 80 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "1c757c7b-91e7-53e3-b030-44ce32430428"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 80 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "cf265bfd-3b56-5e2f-8eff-ade0754669de"))
+  (text
+    "R5"
+    (exclude_from_sim no)
+    (at 21.5 88 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "b67c55d4-4d1e-5c94-a63b-345bbbdaffea"))
+  (text
+    "Резистор 0805 1 кОм ±1%"
+    (exclude_from_sim no)
+    (at 41.5 88 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "17e54cff-bd09-5b23-884c-c6a4eee44474"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 88 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "7a353822-df76-5214-a9f0-6b1da9a6b5bc"))
+  (text
+    "R6"
+    (exclude_from_sim no)
+    (at 21.5 96 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "7fd57808-b14c-574a-b3cf-916f99206dc5"))
+  (text
+    "Резистор 0805 10 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 96 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "4e233492-53af-58c8-ba7d-2dcda838788d"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 96 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "5e4e76c0-898c-583c-9402-94bc2b79f4ab"))
+  (text
+    "R7…R9"
+    (exclude_from_sim no)
+    (at 21.5 104 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ac28cb24-903d-59f5-9e54-f8319193d1eb"))
+  (text
+    "Резистор 0805 220 Ом ±5%"
+    (exclude_from_sim no)
+    (at 41.5 104 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "7b637330-5e40-5209-aaec-616fc36ae873"))
+  (text
+    "3"
+    (exclude_from_sim no)
+    (at 155 104 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "46654aba-8230-56b4-a1f2-faf2ea829696"))
+  (text
+    "R10"
+    (exclude_from_sim no)
+    (at 21.5 112 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e217582e-6903-50c0-83e9-de3b4f31ea04"))
+  (text
+    "Резистор 0805 100 Ом ±5%"
+    (exclude_from_sim no)
+    (at 41.5 112 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "bdfe84cd-6c87-5673-8d8c-0c91e137f91b"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 112 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "3f47405b-df73-5aff-a200-075d25a859e0"))
+  (text
+    "R11"
+    (exclude_from_sim no)
+    (at 21.5 120 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "06cf2668-6686-5710-a7dc-90f2ad9abda8"))
+  (text
+    "Резистор 0805 100 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 120 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "d88437ee-ff3e-5059-b7d4-05a1ed105e3f"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 120 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "2843b675-fed3-5ec7-a571-26964af29c64"))
+  (text
+    "R12"
+    (exclude_from_sim no)
+    (at 21.5 128 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "a12c4df4-3084-580f-8de2-feb2c8c4e35b"))
+  (text
+    "Резистор 0805 100 Ом ±5%"
+    (exclude_from_sim no)
+    (at 41.5 128 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "d9a37b7c-7aad-51d1-aa27-3a066db9dbaf"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 128 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "d8876867-62d9-5899-a8aa-c94c61a90891"))
+  (text
+    "R13"
+    (exclude_from_sim no)
+    (at 21.5 136 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "379b7b3b-6a4f-5b97-b08d-7156b2cad3cc"))
+  (text
+    "Резистор 0805 100 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 136 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "8ff6c3ae-c7df-505e-8eff-416198d5826d"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 136 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "1f8694da-f66f-507a-8206-8d70ed5d946d"))
+  (text
+    "R14"
+    (exclude_from_sim no)
+    (at 21.5 144 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "32d52f0b-0f87-53fb-91d9-a8c1eccecc4d"))
+  (text
+    "Резистор 0805 100 Ом ±5%"
+    (exclude_from_sim no)
+    (at 41.5 144 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "70884e52-2a6f-5ff9-81ff-bc261304759d"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 144 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "50c71e34-af4f-5c57-a12c-93e66a5755e1"))
+  (text
+    "R15"
+    (exclude_from_sim no)
+    (at 21.5 152 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "44a17d72-8eed-51cf-b2ff-7335829fcff8"))
+  (text
+    "Резистор 0805 100 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 152 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "6424e385-d86f-5428-b673-d817862dffdb"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 152 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "a05fbd43-098f-5e3d-b218-c5866093161f"))
+  (text
+    "R16"
+    (exclude_from_sim no)
+    (at 21.5 160 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "dba75e54-0a64-5218-ba7b-a4b79081abde"))
+  (text
+    "Резистор 0805 330 Ом ±5%"
+    (exclude_from_sim no)
+    (at 41.5 160 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "85fd825f-513d-53d1-bb77-b76a65669eb9"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 160 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "97278ea5-1c8c-5dc4-8cfb-5ec5e028eca1"))
+  (text
+    "R17…R19"
+    (exclude_from_sim no)
+    (at 21.5 168 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "a66a4aac-40fd-5638-ba8c-b138eb34f5cd"))
+  (text
+    "Резистор 0805 10 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 168 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "56caf89c-0731-5a30-90cf-84311846e1f1"))
+  (text
+    "3"
+    (exclude_from_sim no)
+    (at 155 168 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "cf25fd31-fdc1-5f26-98d1-2aa5c43d6f06"))
+  (text
+    "R20"
+    (exclude_from_sim no)
+    (at 21.5 176 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "bc6581dc-b2bd-5928-85c9-7b142494d8d7"))
+  (text
+    "Резистор 0805 10 кОм ±1%"
+    (exclude_from_sim no)
+    (at 41.5 176 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "deda4aac-d915-5e55-8818-f93da66715fa"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 176 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "ac78ce54-2250-50ee-885f-e004bb0e44b2"))
+  (text
+    "R21"
+    (exclude_from_sim no)
+    (at 21.5 184 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "1154de6b-0f7c-5738-a16b-b877874e91b6"))
+  (text
+    "Резистор 0805 20 кОм ±1%"
+    (exclude_from_sim no)
+    (at 41.5 184 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "fb5ab870-9c80-5a47-bf75-93a89f71fcee"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 184 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "73a8971e-c5ef-535e-91be-54bcf6ff2379"))
+  (text
+    "R22, R23"
+    (exclude_from_sim no)
+    (at 21.5 192 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "98af2695-70d4-5588-af07-bb7d1672bc4a"))
+  (text
+    "Резистор 0805 10 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 192 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "f234313a-28f5-5537-a395-18458af4df00"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 192 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "6ed496d6-a126-50b4-954d-1c53cd70e346"))
+  (text
+    "Диоды"
+    (exclude_from_sim no)
+    (at 95 208 0)
+    (effects (font (size 3 3)))
+    (uuid "427522ef-dd0f-55ac-9d0a-5a535157702f"))
+  (text
+    "VD1"
+    (exclude_from_sim no)
+    (at 21.5 216 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "4dd1a326-cf64-506c-b6a2-5b7370f5e4c7"))
+  (text
+    "Диод защитный SMBJ15A"
+    (exclude_from_sim no)
+    (at 41.5 216 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "335b45ef-989e-55c2-8554-69019507b1d7"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 216 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "c2ce3a60-8346-5e22-8392-6136af33ae63"))
+  (text
+    "VD2, VD3"
+    (exclude_from_sim no)
+    (at 21.5 224 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "df5d25a4-2c6f-5538-91d5-57560a8dad43"))
+  (text
+    "Диод Шоттки SS54"
+    (exclude_from_sim no)
+    (at 41.5 224 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "4213da62-c97d-559c-b3a6-43d59ed6cde6"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 224 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "32cd3c46-e8c1-5883-a1fa-279cd508be00"))
+  (text
+    "VD4, VD5"
+    (exclude_from_sim no)
+    (at 21.5 232 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "f8e9602c-ada8-50a1-9af5-d278365c3f8d"))
+  (text
+    "Диод Шоттки SS34"
+    (exclude_from_sim no)
+    (at 41.5 232 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "05bb8222-96cd-505e-a7c5-f381bc44e393"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 232 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "15efce65-5d13-5957-a11f-8c7cc81ace76"))
+  (text
+    "Транзисторы"
+    (exclude_from_sim no)
+    (at 95 248 0)
+    (effects (font (size 3 3)))
+    (uuid "c06d7de5-6e8e-526a-bfd6-42f7af3d586a"))
+  (text
+    "VT1…VT3"
+    (exclude_from_sim no)
+    (at 21.5 256 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e354435b-001e-5cdf-a362-2fb908430b70"))
+  (text
+    "Транзистор AO3400A"
+    (exclude_from_sim no)
+    (at 41.5 256 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "6dca0d36-31e7-5b17-8690-8d037acc0d35"))
+  (text
+    "3"
+    (exclude_from_sim no)
+    (at 155 256 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "2cf87686-2aca-50e7-92d1-85b301e42393"))
+  (text
+    "VT4"
+    (exclude_from_sim no)
+    (at 21.5 264 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "7376ea79-6dce-575a-8727-b0ac67426cdc"))
+  (text
+    "Транзистор BSS138"
+    (exclude_from_sim no)
+    (at 41.5 264 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "84262f81-a13e-56b3-9fdf-2b06656c18f7"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 264 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "0bc92214-5d97-58c0-ba96-373078e5bcc0"))
+  (sheet
+    (at 150 300)
+    (size 20 5)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (stroke (width 0.1) (type solid))
+    (fill (color 0 0 0 0))
+    (uuid "4e34ff26-c63e-52ac-a240-9b93290acf3e")
+    (property
+      "Sheetname"
+      "ПЭ3 лист 3"
+      (at 150 299.5 0)
+      (effects (font (size 1.5 1.5)) (justify left bottom)))
+    (property
+      "Sheetfile"
+      "pe3_3.kicad_sch"
+      (at 150 305.6 0)
+      (effects (font (size 1.5 1.5)) (justify left top)))
+    (instances
+      (project
+        "etz_plata"
+        (path
+          "/682757a5-4c87-57dc-8e78-46908122b5db/2746c6c4-288d-5d4d-bfb3-fa15884d185b/3be46d36-95da-5f93-b052-8018d011bbd9"
+          (page "4")))))
+  (embedded_fonts no))

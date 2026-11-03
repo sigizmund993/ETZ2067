@@ -27,3 +27,9 @@ print/orca/out_*/
 print/orca/*.log
 print/orca/result.json
 print/orca/*_raw.3mf
+elektronika/gen/out/
+elektronika/fab/
+elektronika/*.kicad_prl
+elektronika/*-backups/
+elektronika/fp-info-cache
+*.lck
