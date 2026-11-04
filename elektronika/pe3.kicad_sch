@@ -466,7 +466,7 @@
     (effects (font (size 2.5 2.5)))
     (uuid "9e01d39a-00da-5d47-a90e-c63eb6d45da9"))
   (text
-    "3"
+    "4"
     (exclude_from_sim no)
     (at 195 274.5 0)
     (effects (font (size 2.5 2.5)))
@@ -610,7 +610,7 @@
     (effects (font (size 2.5 2.5)))
     (uuid "9c19353b-698e-5d7f-b8ab-75dec5198347"))
   (text
-    "Плечо"
+    "Плечо, в XS1, XS2"
     (exclude_from_sim no)
     (at 161.5 32 0)
     (effects (font (size 2.5 2.5)) (justify left))
@@ -640,7 +640,7 @@
     (effects (font (size 2.5 2.5)))
     (uuid "6db635ef-035a-5dd3-9512-04145c582417"))
   (text
-    "Предплечье"
+    "Предплечье, в XS3,"
     (exclude_from_sim no)
     (at 161.5 48 0)
     (effects (font (size 2.5 2.5)) (justify left))
@@ -652,287 +652,323 @@
     (effects (font (size 3 3)))
     (uuid "5c639130-7fb4-5f4e-a5a9-17d7012635be"))
   (text
-    "Конденсаторы"
+    "XS4"
     (exclude_from_sim no)
-    (at 95 72 0)
-    (effects (font (size 3 3)))
+    (at 161.5 56 0)
+    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "c43a8640-80d6-50ee-9e0b-812a852c7951"))
   (text
-    "C1"
+    "A3"
     (exclude_from_sim no)
-    (at 21.5 80 0)
+    (at 21.5 64 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "6dabb9dc-fa56-58a7-a837-ba09901de5ab"))
   (text
-    "Конденсатор алюминиевый 470 мкФ 25 В"
+    "Модуль ESP32-S3-DevKitC-1 (N8R2 или N16R8)"
     (exclude_from_sim no)
-    (at 41.5 80 0)
+    (at 41.5 64 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "be535478-e624-5576-b569-71a4eaffc403"))
   (text
     "1"
     (exclude_from_sim no)
-    (at 155 80 0)
+    (at 155 64 0)
     (effects (font (size 2.5 2.5)))
     (uuid "47d1be7b-7416-531a-800f-4c2c644b6096"))
   (text
-    "C2"
+    "В XS5, XS6"
     (exclude_from_sim no)
-    (at 21.5 88 0)
+    (at 161.5 64 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "f6816d82-4812-57de-a6d2-5f8a3894cf75"))
   (text
-    "Конденсатор 0805 X7R 0,1 мкФ"
+    "Конденсаторы"
+    (exclude_from_sim no)
+    (at 95 80 0)
+    (effects (font (size 3 3)))
+    (uuid "d83d3229-bb69-59f2-85d2-1efd76ebfe4d"))
+  (text
+    "C1"
+    (exclude_from_sim no)
+    (at 21.5 88 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "d2155031-9e1f-585e-b301-7a835b8e6845"))
+  (text
+    "Конденсатор алюминиевый 470 мкФ 25 В"
     (exclude_from_sim no)
     (at 41.5 88 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "d83d3229-bb69-59f2-85d2-1efd76ebfe4d"))
+    (uuid "f19bd243-d19e-5939-a234-623365502c84"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 88 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "d2155031-9e1f-585e-b301-7a835b8e6845"))
+    (uuid "ffac54d4-a82d-5582-bf7b-8e88af5d8f7a"))
   (text
-    "C3"
+    "C2"
     (exclude_from_sim no)
     (at 21.5 96 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "f19bd243-d19e-5939-a234-623365502c84"))
+    (uuid "de1023ad-81d4-5628-9279-60225aea70ad"))
   (text
-    "Конденсатор алюминиевый 220 мкФ 25 В"
+    "Конденсатор 0805 X7R 0,1 мкФ"
     (exclude_from_sim no)
     (at 41.5 96 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "ffac54d4-a82d-5582-bf7b-8e88af5d8f7a"))
+    (uuid "0d18563e-b92d-52f3-90aa-b93a6598e96c"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 96 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "de1023ad-81d4-5628-9279-60225aea70ad"))
+    (uuid "8bb734ba-1b90-50f1-b5f2-f64ec275f0b6"))
   (text
-    "C4"
+    "C3"
     (exclude_from_sim no)
     (at 21.5 104 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "0d18563e-b92d-52f3-90aa-b93a6598e96c"))
+    (uuid "74241946-1fe0-513b-99aa-03ea0b58c59f"))
   (text
-    "Конденсатор алюминиевый 470 мкФ 10 В"
+    "Конденсатор алюминиевый 220 мкФ 25 В"
     (exclude_from_sim no)
     (at 41.5 104 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "8bb734ba-1b90-50f1-b5f2-f64ec275f0b6"))
+    (uuid "174dddcf-c555-5a62-bafe-10a09f8a4389"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 104 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "74241946-1fe0-513b-99aa-03ea0b58c59f"))
+    (uuid "9c5dc31c-5965-5b04-81c6-f47e9d4dc5d8"))
   (text
-    "C5"
+    "C4"
     (exclude_from_sim no)
     (at 21.5 112 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "174dddcf-c555-5a62-bafe-10a09f8a4389"))
+    (uuid "9a5f346a-cf7a-57f9-8049-0b529420acf5"))
   (text
-    "Конденсатор алюминиевый 220 мкФ 25 В"
+    "Конденсатор алюминиевый 470 мкФ 10 В"
     (exclude_from_sim no)
     (at 41.5 112 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "9c5dc31c-5965-5b04-81c6-f47e9d4dc5d8"))
+    (uuid "24fa3567-095d-5cf1-9580-6462cc322adf"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 112 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "9a5f346a-cf7a-57f9-8049-0b529420acf5"))
+    (uuid "aba83d2b-4a08-5d15-a3a9-d7f34f3e8248"))
   (text
-    "C6"
+    "C5"
     (exclude_from_sim no)
     (at 21.5 120 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "24fa3567-095d-5cf1-9580-6462cc322adf"))
+    (uuid "a9234c26-0ce4-5106-85d9-6d664336f2cb"))
   (text
-    "Конденсатор алюминиевый 220 мкФ 16 В"
+    "Конденсатор алюминиевый 220 мкФ 25 В"
     (exclude_from_sim no)
     (at 41.5 120 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "aba83d2b-4a08-5d15-a3a9-d7f34f3e8248"))
+    (uuid "7675350e-4568-5f91-9441-7e93d32162e4"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 120 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "a9234c26-0ce4-5106-85d9-6d664336f2cb"))
+    (uuid "bf2551ca-a354-5607-9fb7-c0bbcfa9a95a"))
   (text
-    "C7, C8"
+    "C6"
     (exclude_from_sim no)
     (at 21.5 128 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "7675350e-4568-5f91-9441-7e93d32162e4"))
+    (uuid "43da6024-65bf-52d0-a267-d00c15251435"))
   (text
-    "Конденсатор алюминиевый 100 мкФ 25 В"
+    "Конденсатор алюминиевый 220 мкФ 16 В"
     (exclude_from_sim no)
     (at 41.5 128 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "bf2551ca-a354-5607-9fb7-c0bbcfa9a95a"))
+    (uuid "77227338-94af-527e-a7d5-9ee3921b236f"))
   (text
-    "2"
+    "1"
     (exclude_from_sim no)
     (at 155 128 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "43da6024-65bf-52d0-a267-d00c15251435"))
+    (uuid "f1debdc8-d147-56e9-99b5-7e3f10287163"))
   (text
-    "C9, C10"
+    "C7, C8"
     (exclude_from_sim no)
     (at 21.5 136 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "77227338-94af-527e-a7d5-9ee3921b236f"))
+    (uuid "7647bb79-9793-56a1-b267-ac3627f3cb06"))
   (text
-    "Конденсатор 0805 X7R 0,1 мкФ"
+    "Конденсатор алюминиевый 100 мкФ 25 В"
     (exclude_from_sim no)
     (at 41.5 136 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "f1debdc8-d147-56e9-99b5-7e3f10287163"))
+    (uuid "544379eb-afa5-5a65-a86c-f28c4fbb5621"))
   (text
     "2"
     (exclude_from_sim no)
     (at 155 136 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "7647bb79-9793-56a1-b267-ac3627f3cb06"))
+    (uuid "509dc261-8421-5199-8010-65ba6a29d829"))
   (text
-    "C11"
+    "C9, C10"
     (exclude_from_sim no)
     (at 21.5 144 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "544379eb-afa5-5a65-a86c-f28c4fbb5621"))
-  (text
-    "Конденсатор 1206 X5R 10 мкФ 16 В"
-    (exclude_from_sim no)
-    (at 41.5 144 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "509dc261-8421-5199-8010-65ba6a29d829"))
-  (text
-    "1"
-    (exclude_from_sim no)
-    (at 155 144 0)
-    (effects (font (size 2.5 2.5)))
     (uuid "9b7f6bfd-e543-5c55-89b1-a20b5f9208cd"))
-  (text
-    "C12"
-    (exclude_from_sim no)
-    (at 21.5 152 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "39d38e69-13c3-5a3c-9ad9-833c585af9a2"))
   (text
     "Конденсатор 0805 X7R 0,1 мкФ"
     (exclude_from_sim no)
+    (at 41.5 144 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "39d38e69-13c3-5a3c-9ad9-833c585af9a2"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 144 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "6febf487-47f9-56bb-b076-26a96c9016b7"))
+  (text
+    "C11"
+    (exclude_from_sim no)
+    (at 21.5 152 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "2d68109a-c3ed-5624-a5e7-a5b45d432a60"))
+  (text
+    "Конденсатор 1206 X5R 10 мкФ 16 В"
+    (exclude_from_sim no)
     (at 41.5 152 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "6febf487-47f9-56bb-b076-26a96c9016b7"))
+    (uuid "d13f2812-2a81-544c-8172-7610ebd3d249"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 152 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "2d68109a-c3ed-5624-a5e7-a5b45d432a60"))
-  (text
-    "Микросхемы"
-    (exclude_from_sim no)
-    (at 95 168 0)
-    (effects (font (size 3 3)))
-    (uuid "d13f2812-2a81-544c-8172-7610ebd3d249"))
-  (text
-    "DA1"
-    (exclude_from_sim no)
-    (at 21.5 176 0)
-    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "fe3b2770-dc3c-5577-b7e4-1894283c729a"))
   (text
-    "Микросхема LM2596S-5.0"
+    "C12…C14"
     (exclude_from_sim no)
-    (at 41.5 176 0)
+    (at 21.5 160 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "250d4184-6c12-58dd-8714-656170cae5cb"))
   (text
-    "1"
+    "Конденсатор 0805 X7R 0,1 мкФ"
     (exclude_from_sim no)
-    (at 155 176 0)
-    (effects (font (size 2.5 2.5)))
+    (at 41.5 160 0)
+    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "b88398af-eb1b-5f67-8ad4-dff350e31751"))
   (text
-    "DA2"
+    "3"
+    (exclude_from_sim no)
+    (at 155 160 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "79c00980-13a1-5e67-b109-dcb21170c4e3"))
+  (text
+    "Микросхемы аналоговые"
+    (exclude_from_sim no)
+    (at 95 176 0)
+    (effects (font (size 3 3)))
+    (uuid "a5eceb4a-5346-58eb-ba83-c46851929003"))
+  (text
+    "DA1"
     (exclude_from_sim no)
     (at 21.5 184 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "79c00980-13a1-5e67-b109-dcb21170c4e3"))
+    (uuid "b9ada3d8-5aeb-5c60-a3ac-ec37baf4a1b7"))
   (text
-    "Микросхема LM2596S-ADJ"
+    "Микросхема LM2596S-5.0"
     (exclude_from_sim no)
     (at 41.5 184 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "a5eceb4a-5346-58eb-ba83-c46851929003"))
+    (uuid "7f803a9a-f33e-5f3b-b632-39af0981f7db"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 184 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "b9ada3d8-5aeb-5c60-a3ac-ec37baf4a1b7"))
-  (text
-    "Предохранители"
-    (exclude_from_sim no)
-    (at 95 200 0)
-    (effects (font (size 3 3)))
-    (uuid "7f803a9a-f33e-5f3b-b632-39af0981f7db"))
-  (text
-    "FU1"
-    (exclude_from_sim no)
-    (at 21.5 208 0)
-    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "7abbd40b-0400-518e-9d0d-e9a7db204d73"))
   (text
-    "Держатель предохранителя Keystone 3568 с"
+    "DA2"
     (exclude_from_sim no)
-    (at 41.5 208 0)
+    (at 21.5 192 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "66797835-5d4f-5bea-8a65-bf3564d4b8a0"))
   (text
-    "1"
+    "Микросхема LM2596S-ADJ"
     (exclude_from_sim no)
-    (at 155 208 0)
-    (effects (font (size 2.5 2.5)))
+    (at 41.5 192 0)
+    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "556fed57-9049-5cfc-a6a1-bcec8c90e5ee"))
   (text
-    "предохранителем Mini 5 А"
+    "1"
     (exclude_from_sim no)
-    (at 95 216 0)
-    (effects (font (size 3 3)))
+    (at 155 192 0)
+    (effects (font (size 2.5 2.5)))
     (uuid "6988f0be-073d-544e-8458-983cdca7c672"))
   (text
-    "Индикаторы"
+    "Предохранители"
     (exclude_from_sim no)
-    (at 95 232 0)
+    (at 95 208 0)
     (effects (font (size 3 3)))
     (uuid "5579e564-26ab-5848-b8be-8be294ebde15"))
   (text
-    "HL1"
+    "FU1"
     (exclude_from_sim no)
-    (at 21.5 240 0)
+    (at 21.5 216 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "dfbdc201-96a2-5456-a24b-2d1bf08afc3e"))
   (text
-    "Светодиод 0805 зелёный"
+    "Держатель предохранителя Keystone 3568 с"
     (exclude_from_sim no)
-    (at 41.5 240 0)
+    (at 41.5 216 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "3f34141e-f05f-5dd7-a5e9-64fc0d3e792e"))
   (text
     "1"
     (exclude_from_sim no)
-    (at 155 240 0)
+    (at 155 216 0)
     (effects (font (size 2.5 2.5)))
     (uuid "21a28549-b211-5227-8078-3d1688a22557"))
+  (text
+    "предохранителем Mini 5 А"
+    (exclude_from_sim no)
+    (at 95 224 0)
+    (effects (font (size 3 3)))
+    (uuid "d034c6ad-c337-5191-ba20-8714a66168f9"))
+  (text
+    "Индикаторы"
+    (exclude_from_sim no)
+    (at 95 240 0)
+    (effects (font (size 3 3)))
+    (uuid "ed464077-28f2-594a-b493-364dd51082da"))
+  (text
+    "HL1"
+    (exclude_from_sim no)
+    (at 21.5 248 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "86bae47d-b07a-5d8e-98db-0523ed6fe6cb"))
+  (text
+    "Светодиод 5 мм зелёный"
+    (exclude_from_sim no)
+    (at 41.5 248 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "ac44c76c-e70d-5304-b7ef-4c59066ddcd2"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 248 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "45150ee1-347f-5dca-96b4-ee930fbdd67f"))
+  (text
+    "Приводы под"
+    (exclude_from_sim no)
+    (at 161.5 248 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "bb5f3cdc-3be2-58a2-96d8-9deb7d93a461"))
   (sheet
     (at 150 300)
     (size 20 5)

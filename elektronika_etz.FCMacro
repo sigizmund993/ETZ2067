@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
-"""Электроника в ETZ_Robot: плата приводов (STEP из KiCad), Arduino Mega,
-макетная плата, органы управления, помпа и клапан, датчики, аккумулятор и
-двухъярусная полка на мачте камеры.
+"""Электроника в ETZ_Robot: плата приводов (STEP из KiCad) с ESP32-S3 и
+драйверами в гнёздах, дисплеем, кнопками и индикаторами; под ней на фанере —
+аккумулятор, помпа и клапан; рядом — макетная плата 400 (ЕТЗ п. 3.6).
 
-Запускать ПОСЛЕ uzly_etz.FCMacro (берёт мачту, шкивы, плиту 2). Детали —
-Part::Feature с префиксом EL_ в App::Part «Электроника» (Part_Elec).
+Запускать ПОСЛЕ uzly_etz.FCMacro (основание с удлинением назад — Etz.BaseRear*,
+шкивы, плита 2). Детали — Part::Feature с префиксом EL_ в App::Part
+«Электроника» (Part_Elec).
 
 Где что стоит и почему:
-- Выше z ~ 140 рука не заходит ни в одной позе (верх кронштейна Z — 134),
-  поэтому всё крупное — на полке на мачте камеры: нижний ярус z 150
-  (Mega, помпа, клапан, датчик вакуума), верхний z 194 (плата приводов,
-  макетка 400, кнопка останова, «Старт», выключатель, индикаторы).
-  Полка — только над зоной 1 (x <= 45, см. proverka park) и в стороне от
-  лучей камеры на поле (proverka cam).
-- Аккумулятор 3S низко на фанере (z до 20): ниже всего, что носит рука (27),
-  и спереди-справа — противовес полке в заднем углу.
+- Всё — на удлинении фанеры за моторами (x -75..-185, y -25..-205). Туда
+  рука не заходит ни в одной позе: плечо — только -110..138°, предплечье
+  на парковке и при переезде проходит при y >= -19 (захват на парковке
+  висит у (-108, 15)).
+- Плата на латунных стойках M3x35 (низ платы z 34): под ней по фанере —
+  аккумулятор 3S, помпа и клапан (выше всех помпа, 27).
+- Кнопка останова (грибок) и выключатель пока не ставятся — на плате для
+  них клеммники X3 (выключатель) и X4 (останов).
 - Датчики Холла: плечо — снизу под шкивом 1 на печатной стойке, магнит на
   нижнем фланце шкива 1; предплечье — над шкивом 2 на печатном кронштейне
   с плиты 2, магнит на верхнем фланце шкива 2. Магниты стоят против датчиков
@@ -35,20 +36,19 @@ BRASS = (0.80, 0.62, 0.20)
 DARK = (0.12, 0.12, 0.12)
 STEEL = (0.75, 0.75, 0.78)
 
-# полка
-SH_X0, SH_X1, SH_Y0, SH_Y1 = -75.0, 45.0, -95.0, 135.0
-L1_Z, L2_Z, PLY_T = 150.0, 194.0, 4.0           # низ фанеры ярусов
-STD_XY = [(-68.0, 125.0), (-68.0, -25.0), (10.0, -91.0), (44.0, -60.0)]
-# плата приводов (130 x 99): KiCad (u вправо, v вниз) -> x = 45 - v, y = 133 - u
-PCB_X0, PCB_Y0 = 45.0, 133.0
-PCB_STD = 10.0
-PCB_HOLES = [(4, 3.8), (126, 4), (4, 95), (126, 95)]
-# органы управления на верхнем ярусе
-ESTOP = (28.0, -75.0)
-START = (-6.0, -85.0)
-SWITCH = (-6.0, -66.0)
-LED_G = (-25.0, -84.0)
-LED_R = (-25.0, -68.0)
+# плата приводов (125 x 110) за моторами: KiCad (u вправо, v вниз) ->
+# x = -75 - v (верхний край — к моторам), y = -25 - u
+PCB_X0, PCB_Y0 = -75.0, -25.0
+BASE_TOP = -1.0                      # уточняется по FR_Base в main()
+PCB_STD = 35.0                       # латунные стойки M3x35
+PCB_Z = BASE_TOP + PCB_STD           # низ платы
+PCB_HOLES = [(4, 4), (121, 4), (4, 106), (121, 106)]
+# из расстановки платы (elektronika/gen/layout.py) — для деталей без 3D-модели в KiCad
+DRV_AT = [(30.0, 12.0), (56.0, 12.0)]        # A1, A2 (поворот 270)
+SB_AT = [(40.0, 40.0), (40.0, 52.0), (40.0, 64.0)]   # кнопки 6x6, вывод 1
+DISPLAY_UV = (11.0, 36.0, 37.0, 69.0)        # проекция модуля 0,96" ST7735S
+ESP_UV = (0.5, 63.85, 80.25, 105.6)          # ESP32-S3-DevKitC-1, USB к u = 0
+VAC_AT = (40.0, 76.0)                        # гнездо модуля датчика вакуума (выв. 1)
 # Холл
 HALL_R = 25.7
 PARK_SHOULDER, PARK_LEVER = 136.0, 56.0
@@ -150,7 +150,7 @@ def load_board():
     # KiCad STEP: X = u + X0, Y = -v + Y0  ->  робот: x = PCB_X0 - v, y = PCB_Y0 - u
     comp.rotate(V(0, 0, 0), V(0, 0, 1), -90)
     # после поворота: x = Y, y = -X; совмещаем край u=0 (X = bb.XMin) и v=0 (Y = bb.YMax)
-    dz = L2_Z + PLY_T + PCB_STD - bb.ZMin
+    dz = PCB_Z - bb.ZMin
     comp.translate(V(PCB_X0 - bb.YMax, PCB_Y0 + bb.XMin, dz))
     return comp, (colors if colors and len(colors) == len(comp.Faces) else None)
 
@@ -159,139 +159,88 @@ def uv(u, v, z=0.0):
     return V(PCB_X0 - v, PCB_Y0 - u, z)
 
 
+def rect(u0, u1, v0, v1, z0, z1):
+    a, b = uv(u0, v0), uv(u1, v1)
+    x0, x1 = sorted((a.x, b.x)); y0, y1 = sorted((a.y, b.y))
+    return box(x0, x1, y0, y1, z0, z1)
+
+
 def board_extras(doc, P):
-    """Чего нет в библиотеке 3D KiCad: модули TMC2209 и вилка XT30."""
-    ztop = L2_Z + PLY_T + PCB_STD + 1.6
-    for k, (fu, fv) in enumerate(((48.0, 12.0), (72.0, 12.0))):
-        # посадочное место повёрнуто на 270: модуль u fu-19.05..fu+1.27, v fv-1.25..fv+13.95
+    """Чего нет в библиотеке 3D KiCad: модули в гнёздах (TMC2209, ESP32-S3,
+    дисплей, датчик вакуума) и кнопки 6x6."""
+    ztop = PCB_Z + 1.6
+    for k, (fu, fv) in enumerate(DRV_AT):
+        # место модуля повёрнуто на 270: модуль u fu-19.05..fu+1.27, v fv-1.25..fv+13.95
         u0, u1, v0, v1 = fu - 19.05, fu + 1.27, fv - 1.25, fv + 13.95
-        a, b = uv(u0, v0), uv(u1, v1)
-        x0, x1 = sorted((a.x, b.x)); y0, y1 = sorted((a.y, b.y))
         z0 = ztop + 8.5                       # гнёзда PBS 8.5 мм
-        m = box(x0, x1, y0, y1, z0, z0 + 1.6)
+        m = rect(u0, u1, v0, v1, z0, z0 + 1.6)
         c = uv((u0 + u1) / 2, (v0 + v1) / 2)
         m = m.fuse(box(c.x - 4.5, c.x + 4.5, c.y - 4.5, c.y + 4.5, z0 + 1.6, z0 + 6.6))   # радиатор
         feat(doc, P, "EL_Drv%d" % (k + 1), "Модуль_TMC2209_%d" % (k + 1), m, (0.55, 0.05, 0.05))
-    a, b = uv(1.4, 7.3), uv(17.2, 21.7)
-    x0, x1 = sorted((a.x, b.x)); y0, y1 = sorted((a.y, b.y))
-    feat(doc, P, "EL_XT30", "Вилка_XT30PW-M", box(x0, x1, y0, y1, ztop, ztop + 8.0), (0.95, 0.80, 0.10))
+    # ESP32-S3-DevKitC-1: плата 62.7 x 25.4 на штырях над гнёздами, модуль
+    # WROOM у вывода 1 (дальний от USB конец), два USB-C у края платы
+    u0, u1, v0, v1 = ESP_UV
+    ze = ztop + 11.0
+    esp = rect(u0, u1, v0, v1, ze, ze + 1.6)
+    esp = esp.fuse(rect(u1 - 19.5, u1 - 1.5, v0 + 0.5, v1 - 0.5, ze + 1.6, ze + 4.8))
+    for vc in (v0 + 6.0, v1 - 6.0):
+        esp = esp.fuse(rect(u0 - 0.5, u0 + 7.0, vc - 4.5, vc + 4.5, ze + 1.6, ze + 4.8))
+    feat(doc, P, "EL_Esp", "ESP32-S3-DevKitC-1", esp, (0.08, 0.08, 0.10))
+    # дисплей 0,96" 80x160 на гнезде PBS-8 (8.5) + штыри с пластиком 2.5
+    u0, u1, v0, v1 = DISPLAY_UV
+    zd = ztop + 11.0
+    feat(doc, P, "EL_DispPcb", "Дисплей_0.96_ST7735S_плата", rect(u0 + 0.5, u1 - 0.5, v0 + 1.0, v1 - 1.0, zd, zd + 1.6),
+         (0.10, 0.25, 0.55))
+    feat(doc, P, "EL_DispLcd", "Дисплей_0.96_ST7735S_экран", rect(u0 + 2.0, u1 - 2.0, v0 + 6.0, v1 - 3.0, zd + 1.6, zd + 3.2),
+         (0.05, 0.05, 0.05))
+    # модуль датчика вакуума XGZP6847A стоит в гнезде PBS-3 вертикально
+    vu, vv = VAC_AT
+    vs = rect(vu - 3.0, vu + 15.0, vv - 0.8, vv + 0.8, ztop + 8.5, ztop + 26.5)
+    c = uv(vu + 6.0, vv - 0.8 - 3.5)
+    vs = vs.fuse(rect(vu + 1.0, vu + 11.0, vv - 6.8, vv - 0.8, ztop + 14.5, ztop + 24.5))
+    vs = vs.fuse(Part.makeCylinder(1.5, 6.0, V(c.x, c.y, ztop + 24.5)))
+    feat(doc, P, "EL_VacSensor", "Датчик_вакуума_XGZP6847A_модуль", vs, (0.10, 0.35, 0.15))
+    for k, (bu, bv) in enumerate(SB_AT):
+        cu, cv = bu + 3.25, bv + 2.25
+        b_ = rect(cu - 3.0, cu + 3.0, cv - 3.0, cv + 3.0, ztop, ztop + 3.5)
+        c = uv(cu, cv)
+        feat(doc, P, "EL_SB%d" % (k + 1), "Кнопка_6x6_SB%d" % (k + 1),
+             b_.fuse(cyl(1.75, ztop + 3.5, ztop + 8.5, c.x, c.y)), DARK)
 
 
-# ---------------------------------------------------------------- полка
-def shelf(doc, P, mast_c):
-    mx, my = mast_c
-    hole = cyl(8.25, 0, 1, mx, my)
-    for lvl, z in ((1, L1_Z), (2, L2_Z)):
-        pl = box(SH_X0, SH_X1, SH_Y0, SH_Y1, z, z + PLY_T)
-        cuts = [cyl(8.25, z - 1, z + PLY_T + 1, mx, my)]
-        cuts += [cyl(1.7, z - 1, z + PLY_T + 1, x, y) for x, y in STD_XY]
-        if lvl == 2:
-            cuts.append(cyl(11.25, z - 1, z + PLY_T + 1, *ESTOP))
-            cuts.append(cyl(8.1, z - 1, z + PLY_T + 1, *START))
-            cuts.append(box(SWITCH[0] - 9.5, SWITCH[0] + 9.5, SWITCH[1] - 6.5, SWITCH[1] + 6.5, z - 1, z + PLY_T + 1))
-            cuts += [cyl(4.0, z - 1, z + PLY_T + 1, *p) for p in (LED_G, LED_R)]
-            cuts += [cyl(1.7, z - 1, z + PLY_T + 1, uv(u, v).x, uv(u, v).y) for u, v in PCB_HOLES]
-        pl = pl.cut(cuts)
-        feat(doc, P, "EL_Shelf%d" % lvl, "Полка_электроники_%d_фанера_4мм" % lvl, pl, PLY)
-        # хомут на мачте под ярусом: втулка Ø32 x 20, фланец Ø50 x 4, разрез и ухо M3
-        zc = z - 20.0
-        cl = cyl(16.0, zc, z, mx, my).fuse(cyl(25.0, z - 4.0, z, mx, my))
-        ear = box(mx - 16.0 - 9.0, mx - 13.0, my - 5.0, my + 5.0, zc, zc + 12.0)
-        cl = cl.fuse(ear).cut([cyl(8.1, zc - 1, z + 1, mx, my),
-                               box(mx - 26.0, mx - 7.0, my - 0.75, my + 0.75, zc - 1, zc + 13.0),
-                               Part.makeCylinder(1.7, 12.0, V(mx - 20.5, my - 6.0, zc + 6.0), V(0, 1, 0))])
-        feat(doc, P, "EL_Clamp%d" % lvl, "Хомут_полки_%d_печать" % lvl, cl, PRINT)
-        sc = Part.makeCylinder(1.5, 12.0, V(mx - 20.5, my + 5.0, zc + 6.0), V(0, -1, 0)).fuse(
-            Part.makeCylinder(2.75, 3.0, V(mx - 20.5, my + 5.0, zc + 6.0), V(0, 1, 0)))
-        feat(doc, P, "EL_ClampScr%d" % lvl, "Винт_хомута_полки_M3x12_%d" % lvl, sc, DARK)
-        nt = Part.makeCylinder(3.2, 2.4, V(mx - 20.5, my - 5.0, zc + 6.0), V(0, -1, 0)).cut(
-            Part.makeCylinder(1.5, 2.4, V(mx - 20.5, my - 5.0, zc + 6.0), V(0, -1, 0)))
-        feat(doc, P, "EL_ClampNut%d" % lvl, "Гайка_хомута_полки_M3_%d" % lvl, nt, STEEL)
-    for i, (x, y) in enumerate(STD_XY):
-        s = cyl(2.75, L1_Z + PLY_T, L2_Z, x, y).cut(cyl(1.25, L1_Z + PLY_T - 1, L2_Z + 1, x, y))
-        feat(doc, P, "EL_Std%d" % (i + 1), "Стойка_латунь_M3x40_ВВ_полка_%d" % (i + 1), s, BRASS)
-        for z0, sgn, nm in ((L2_Z + PLY_T, 1, "в"), (L1_Z, -1, "н")):
-            h = cyl(2.75, z0, z0 + 2.4 * sgn, x, y) if sgn > 0 else cyl(2.75, z0 - 2.4, z0, x, y)
-            feat(doc, P, "EL_StdScr%d%s" % (i + 1, "a" if sgn > 0 else "b"),
-                 "Винт_полки_M3x8_ISO7380_%d%s" % (i + 1, nm), h, DARK)
-
-
-# ---------------------------------------------------------------- верхний ярус
-def level2(doc, P):
-    z = L2_Z + PLY_T
+def standoffs(doc, P, base_top):
     for i, (u, v) in enumerate(PCB_HOLES):
         c = uv(u, v)
-        s = cyl(2.75, z, z + PCB_STD, c.x, c.y).cut(cyl(1.25, z - 1, z + PCB_STD + 1, c.x, c.y))
-        feat(doc, P, "EL_PcbStd%d" % (i + 1), "Стойка_латунь_M3x10_ВВ_плата_%d" % (i + 1), s, BRASS)
-    # макетная плата 400 точек (ЕТЗ п. 3.6) — рядом с разъёмами А, Б, В
-    bbx0, bby0 = -37.0, -54.0
-    bbd = box(bbx0, bbx0 + 82.5, bby0, bby0 + 54.5, z, z + 8.5)
-    feat(doc, P, "EL_Breadboard", "Макетная_плата_400_точек", bbd, (0.95, 0.95, 0.93))
-    # кнопка останова 22 мм с фиксацией (грибок Ø40)
-    ex, ey = ESTOP
-    es_top = cyl(15.0, z, z + 4.0, ex, ey).fuse(cyl(11.0, z + 4.0, z + 12.0, ex, ey))
-    feat(doc, P, "EL_EStopBody", "Кнопка_останова_корпус", es_top.fuse(cyl(11.0, z - PLY_T, z, ex, ey))
-         .fuse(cyl(13.5, L2_Z - 30.0, L2_Z, ex, ey)), (0.95, 0.80, 0.10))
-    feat(doc, P, "EL_EStopHead", "Кнопка_останова_грибок_Ø40", cyl(20.0, z + 12.0, z + 24.0, ex, ey), (0.85, 0.05, 0.05))
-    sx, sy = START
-    st = cyl(9.5, z, z + 2.0, sx, sy).fuse(cyl(8.0, z - PLY_T, z, sx, sy)).fuse(cyl(8.0, L2_Z - 25.0, L2_Z, sx, sy))
-    feat(doc, P, "EL_StartBody", "Кнопка_Старт_16мм_корпус", st, DARK)
-    feat(doc, P, "EL_StartCap", "Кнопка_Старт_16мм_толкатель", cyl(6.0, z + 2.0, z + 6.0, sx, sy), (0.10, 0.65, 0.20))
-    wx, wy = SWITCH
-    sw = box(wx - 10.5, wx + 10.5, wy - 7.5, wy + 7.5, z, z + 3.0).fuse(
-        box(wx - 9.25, wx + 9.25, wy - 6.25, wy + 6.25, L2_Z - 20.0, z))
-    sw = sw.fuse(box(wx - 8.0, wx + 8.0, wy - 5.0, wy + 5.0, z + 3.0, z + 7.0))
-    feat(doc, P, "EL_Switch", "Выключатель_KCD1_21x15", sw, DARK)
-    for nm, (lx, ly), col in (("EL_LedG", LED_G, (0.10, 0.80, 0.20)), ("EL_LedR", LED_R, (0.90, 0.10, 0.10))):
-        led = cyl(5.0, z, z + 2.0, lx, ly).fuse(cyl(4.0, L2_Z - 18.0, z, lx, ly))
-        led = led.fuse(cyl(3.5, z + 2.0, z + 6.0, lx, ly))
-        feat(doc, P, nm, "Индикатор_8мм_" + ("зелёный_приводы" if nm.endswith("G") else "красный_программа"),
-             led, col)
+        s = cyl(2.75, base_top, PCB_Z, c.x, c.y).cut(cyl(1.25, base_top - 1, PCB_Z + 1, c.x, c.y))
+        feat(doc, P, "EL_PcbStd%d" % (i + 1), "Стойка_латунь_M3x35_ВВ_плата_%d" % (i + 1), s, BRASS)
+        h = cyl(2.75, PCB_Z + 1.6, PCB_Z + 1.6 + 1.65, c.x, c.y)
+        feat(doc, P, "EL_PcbScr%d" % (i + 1), "Винт_платы_M3x6_ISO7380_%d" % (i + 1), h, DARK)
 
 
-# ---------------------------------------------------------------- нижний ярус
-def level1(doc, P):
-    z = L1_Z + PLY_T
-    # Arduino Mega 2560: 101.6 x 53.3, длинной стороной вдоль y, USB к +y
-    mx0, my0, zs = -50.0, 30.0, 6.0
-    zb = z + zs
-    mega = box(mx0, mx0 + 53.3, my0, my0 + 101.6, zb, zb + 1.6)
-    mega = mega.fuse(box(mx0 + 30.0, mx0 + 42.0, my0 + 95.6, my0 + 111.6, zb + 1.6, zb + 12.6))     # USB-B
-    mega = mega.fuse(box(mx0 + 3.0, mx0 + 12.0, my0 + 88.0, my0 + 102.0, zb + 1.6, zb + 12.6))      # гнездо питания
-    mega = mega.fuse(box(mx0 + 1.0, mx0 + 3.5, my0 + 10.0, my0 + 86.0, zb + 1.6, zb + 10.1))        # гребёнки
-    mega = mega.fuse(box(mx0 + 49.8, mx0 + 52.3, my0 + 4.0, my0 + 88.0, zb + 1.6, zb + 10.1))
-    mega = mega.fuse(box(mx0 + 5.0, mx0 + 48.0, my0 + 1.0, my0 + 6.0, zb + 1.6, zb + 10.1))
-    mega = mega.fuse(box(mx0 + 18.0, mx0 + 32.0, my0 + 30.0, my0 + 44.0, zb + 1.6, zb + 2.8))       # ATmega2560
-    feat(doc, P, "EL_Mega", "Arduino_Mega_2560", mega, (0.0, 0.45, 0.65))
-    for i, (hx, hy) in enumerate(((2.5, 14.0), (50.7, 15.3), (7.6, 66.1), (35.5, 66.1), (50.7, 90.2), (2.5, 96.5))):
-        x, y = mx0 + hx, my0 + hy
-        s = cyl(2.75, z, zb, x, y).cut(cyl(1.25, z - 1, zb + 1, x, y))
-        feat(doc, P, "EL_MegaStd%d" % (i + 1), "Стойка_латунь_M3x6_Mega_%d" % (i + 1), s, BRASS)
+# ---------------------------------------------------------------- под платой и рядом
+def under(doc, P, base_top):
+    z = base_top
+    # аккумулятор 3S (3x18650 в держателе), банки вдоль y
+    x0, y0 = -170.0, -113.0
+    hol = box(x0, x0 + 58.0, y0, y0 + 78.0, z, z + 21.0)
+    hol = hol.cut(box(x0 + 1.5, x0 + 56.5, y0 + 1.5, y0 + 76.5, z + 2.0, z + 22.0))
+    feat(doc, P, "EL_BatHolder", "Аккумулятор_3S_держатель", hol, DARK)
+    cells = [Part.makeCylinder(9.25, 72.0, V(x0 + 9.75 + 19.25 * k, y0 + 3.0, z + 11.25), V(0, 1, 0))
+             for k in range(3)]
+    feat(doc, P, "EL_BatCells", "Аккумулятор_3S_18650x3", cells[0].fuse(cells[1:]), (0.15, 0.35, 0.80))
     # вакуумная помпа 6 В: мотор Ø24 x 32 + головка 27 x 27 x 27, лёжа вдоль y
-    px, pz = 28.5, z + 13.5
-    pump = cyl_y(12.0, 40.0, 72.0, px, pz).fuse(box(px - 13.5, px + 13.5, 72.0, 99.0, z, z + 27.0))
+    px, pz = -91.5, z + 13.5
+    pump = cyl_y(12.0, -100.0, -68.0, px, pz).fuse(box(px - 13.5, px + 13.5, -68.0, -41.0, z, z + 27.0))
     for dx in (-5.0, 5.0):
-        pump = pump.fuse(cyl_y(2.0, 99.0, 107.0, px + dx, z + 20.0))
+        pump = pump.fuse(cyl_y(2.0, -41.0, -35.0, px + dx, z + 20.0))
     feat(doc, P, "EL_Pump", "Помпа_вакуумная_6В", pump, DARK)
     # клапан сброса 6 В, нормально открытый
-    vl = box(15.0, 45.0, 10.0, 23.0, z, z + 13.0).fuse(cyl(6.0, z + 13.0, z + 26.0, 30.0, 16.5))
-    vl = vl.fuse(cyl_y(2.0, 2.0, 10.0, 22.0, z + 6.5)).fuse(cyl_y(2.0, 23.0, 31.0, 38.0, z + 6.5))
+    vl = box(-106.0, -76.0, -125.0, -112.0, z, z + 13.0).fuse(cyl(6.0, z + 13.0, z + 26.0, -91.0, -118.5))
     feat(doc, P, "EL_Valve", "Клапан_6В_НО", vl, (0.30, 0.30, 0.32))
-    # датчик вакуума XGZP6847A на модуле
-    vs = box(15.0, 35.0, -15.0, 1.0, z, z + 1.6).fuse(box(19.0, 31.0, -13.0, -1.0, z + 1.6, z + 8.6))
-    vs = vs.fuse(cyl(1.5, z + 8.6, z + 14.6, 25.0, -7.0))
-    feat(doc, P, "EL_VacSensor", "Датчик_вакуума_XGZP6847A", vs, (0.10, 0.35, 0.15))
-
-
-# ---------------------------------------------------------------- аккумулятор
-def battery(doc, P, base_top):
-    x0, y0 = 26.0, -70.0
-    hol = box(x0, x0 + 78.0, y0, y0 + 58.0, base_top, base_top + 21.0)
-    cells = [cyl_y(9.25, y0 + 3.0, y0 + 55.0, x0 + 12.0 + 19.5 * k, base_top + 11.25) for k in range(3)]
-    hol = hol.cut(box(x0 + 1.5, x0 + 76.5, y0 + 1.5, y0 + 56.5, base_top + 2.0, base_top + 22.0))
-    feat(doc, P, "EL_BatHolder", "Аккумулятор_3S_держатель", hol, DARK)
-    c = cells[0].fuse(cells[1:])
-    feat(doc, P, "EL_BatCells", "Аккумулятор_3S_18650x3", c, (0.15, 0.35, 0.80))
+    # макетная плата 400 точек (ЕТЗ п. 3.6) — рядом с разъёмами А, Б, В
+    # (правый край платы, y -150)
+    feat(doc, P, "EL_Breadboard", "Макетная_плата_400_точек",
+         box(-185.0 + 1.0, -185.0 + 83.5, -205.0 + 1.0, -205.0 + 55.5, z, z + 8.5), (0.95, 0.95, 0.93))
 
 
 # ---------------------------------------------------------------- датчики Холла
@@ -335,30 +284,33 @@ def hall(doc, P):
 
 
 def main():
+    global PCB_Z
     doc = D()
     purge(doc)
     P = container(doc, "Part_Elec", "Электроника")
-    mast = doc.getObject("CAM_Mast")
-    ms = mast.Shape.copy()
-    ms.Placement = global_pl(mast).multiply(ms.Placement)
-    mc = ms.BoundBox.Center
     base = doc.getObject("FR_Base")
     bs = base.Shape.copy()
     bs.Placement = global_pl(base).multiply(bs.Placement)
-    base_top = float(bs.BoundBox.ZMax)          # до импорта STEP: потом габарит бывает порчен
-    shelf(doc, P, (mc.x, mc.y))
+    base_top = float(bs.BoundBox.ZMax)
+    if abs(base_top) > 1e3:
+        # в только что открытом документе габарит копии бывает бесконечным —
+        # верх фанеры: пол полигона + 6 мм
+        base_top = doc.getObject("Etz").FloorZ.Value + 6.0
+    e = doc.getObject("Etz")
+    if not hasattr(e, "BaseRearX0") or e.BaseRearX0.Value > -180:
+        print("!! основание без удлинения назад (Etz.BaseRear*): сначала uzly_etz.FCMacro")
+    PCB_Z = base_top + PCB_STD
     comp, colors = load_board()
     App.setActiveDocument(doc.Name)
-    o = feat(doc, P, "EL_Board", "Плата_приводов_ETZ_v1", comp, (0.10, 0.40, 0.15))
+    o = feat(doc, P, "EL_Board", "Плата_приводов_ETZ_v3", comp, (0.10, 0.40, 0.15))
     if colors and App.GuiUp:
         try:
             o.ViewObject.DiffuseColor = colors
         except Exception:
             pass
     board_extras(doc, P)
-    level2(doc, P)
-    level1(doc, P)
-    battery(doc, P, base_top)
+    standoffs(doc, P, base_top)
+    under(doc, P, base_top)
     hall(doc, P)
     doc.recompute()
     print("Электроника: %d деталей" % len([x for x in doc.Objects if x.Name.startswith("EL_")]))

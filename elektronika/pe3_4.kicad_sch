@@ -1,0 +1,532 @@
+(kicad_sch
+  (version 20250114)
+  (generator "eeschema")
+  (generator_version "9.0")
+  (uuid "21c60d60-0137-5993-be3c-05c940fba775")
+  (paper "A4" portrait)
+  (lib_symbols)
+  (polyline
+    (pts (xy 20 5) (xy 205 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "99742301-adb8-580c-a4e1-654a07a13c32"))
+  (polyline
+    (pts (xy 205 5) (xy 205 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "c8cbd970-085a-56b6-8d29-678ff801097b"))
+  (polyline
+    (pts (xy 205 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "494e53b7-cdc3-54c0-b958-896f8e35a396"))
+  (polyline
+    (pts (xy 20 292) (xy 20 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "d8a092c1-a96e-5ab4-b040-21705d6899c8"))
+  (polyline
+    (pts (xy 20 277) (xy 205 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "3fa2a603-6d91-5cd3-850a-5551b3793b0d"))
+  (polyline
+    (pts (xy 205 277) (xy 205 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "9abae040-7379-582a-becd-ddae3032193e"))
+  (polyline
+    (pts (xy 205 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "409e830a-c332-5237-a30e-a1eec3768e12"))
+  (polyline
+    (pts (xy 20 292) (xy 20 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "db9dd314-3ab6-5dc8-b38a-49da15d628e5"))
+  (polyline
+    (pts (xy 27 277) (xy 27 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "e927b675-b02d-5c79-b370-7c787b601435"))
+  (polyline
+    (pts (xy 37 277) (xy 37 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "dff52375-e076-57d2-b43d-3f5ac763dec8"))
+  (polyline
+    (pts (xy 60 277) (xy 60 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "4f7162b5-bdec-5077-a0d0-c593a695db9d"))
+  (polyline
+    (pts (xy 75 277) (xy 75 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "e3afb14b-ed3e-5e08-8565-4cc735ccae1a"))
+  (polyline
+    (pts (xy 85 277) (xy 85 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "709e0efd-cc77-5b71-922e-da9d33578a1e"))
+  (polyline
+    (pts (xy 20 282) (xy 85 282))
+    (stroke (width 0.25) (type solid))
+    (uuid "859967c1-17b7-5979-a2ae-8e9c6e08f215"))
+  (polyline
+    (pts (xy 20 287) (xy 85 287))
+    (stroke (width 0.5) (type solid))
+    (uuid "208bb23a-5a50-5c21-9e0a-856e3707bbeb"))
+  (polyline
+    (pts (xy 195 277) (xy 195 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "cf4f4d3f-21df-5306-99ce-f74258ad7722"))
+  (polyline
+    (pts (xy 195 284) (xy 205 284))
+    (stroke (width 0.25) (type solid))
+    (uuid "9f068467-c747-53ae-a7fe-9a776dfd9dc8"))
+  (polyline
+    (pts (xy 8 292) (xy 20 292))
+    (stroke (width 0.5) (type solid))
+    (uuid "9f4f3b40-96b0-525f-b14d-9a42388c7dae"))
+  (polyline
+    (pts (xy 8 267) (xy 20 267))
+    (stroke (width 0.5) (type solid))
+    (uuid "9c127bb0-d51b-514a-bde1-a292ff6cd2a0"))
+  (polyline
+    (pts (xy 8 232) (xy 20 232))
+    (stroke (width 0.5) (type solid))
+    (uuid "d0bc2756-6fd2-5dd4-ae0e-178040b5369c"))
+  (polyline
+    (pts (xy 8 207) (xy 20 207))
+    (stroke (width 0.5) (type solid))
+    (uuid "1e542b82-62ad-5f8e-81fc-bea177f2c4c3"))
+  (polyline
+    (pts (xy 8 182) (xy 20 182))
+    (stroke (width 0.5) (type solid))
+    (uuid "98770070-0a1b-5b35-963e-e3768dae1d58"))
+  (polyline
+    (pts (xy 8 147) (xy 20 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "3bd7fc15-f886-59aa-813b-80b009c8a821"))
+  (polyline
+    (pts (xy 8 292) (xy 8 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "cd2a92fd-bf51-5587-9312-90ef603bdb5f"))
+  (polyline
+    (pts (xy 13 292) (xy 13 147))
+    (stroke (width 0.5) (type solid))
+    (uuid "6657dc80-cd0d-5199-9778-650aaac8770a"))
+  (polyline
+    (pts (xy 8 5) (xy 20 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "4c50c412-94b6-5d3e-9388-8fce2a494c5d"))
+  (polyline
+    (pts (xy 20 5) (xy 20 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "fcfa1560-45d2-551b-aa17-d3d975c37d8c"))
+  (polyline
+    (pts (xy 20 65) (xy 8 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "5c81952d-968d-5c25-b5c3-770f18047b5d"))
+  (polyline
+    (pts (xy 8 65) (xy 8 5))
+    (stroke (width 0.5) (type solid))
+    (uuid "1d1fc4dd-3092-57d2-b24d-b535678a7b26"))
+  (polyline
+    (pts (xy 13 5) (xy 13 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "3ca5c700-1699-583a-86f0-6855e7da82eb"))
+  (polyline
+    (pts (xy 8 65) (xy 20 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "fd5b4ad0-f720-570e-a4db-8ee3d4bb2de9"))
+  (polyline
+    (pts (xy 20 65) (xy 20 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "936e92e8-b11c-550b-b8d0-0249b11aab05"))
+  (polyline
+    (pts (xy 20 125) (xy 8 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "a539fb43-e85d-5ef0-969b-5db1893a6aa1"))
+  (polyline
+    (pts (xy 8 125) (xy 8 65))
+    (stroke (width 0.5) (type solid))
+    (uuid "c10772f3-7fbd-5f77-926d-413c4b513635"))
+  (polyline
+    (pts (xy 13 65) (xy 13 125))
+    (stroke (width 0.5) (type solid))
+    (uuid "83911564-360d-52ab-803d-f2e0fd914eb7"))
+  (polyline
+    (pts (xy 40 5) (xy 40 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "b1dd0f16-446c-5c89-b24c-babff5b2312d"))
+  (polyline
+    (pts (xy 150 5) (xy 150 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "3f3b49a6-be24-5cf6-8aa5-1b811f34bb51"))
+  (polyline
+    (pts (xy 160 5) (xy 160 277))
+    (stroke (width 0.5) (type solid))
+    (uuid "b85b110b-1aac-581c-922f-1068e56280a0"))
+  (polyline
+    (pts (xy 20 20) (xy 205 20))
+    (stroke (width 0.5) (type solid))
+    (uuid "67503f69-eeea-5b41-8754-4c2eb405025b"))
+  (polyline
+    (pts (xy 20 28) (xy 205 28))
+    (stroke (width 0.25) (type solid))
+    (uuid "5b0d0175-ac7e-5c50-bc4f-13c8eccfa1cd"))
+  (polyline
+    (pts (xy 20 36) (xy 205 36))
+    (stroke (width 0.25) (type solid))
+    (uuid "50225305-327e-5d5b-8c26-2c4819cc0624"))
+  (polyline
+    (pts (xy 20 44) (xy 205 44))
+    (stroke (width 0.25) (type solid))
+    (uuid "535be31c-5980-56bf-b8ba-49ce6a76236b"))
+  (polyline
+    (pts (xy 20 52) (xy 205 52))
+    (stroke (width 0.25) (type solid))
+    (uuid "d5d45e15-7d12-5b4d-85df-c729d120a36e"))
+  (polyline
+    (pts (xy 20 60) (xy 205 60))
+    (stroke (width 0.25) (type solid))
+    (uuid "ce9f278a-5f99-5400-b00d-43a948d815b2"))
+  (polyline
+    (pts (xy 20 68) (xy 205 68))
+    (stroke (width 0.25) (type solid))
+    (uuid "c5684b08-224c-5dc2-bdc7-ad7b9a29dbbe"))
+  (polyline
+    (pts (xy 20 76) (xy 205 76))
+    (stroke (width 0.25) (type solid))
+    (uuid "07b199bb-cdca-5028-8989-4094a725a5b7"))
+  (polyline
+    (pts (xy 20 84) (xy 205 84))
+    (stroke (width 0.25) (type solid))
+    (uuid "f0fc8023-54da-5a65-bccb-b1df60600728"))
+  (polyline
+    (pts (xy 20 92) (xy 205 92))
+    (stroke (width 0.25) (type solid))
+    (uuid "efb56b36-4401-5ce8-a114-0ca9d25636c4"))
+  (polyline
+    (pts (xy 20 100) (xy 205 100))
+    (stroke (width 0.25) (type solid))
+    (uuid "cc8bc871-9b39-5ba1-b9f4-077784c8eae0"))
+  (polyline
+    (pts (xy 20 108) (xy 205 108))
+    (stroke (width 0.25) (type solid))
+    (uuid "341fb936-8c90-5131-bcea-dc938a3df815"))
+  (polyline
+    (pts (xy 20 116) (xy 205 116))
+    (stroke (width 0.25) (type solid))
+    (uuid "34d3066e-0c45-5ead-bcc3-2fdfcee6827d"))
+  (polyline
+    (pts (xy 20 124) (xy 205 124))
+    (stroke (width 0.25) (type solid))
+    (uuid "1bf41490-0938-5c6f-ac5c-87f34700aee1"))
+  (polyline
+    (pts (xy 20 132) (xy 205 132))
+    (stroke (width 0.25) (type solid))
+    (uuid "9fb2d00a-947b-50b4-9679-c3a17c466d77"))
+  (polyline
+    (pts (xy 20 140) (xy 205 140))
+    (stroke (width 0.25) (type solid))
+    (uuid "b90096d6-9095-58fc-be17-bf8def9c54a0"))
+  (polyline
+    (pts (xy 20 148) (xy 205 148))
+    (stroke (width 0.25) (type solid))
+    (uuid "f7afe655-1e76-5a58-a7b8-77951d4911fd"))
+  (polyline
+    (pts (xy 20 156) (xy 205 156))
+    (stroke (width 0.25) (type solid))
+    (uuid "7c98a540-0c9d-57be-b7ce-357971fffe0b"))
+  (polyline
+    (pts (xy 20 164) (xy 205 164))
+    (stroke (width 0.25) (type solid))
+    (uuid "21112b56-dbce-5063-9aca-7cc419843cc9"))
+  (polyline
+    (pts (xy 20 172) (xy 205 172))
+    (stroke (width 0.25) (type solid))
+    (uuid "daae1b46-39ac-529a-b304-56b9f564a51b"))
+  (polyline
+    (pts (xy 20 180) (xy 205 180))
+    (stroke (width 0.25) (type solid))
+    (uuid "6ee27003-3a49-50fa-900c-49edb87f4893"))
+  (polyline
+    (pts (xy 20 188) (xy 205 188))
+    (stroke (width 0.25) (type solid))
+    (uuid "46a5a847-ecdb-5ae8-a024-62b8802dfceb"))
+  (polyline
+    (pts (xy 20 196) (xy 205 196))
+    (stroke (width 0.25) (type solid))
+    (uuid "1a710311-584b-56a8-807d-ad8632713d91"))
+  (polyline
+    (pts (xy 20 204) (xy 205 204))
+    (stroke (width 0.25) (type solid))
+    (uuid "8c1db015-e0f5-5fa0-b968-e6666f140749"))
+  (polyline
+    (pts (xy 20 212) (xy 205 212))
+    (stroke (width 0.25) (type solid))
+    (uuid "4f9623dd-a11b-56cf-bad5-797e93abfc1e"))
+  (polyline
+    (pts (xy 20 220) (xy 205 220))
+    (stroke (width 0.25) (type solid))
+    (uuid "dbe3d4b0-1551-566d-83df-9dab380b1110"))
+  (polyline
+    (pts (xy 20 228) (xy 205 228))
+    (stroke (width 0.25) (type solid))
+    (uuid "cfec0cb5-e5b2-5437-b9b5-88b17af4c37c"))
+  (polyline
+    (pts (xy 20 236) (xy 205 236))
+    (stroke (width 0.25) (type solid))
+    (uuid "4ef5753a-702c-5f0a-909d-20419866f4cd"))
+  (polyline
+    (pts (xy 20 244) (xy 205 244))
+    (stroke (width 0.25) (type solid))
+    (uuid "0160baa3-3c02-553f-b069-baeb7529bed0"))
+  (polyline
+    (pts (xy 20 252) (xy 205 252))
+    (stroke (width 0.25) (type solid))
+    (uuid "84b77bf9-1a50-5b40-a75c-8aa370f7f9f5"))
+  (polyline
+    (pts (xy 20 260) (xy 205 260))
+    (stroke (width 0.25) (type solid))
+    (uuid "246242ce-df5b-5a3a-9bdf-7c25e5bc85d0"))
+  (polyline
+    (pts (xy 20 268) (xy 205 268))
+    (stroke (width 0.25) (type solid))
+    (uuid "ba176016-b6f9-567d-8d12-85400cf579d2"))
+  (polyline
+    (pts (xy 20 276) (xy 205 276))
+    (stroke (width 0.25) (type solid))
+    (uuid "9906969a-303a-5c76-9fc7-c627bb08db95"))
+  (text
+    "Изм."
+    (exclude_from_sim no)
+    (at 23.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "3ea41c72-7bd3-523a-9515-13ea86fe3cc5"))
+  (text
+    "Лист"
+    (exclude_from_sim no)
+    (at 32 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "c50516f0-202a-5fc8-b956-9c429dc49c8b"))
+  (text
+    "N докум."
+    (exclude_from_sim no)
+    (at 48.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "dc4cddfe-d765-5f54-a95d-1b880d6aa3aa"))
+  (text
+    "Подп."
+    (exclude_from_sim no)
+    (at 67.5 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "f1e7fe8d-1893-52c5-bc12-917b5cf6afff"))
+  (text
+    "Дата"
+    (exclude_from_sim no)
+    (at 80 289.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "d6199a80-5d72-5260-bc02-68a9058464c6"))
+  (text
+    "Лист"
+    (exclude_from_sim no)
+    (at 200 280.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "2ff51b8c-5e76-59f9-916f-353c402a4d14"))
+  (text
+    "4"
+    (exclude_from_sim no)
+    (at 200 288 0)
+    (effects (font (size 3.5 3.5)))
+    (uuid "57ea08be-b1f8-5b67-ad9e-0c8640bc1c01"))
+  (text
+    "ЕТЗ.467000.001 ПЭ3"
+    (exclude_from_sim no)
+    (at 140 284.5 0)
+    (effects (font (size 6 6)))
+    (uuid "295c1a7e-74ce-5b3c-b72f-1a6a9c70fae0"))
+  (text
+    "Инв. N подл."
+    (exclude_from_sim no)
+    (at 10.5 279.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "3510ee77-4d59-582d-99ce-333bbf6ea8b1"))
+  (text
+    "Подп. и дата"
+    (exclude_from_sim no)
+    (at 10.5 249.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "da4f04f8-c5d7-5efc-85b6-2bfe9b4f5fa8"))
+  (text
+    "Взам. инв. N"
+    (exclude_from_sim no)
+    (at 10.5 219.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "b5bbdf23-5740-51cd-b2de-a7a2b1bef7d4"))
+  (text
+    "Инв. N дубл."
+    (exclude_from_sim no)
+    (at 10.5 194.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "ccd804b8-609e-591f-a22b-3678c4cfa3eb"))
+  (text
+    "Подп. и дата"
+    (exclude_from_sim no)
+    (at 10.5 164.5 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "18c4ef6a-a936-553f-a98f-cc567113168a"))
+  (text
+    "Перв. примен."
+    (exclude_from_sim no)
+    (at 10.5 35 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "f95bdea8-2e80-56b3-8958-03a0769f05e7"))
+  (text
+    "Справ. N"
+    (exclude_from_sim no)
+    (at 10.5 95 90)
+    (effects (font (size 2.5 2.5)))
+    (uuid "ea4f5436-b0ad-56cc-b721-f1232e2afe9b"))
+  (text
+    "Поз."
+    (exclude_from_sim no)
+    (at 30 9 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "87c64bf9-02c0-58a8-acb7-8df1ae7b7500"))
+  (text
+    "обозна-"
+    (exclude_from_sim no)
+    (at 30 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "a0411d09-b472-56fa-9843-1a9bdff3a13e"))
+  (text
+    "чение"
+    (exclude_from_sim no)
+    (at 30 16 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "bca22d7f-6be9-5dce-bbae-6b277eda088f"))
+  (text
+    "Наименование"
+    (exclude_from_sim no)
+    (at 95 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "bcd7e71d-3916-5068-a3d9-32253f5e2dd5"))
+  (text
+    "Кол."
+    (exclude_from_sim no)
+    (at 155 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "2f9127a7-5826-54c2-9849-363040745d74"))
+  (text
+    "Примечание"
+    (exclude_from_sim no)
+    (at 182.5 12.5 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "81217ac6-0e45-52a6-a442-00b46e24cb2b"))
+  (text
+    "Розетки"
+    (exclude_from_sim no)
+    (at 95 24 0)
+    (effects (font (size 3 3)))
+    (uuid "64ca51a8-cc13-5d77-9a1c-43d8b6c490cc"))
+  (text
+    "XS1, XS2"
+    (exclude_from_sim no)
+    (at 21.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "43d8ac27-7c6d-52b1-aaa6-c96c7bb5a21c"))
+  (text
+    "Розетка PBS-8 1x8 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "0ca3053f-4b05-5996-b069-ac30d29f7611"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 32 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "3d01d48e-2357-5b3f-8c51-12a5a233df5d"))
+  (text
+    "Под A1"
+    (exclude_from_sim no)
+    (at 161.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "85f3a078-6da7-5d5a-8bbe-b77090bad0fd"))
+  (text
+    "XS3, XS4"
+    (exclude_from_sim no)
+    (at 21.5 40 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "28c6d981-adcb-5d38-b0b5-e76f7b24a580"))
+  (text
+    "Розетка PBS-8 1x8 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 40 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "7d206a69-e557-5b9c-a4c1-c4690753cecc"))
+  (text
+    "2"
+    (exclude_from_sim no)
+    (at 155 40 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "92bfab78-7d7a-5b5b-9fad-ddc0dc678b79"))
+  (text
+    "Под A2"
+    (exclude_from_sim no)
+    (at 161.5 40 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "b25a28fe-e0de-5c3b-8049-67edb363eabd"))
+  (text
+    "XS5"
+    (exclude_from_sim no)
+    (at 21.5 48 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "3457b223-8c75-5199-a630-43671bc3eb9f"))
+  (text
+    "Розетка PBS-22 1x22 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 48 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "fa6ca9fa-b2e1-5000-bb14-b9edd3bd8d34"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 48 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "2e8986dc-d4c7-58e4-9e8b-70b316ab70a7"))
+  (text
+    "Под A3, гребёнка"
+    (exclude_from_sim no)
+    (at 161.5 48 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "b72f3b30-b882-597a-9a95-c283b19a8cc6"))
+  (text
+    "J1"
+    (exclude_from_sim no)
+    (at 161.5 56 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "3a6da5d3-b6f1-5e4f-962c-0b7ba33d7286"))
+  (text
+    "XS6"
+    (exclude_from_sim no)
+    (at 21.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "93a0e020-de1f-5987-9040-1f42560670e0"))
+  (text
+    "Розетка PBS-22 1x22 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "28c067db-50b9-5421-9202-0ab89d7ef59a"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 64 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "27554ee8-a92e-5d7f-8ec6-64a402d1f327"))
+  (text
+    "Под A3, гребёнка"
+    (exclude_from_sim no)
+    (at 161.5 64 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "dad54751-f7ca-5a8c-a747-0c541091dfa8"))
+  (text
+    "J3"
+    (exclude_from_sim no)
+    (at 161.5 72 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "a9c8856d-c6b5-544d-9d1f-bc05bcc5c7f9"))
+  (embedded_fonts no))

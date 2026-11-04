@@ -68,15 +68,19 @@ INPUTS = [
      "полигоне x = PolyShaftX (300), граница зоны 1 — x 350"),
     ("BaseY0", "App::PropertyDistance", "3 Станина", -90.0, "Левый край основания"),
     ("BaseY1", "App::PropertyDistance", "3 Станина", 135.0, "Правый край основания"),
+    ("BaseRearX0", "App::PropertyDistance", "3 Станина", -185.0,
+     "Удлинение основания назад под электронику (за моторами): задний край. "
+     "На полигоне x = PolyShaftX + (BaseRearX0 - ось шкивов) — не меньше 3 (зона 1)"),
+    ("BaseRearY0", "App::PropertyDistance", "3 Станина", -205.0, "Удлинение назад: левый край"),
+    ("BaseRearY1", "App::PropertyDistance", "3 Станина", -25.0,
+     "Удлинение назад: правый край. Дальше по y — захват на парковке (висит у y +15)"),
     ("TensionSlot", "App::PropertyLength", "3 Станина", 2.0,
      "Ход натяжения ремня в каждую сторону (пазы плит под винты стоек)"),
-    ("CamPivotX", "App::PropertyLength", "4 Камера", 139.0,
-     "Ось мачты камеры на ПОЛИГОНЕ: задний угол фанеры, вне хода руки"),
-    ("CamPivotY", "App::PropertyLength", "4 Камера", 142.0, "Ось мачты камеры, y полигона"),
-    ("CamStow", "App::PropertyAngle", "4 Камера", 64.0,
+    ("CamStow", "App::PropertyAngle", "4 Камера", 95.0,
      "Угол консоли в сложенном виде (до старта и после финиша): камера над "
-     "зоной 1, у дальнего края по y"),
-    ("CamAngle", "App::PropertyAngle", "4 Камера", 64.0,
+     "зоной 1. Мачта на оси шкивов, консоль ~155 мм: при 95° край кронштейна "
+     "камеры — на x ~340 полигона, SG90 — 165° (i = 2)"),
+    ("CamAngle", "App::PropertyAngle", "4 Камера", 95.0,
      "ПОЗА: текущий угол консоли. CamStow — сложена, CamWork — камера над "
      "центром поля"),
     ("CamWork", "App::PropertyAngle", "4 Камера", 17.8,
@@ -166,7 +170,9 @@ Z_STROKE = math.pi * GEAR_M * ZP_TEETH / 2.0       # 180° серво: pi * r
 
 # --- камера на откидной консоли ---
 SHEET_C = (475.0, 250.0)          # центр листа А4 на полигоне (ETZ_poligon)
-MAST_D, MAST_T, MAST_L = 16.0, 1.5, 330.0          # мачта: Al труба Ø16x1.5 x 330 (голова на любой высоте)
+MAST_D, MAST_T, MAST_L = 16.0, 1.5, 260.0          # мачта: Al труба Ø16x1.5 x 260 на оси шкивов (голова на любой высоте)
+PLUG_R, PLUG_FL, PLUG_SPIG = 11.0, 9.0, 25.0       # пробка мачты: фланец R11 x 9 (гайка M8 внутри), хвостовик 25 в трубу
+PLUG_ENGAGE = 6.0                                  # резьба болта вала в гайке пробки, не меньше
 CAM_OFF = 30.0                    # ось консоли вынесена вбок от оси мачты
 HUB_HL, HUB_HW = 19.0, 11.5       # хомут консоли на ступице: полудлина, полуширина
 HUB_SY, HUB_SX = 7.8, 13.5        # винты хомута консоли: от оси трубы поперёк / вдоль
@@ -174,7 +180,7 @@ HUB_CAP = 8.0                     # крышка хомута консоли н�
 HUB_GAP = 0.3                     # зазор крышка — седло: есть что затягивать
 SLEEVE_H = 40.0                   # хомут головы на мачте
 BOOM_D, BOOM_T = 10.0, 1.0                         # консоль: Al труба Ø10x1 (как рука)
-CAM_GEAR_HUB, CAM_GEAR_SV = 30, 13                 # z30 на ступице <- z13 на SG90
+CAM_GEAR_HUB, CAM_GEAR_SV = 26, 13                 # z26 на ступице <- z13 на SG90 (i = 2, как поворот захвата)
 CAM_PCB, CAM_HOLE = 38.0, 34.0    # плата USB-камеры 38x38, крепёж M2 по 34x34
 CAM_FOV_H, CAM_FOV_V = 60.0, 47.0                  # IMX179 AF: H 60°, V 47° (4:3)
 
@@ -281,6 +287,21 @@ def button_screw(m, L):
     головка вверх, стержень вниз. Только M3."""
     head = cyl(BTN_DK / 2.0, 0.0, BTN_K).cut(hexagon(BTN_S, BTN_K - 1.0, BTN_K + 0.1))
     return head.fuse(cyl(m["d"] / 2.0, -L, 0.0)).removeSplitter()
+
+
+M8_HEAD_S, M8_HEAD_K, M8_THREAD = 13.0, 5.3, 22.0  # DIN 931 M8: шестигранник 13, головка 5.3, резьба 22 (L <= 125)
+WASH8_D, WASH8_S = 16.0, 1.6                       # шайба M8 DIN 125
+
+
+def hex_bolt(m, L):
+    """DIN 931 M8: опорная грань головки на z = 0, головка ВНИЗ, стержень вверх."""
+    return hexagon(M8_HEAD_S, -M8_HEAD_K, 0.0, rot=90.0).fuse(cyl(m["d"] / 2.0, -0.01, L)).removeSplitter()
+
+
+def shaft_nut_top(d):
+    """Верх гайки, стягивающей стопку вала сверху (на ней — пробка мачты камеры)."""
+    zt = d.BeltPlaneZ.Value - d.FlangeThk.Value + d.BrgZ2.Value + d.BrgW2.Value
+    return zt + 4.0 + WASH8_S + M8["nut_m"]
 
 
 # латунная стойка M3 «мама-мама» и шайба DIN 125
@@ -494,6 +515,12 @@ def build_frame(doc, d, e):
     #     зенковки, низ фанеры гладкий — робот стоит на полигоне ровно).
     base = rounded_rect(e.BaseX0.Value, S.x + e.BaseFront.Value, e.BaseY0.Value, e.BaseY1.Value,
                         fl, top, 8.0)
+    if e.BaseRearX0.Value < e.BaseX0.Value - 1.0:
+        # удлинение назад под плату электроники: за моторами, в стороне от
+        # захвата на парковке; заходит под основное на 10 мм — одна деталь
+        rear = rounded_rect(e.BaseRearX0.Value, e.BaseX0.Value + 10.0, e.BaseRearY0.Value,
+                            e.BaseRearY1.Value, fl, top, 8.0)
+        base = base.fuse(rear).removeSplitter()
     foot_t = 7.0                                           # подошва стойки вала: вставка 5 + 2
     col_r = 12.0
     col_f = 17.0                                           # полуширина подошвы стойки вала
@@ -527,29 +554,31 @@ def build_frame(doc, d, e):
         for p in pts:
             stands.append((p, L, nw, u, z0p, t))
 
-    # вал M8: болт сверху, гайка в гнезде колонны (паз открыт вперёд, +X).
-    # Длина — самая короткая стандартная, при которой над гайкой остаётся
-    # >= 4 мм пластика стойки вала: за этот «потолок» гайка тянет всю стопку
-    zb_head = Z0 + d.BrgZ2.Value + d.BrgW2.Value + 4.0       # низ головки болта
-    bolt_L = None
-    for L in (40, 45, 50, 55, 60, 65, 70, 75, 80):
-        zn = zb_head - L + 2.0
-        if zn + M8["nut_m"] + 0.4 <= col_top - 4.0 and zb_head - L >= fl + 1.0:
-            bolt_L = L
-            break
+    # вал M8: болт DIN 931 СНИЗУ, головкой в шестигранном гнезде на дне
+    # колонны (снизу гнездо закрывает фанера) — болт не проворачивается.
+    # Стопку стягивает гайка сверху, а на конец болта над ней навинчена
+    # пробка мачты камеры: момент от мачты уходит через головку в колонну,
+    # а не в затяжку стопки. Длина — самая короткая стандартная, при
+    # которой резьба над гайкой стопки входит в гайку пробки на PLUG_ENGAGE
+    z_hb = top + M8_HEAD_K + 0.4                          # опорная грань головки — потолок гнезда
+    z_nt = shaft_nut_top(d)
+    bolt_L = next((L for L in (60, 65, 70, 75, 80, 90, 100) if z_hb + L >= z_nt + PLUG_ENGAGE), None)
     if bolt_L is None:
-        raise RuntimeError("вал M8: колонна %.1f мм — гайка не помещается" % (col_top - top))
-    z_nut = zb_head - bolt_L + 2.0
-    holes = [cyl(M8["hole"] / 2.0, z_nut - 4, col_top + 1, S.x, S.y),
-             nut_pocket(M8, z_nut, S.x, S.y, V(1, 0, 0), rot=90.0, depth=20)]
+        raise RuntimeError("вал M8: болта нужной длины нет")
+    if z_hb + bolt_L - M8_THREAD > z_nt - M8["nut_m"]:
+        raise RuntimeError("вал M8x%d: резьба кончается выше гайки стопки" % bolt_L)
+    if col_top - z_hb < 4.0:
+        raise RuntimeError("вал M8: над головкой болта меньше 4 мм пластика колонны")
+    holes = [cyl(M8["hole"] / 2.0, z_hb - 0.1, col_top + 1, S.x, S.y),
+             hexagon(M8_HEAD_S + 0.3, top - 1, z_hb, S.x, S.y, 90.0)]
     col = rounded_rect(S.x - col_f, S.x + col_f, S.y - col_f, S.y + col_f, top, top + foot_t, 4.0)
     col = col.fuse(cyl(col_r, top, col_top, S.x, S.y))
     col = col.cut(holes + [cyl(INSERT_D / 2.0, top - 1, top + INSERT_L + 0.5, x, y) for x, y in col_ins])
     feat(doc, part, "FR_Column", "Стойка_вала_печать", col.removeSplitter(), PLA)
 
-    # фанера: отверстия под потайные винты (зенковка снизу), под кончик болта вала
+    # фанера: отверстия под потайные винты (зенковка снизу)
     csk_pts = col_ins + [(p.x, p.y) for p, _, _, _, _, _ in stands]
-    pcuts = [cyl(4.5, fl - 1, top + 1, S.x, S.y)]
+    pcuts = []
     for x, y in csk_pts:
         pcuts += [cyl(M3["hole"] / 2.0, fl - 1, top + 1, x, y),
                   cyl(CSK_DK / 2.0 + 0.2, fl - 1, fl + CSK_SINK, x, y),
@@ -632,16 +661,18 @@ def build_frame(doc, d, e):
                      shp(M3, L), DARK)
             o.Placement = App.Placement(V(M.x + sx * NEMA_PCD / 2, M.y + sy * NEMA_PCD / 2, zseat), rot)
 
-    # --- вал: болт M8 сверху, втулки по внутренним кольцам, гайка в колонне ---
+    # --- вал: болт M8 снизу, втулки по внутренним кольцам, шайба и гайка сверху ---
     feat(doc, part, "FR_ShaftBushLo", "Втулка_вала_нижняя_Ø12/Ø8.2x%.1f" % bush_lo,
          tube(6.0, 4.1, col_top, Z0, S.x, S.y), STEEL)
     zt = Z0 + d.BrgZ2.Value + d.BrgW2.Value
     feat(doc, part, "FR_ShaftBushHi", "Втулка_вала_верхняя_Ø12/Ø8.2x4",
          tube(6.0, 4.1, zt, zt + 4.0, S.x, S.y), STEEL)
-    o = feat(doc, part, "FR_ShaftBolt", "Болт_вала_M8x%d_ISO4762" % bolt_L, cap_screw(M8, bolt_L), DARK)
-    o.Placement.Base = V(S.x, S.y, zb_head)
+    o = feat(doc, part, "FR_ShaftBolt", "Болт_вала_M8x%d_DIN931" % bolt_L, hex_bolt(M8, bolt_L), DARK)
+    o.Placement.Base = V(S.x, S.y, z_hb)
+    feat(doc, part, "FR_ShaftWash", "Шайба_вала_M8_DIN125",
+         tube(WASH8_D / 2.0, 4.2, zt + 4.0, zt + 4.0 + WASH8_S, S.x, S.y), STEEL)
     o = feat(doc, part, "FR_ShaftNut", "Гайка_вала_M8_ISO4032", nut(M8, 90.0), STEEL)
-    o.Placement.Base = V(S.x, S.y, z_nut + 0.2)
+    o.Placement.Base = V(S.x, S.y, z_nt - M8["nut_m"])
 
     # --- ремни GT2: огибающая по делительным окружностям ---
     def belt(c1, r1, c2, r2, z0, w):
@@ -936,20 +967,22 @@ def build_effector(doc, d, e):
 def build_camera(doc, d, e):
     """Камера на откидной консоли (ЕТЗ п. 3.1: до старта и после финиша над
     полем ничего быть не может, поэтому неподвижно висеть над полем она не
-    может). Мачта — в заднем углу фанеры, вне хода руки. Голова зажата на
-    мачте разрезным хомутом, ось консоли вынесена вбок от мачты на CAM_OFF:
-    мачта проходит голову насквозь, поэтому голову можно поставить на любую
-    высоту, а мачта — любой длины. На оси — ступица на двух 625ZZ, её
-    поворачивает SG90 через z13 -> z30. Консоль лежит в хомуте НАД верхним
-    подшипником и проходит его насквозь — её можно выдвинуть на любую длину.
-    В работе консоль стоит на CamWork (камера над центром листа, объективом
-    вниз) и не двигается; сложенная (CamStow) — целиком над зоной 1."""
+    может). Мачта стоит НА ОСИ ШКИВОВ — на пробке, навинченной на болт вала:
+    всё подвижное руки вращается вокруг этой оси и к ней не подходит, а
+    консоль до центра листа вдвое короче, чем из угла фанеры. Голова зажата
+    на мачте разрезным хомутом, ось консоли вынесена вбок от мачты на
+    CAM_OFF: мачта проходит голову насквозь, поэтому голову можно поставить
+    на любую высоту, а мачта — любой длины. На оси — ступица на двух 625ZZ,
+    её поворачивает SG90 через z13 -> z26. Консоль лежит в хомуте НАД
+    верхним подшипником и проходит его насквозь — её можно выдвинуть на
+    любую длину. В работе консоль стоит на CamWork (камера над центром
+    листа, объективом вниз) и не двигается; сложенная (CamStow) — целиком
+    над зоной 1."""
     purge(doc, ("CAM_",))
     part = container(doc, "Part_Cam", "Камера")
     boom_p = container(doc, "Part_CamBoom", "Камера_консоль", part)
 
-    P = poly_to_robot(d, e, e.CamPivotX.Value, e.CamPivotY.Value)
-    P = V(P.x, P.y, 0)                                   # ось мачты
+    P = V(d.PulleyAxisX.Value, d.ArmAxisY.Value, 0)      # ось мачты = ось шкивов
     F = poly_to_robot(d, e, SHEET_C[0], SHEET_C[1])
     stow = e.CamStow.Value
     # ось консоли A — сбоку от мачты, перпендикулярно середине сектора
@@ -967,9 +1000,7 @@ def build_camera(doc, d, e):
     work = math.degrees(math.atan2(vF.y, vF.x))
     e.CamWork = work
     fl = e.FloorZ.Value
-    top = fl + e.BaseT.Value
     B5 = BRG625
-    sock_r, flat = 14.0, 12.5                            # стойка: бобышка под трубу, лыски
     rm = MAST_D / 2.0
 
     # --- высоты (z робота) от высоты объектива ---
@@ -978,65 +1009,48 @@ def build_camera(doc, d, e):
     zb = fl + e.CamLensH.Value + 33.6                    # ось консоли
     # над осью M5: подшипники 2 x 5 с шагом 13, шайба 1, головка M5 5, зазор 1
     Hb = zb - BOOM_D / 2.0 - 1.0 - B5["d"] - 1.0 - 13.0 - B5["B"]   # низ ступицы
-    z_floor = top + 3.0                                  # дно гнезда мачты в стойке
+    zp0 = shaft_nut_top(d)                               # низ пробки — на гайке стопки вала
+    z_floor = zp0 + PLUG_FL                              # низ мачты — на фланце пробки
     z_mt = z_floor + MAST_L                              # верх мачты
     z_s1 = Hb - 0.5                                      # верх головы
     z_s0 = z_s1 - SLEEVE_H                               # низ хомута головы на мачте
     if z_mt < z_s1:
         raise RuntimeError("мачта %g коротка: голова на z %.1f, верх мачты %.1f"
                            % (MAST_L, z_s1, z_mt))
-    if z_s0 < top + 40.0 + 20.0:
-        raise RuntimeError("голова камеры опущена до стойки мачты")
+    if z_s0 < z_floor + PLUG_SPIG + 5.0:
+        raise RuntimeError("голова камеры опущена до пробки мачты")
 
-    def mast_clamp(z0, z1, zc):
-        """Гнездо под трубу мачты z0..z1 со стяжкой M3 поперёк (по Y) на zc:
-        головка на лыске +Y, гайка утоплена в лыску -Y (гнездо открыто наружу)."""
-        b = cyl(sock_r, z0, z1).common(box(-sock_r, sock_r, -flat, flat, z0 - 1, z1 + 1))
-        cuts = [cyl(rm + 0.15, z0 + 3.0, z1 + 1.0)]
-        h = Part.makeCylinder(M3["hole"] / 2.0, 2 * flat + 2, V(0, -flat - 1, zc), V(0, 1, 0))
-        cuts.append(h)
-        hx = hexagon(M3["nut_s"] + 0.3, 0, M3["nut_m"] + 0.2)
-        hx.rotate(V(0, 0, 0), V(1, 0, 0), -90)            # ось гайки -> +Y
-        hx.translate(V(0, -flat - 0.01, zc))
-        cuts.append(hx)
-        return b, cuts
+    # --- пробка мачты на конце болта вала (болт снизу, головкой в гнезде
+    #     колонны, не проворачивается): во фланце снизу запрессована гайка
+    #     M8 — пробку навинчивают на болт и контрят о гайку стопки
+    #     (резьбу — фиксатором средней прочности); хвостовик входит в
+    #     трубу мачты, мачта на поперечном винте M3. Ухо с пазом под
+    #     стяжку — к моторам: кабель камеры уходит назад над шкивами ---
+    zc_p = z_floor + PLUG_SPIG / 2.0                     # поперечный винт мачты
+    bolt = doc.getObject("FR_ShaftBolt")
+    tip = bolt.Shape.BoundBox.ZMax
+    plug = cyl(PLUG_R, zp0, z_floor).fuse(cyl(rm - MAST_T - 0.15, z_floor - 0.1, z_floor + PLUG_SPIG))
+    a_back = math.degrees(math.atan2(-d.ArmAxisY.Value, -d.PulleyAxisX.Value))   # на левый мотор
+    ear = box(PLUG_R - 2.0, PLUG_R + 9.0, -4.0, 4.0, zp0, zp0 + 4.0).cut(
+        box(PLUG_R + 3.0, PLUG_R + 6.0, -2.5, 2.5, zp0 - 1, zp0 + 5))        # паз 3 x 5 под стяжку
+    ear.rotate(V(0, 0, 0), V(0, 0, 1), a_back)
+    plug = plug.fuse(ear)
+    plug = plug.cut([hexagon(M8["nut_s"] + 0.3, zp0 - 1, zp0 + M8["nut_m"] + 0.2, 0, 0, 90.0),
+                     cyl(M8["hole"] / 2.0, zp0, tip + 1.0),
+                     Part.makeCylinder(M3["hole"] / 2.0, MAST_D + 2, V(0, -rm - 1, zc_p), V(0, 1, 0))])
+    plug = plug.removeSplitter()
+    plug.translate(P)
+    feat(doc, part, "CAM_Plug", "Пробка_мачты_печать", plug, PLA)
+    o = feat(doc, part, "CAM_PlugNutM8", "Гайка_пробки_M8_ISO4032", nut(M8, 90.0), STEEL)
+    o.Placement.Base = V(P.x, P.y, zp0)
+    o = feat(doc, part, "CAM_PlugScr", "Винт_мачты_M3x20", cap_screw(M3, 20), DARK)
+    o.Placement = App.Placement(P + V(0, rm, zc_p), App.Rotation(V(1, 0, 0), -90))
+    o = feat(doc, part, "CAM_PlugNut", "Гайка_мачты_M3", nut(M3, 0.0), STEEL)
+    o.Placement = App.Placement(P + V(0, -rm - M3["nut_m"] - 0.1, zc_p), App.Rotation(V(1, 0, 0), -90))
 
-    def clamp_hw(tag, zc, part_, label):
-        o = feat(doc, part_, "CAM_%sScr" % tag, "Винт_стяжки_%s_M3x25" % label, cap_screw(M3, 25), DARK)
-        o.Placement = App.Placement(P + V(0, flat, zc), App.Rotation(V(1, 0, 0), -90))
-        o = feat(doc, part_, "CAM_%sNut" % tag, "Гайка_стяжки_%s_M3" % label, nut(M3, 0.0), STEEL)
-        o.Placement = App.Placement(P + V(0, -flat + 0.1, zc), App.Rotation(V(1, 0, 0), -90))
-
-    # --- стойка мачты на фанере (как остальные стойки: вставки + потайные снизу) ---
-    fh = 14.0
-    foot = rounded_rect(-fh, fh, -fh, fh, top, top + 7.0, 3.0)
-    zc_f = top + 25.0
-    b, cuts = mast_clamp(top, top + 40.0, zc_f)
-    ins = [(sx * 10.0, sy * 10.0) for sx in (-1, 1) for sy in (-1, 1)]
-    foot = foot.fuse(b)
-    cuts += [cyl(INSERT_D / 2.0, top - 1, top + INSERT_L + 0.5, x, y) for x, y in ins]
-    foot = foot.cut(cuts).removeSplitter()
-    foot.translate(P)
-    feat(doc, part, "CAM_Foot", "Стойка_мачты_печать", foot, PLA)
-    clamp_hw("Foot", zc_f, part, "стойки")
-    base = doc.getObject("FR_Base")
-    pc = []
-    for i, (x, y) in enumerate(ins):
-        x, y = P.x + x, P.y + y
-        pc += [cyl(M3["hole"] / 2.0, fl - 1, top + 1, x, y),
-               cyl(CSK_DK / 2.0 + 0.2, fl - 1, fl + CSK_SINK, x, y),
-               Part.makeCone(CSK_DK / 2.0 + 0.2, M3["hole"] / 2.0, CSK_K, V(x, y, fl + CSK_SINK))]
-        o = feat(doc, part, "CAM_BaseIns%d" % (i + 1), "Вставка_резьбовая_M3x5_мачта_%d" % (i + 1),
-                 tube(INSERT_D / 2.0, 1.5, 0, INSERT_L), (0.80, 0.62, 0.20))
-        o.Placement.Base = V(x, y, top)
-        o = feat(doc, part, "CAM_BaseScr%d" % (i + 1), "Винт_мачты_M3x%d_ISO10642_%d" % (CSK_L, i + 1),
-                 csk_screw(M3, CSK_L), DARK)
-        o.Placement = App.Placement(V(x, y, fl + CSK_SINK), App.Rotation(V(1, 0, 0), 180))
-    base.Shape = base.Shape.cut(pc).removeSplitter()
-
-    # --- мачта: сверловка только в стойке, голова держится трением ---
+    # --- мачта: одна сверловка — под винт пробки, голова держится трением ---
     m = tube(rm, rm - MAST_T, z_floor, z_mt)
-    m = m.cut(Part.makeCylinder(M3["hole"] / 2.0, 2 * rm + 2, V(0, -rm - 1, zc_f), V(0, 1, 0)))
+    m = m.cut(Part.makeCylinder(M3["hole"] / 2.0, 2 * rm + 2, V(0, -rm - 1, zc_p), V(0, 1, 0)))
     m.translate(P)
     feat(doc, part, "CAM_Mast", "Мачта_Al_труба_Ø%gx%g_L%g" % (MAST_D, MAST_T, MAST_L), m, STEEL)
 

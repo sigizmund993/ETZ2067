@@ -416,461 +416,473 @@
     (effects (font (size 2.5 2.5)))
     (uuid "e2e8ec04-c435-5636-a135-9291f48dc837"))
   (text
-    "Дроссели"
+    "напряжением"
     (exclude_from_sim no)
-    (at 95 24 0)
-    (effects (font (size 3 3)))
+    (at 161.5 24 0)
+    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "53e346c3-e9e4-57bb-b4a2-c11c48b737f0"))
   (text
-    "L1, L2"
+    "HL2"
     (exclude_from_sim no)
     (at 21.5 32 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "72971c17-191a-5bad-b4bf-c577f9ff1bdd"))
   (text
-    "Дроссель SRR1260-330M 33 мкГн 4 А"
+    "Светодиод 5 мм красный"
     (exclude_from_sim no)
     (at 41.5 32 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "ed23a586-5213-5383-8acd-485e32dc3835"))
   (text
-    "2"
+    "1"
     (exclude_from_sim no)
     (at 155 32 0)
     (effects (font (size 2.5 2.5)))
     (uuid "6720b5c2-ed32-55cc-90b2-356cda2c4457"))
   (text
-    "Резисторы"
+    "Выполнение"
     (exclude_from_sim no)
-    (at 95 48 0)
-    (effects (font (size 3 3)))
+    (at 161.5 32 0)
+    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "ecf2e479-2db7-5b00-8d46-cba1c9ea0cb2"))
   (text
-    "R1"
+    "программы"
     (exclude_from_sim no)
-    (at 21.5 56 0)
+    (at 161.5 40 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "3421bd59-8fdb-5a03-a2f9-1ddc2ec264f5"))
   (text
-    "Резистор 0805 2,2 кОм ±5%"
+    "Дроссели"
     (exclude_from_sim no)
-    (at 41.5 56 0)
-    (effects (font (size 2.5 2.5)) (justify left))
+    (at 95 56 0)
+    (effects (font (size 3 3)))
     (uuid "774cd4ec-f426-5c93-a38f-a089364b45fd"))
   (text
-    "1"
-    (exclude_from_sim no)
-    (at 155 56 0)
-    (effects (font (size 2.5 2.5)))
-    (uuid "dfc5c3a8-5999-5087-a966-f6ff3fe8ba7b"))
-  (text
-    "R2"
+    "L1, L2"
     (exclude_from_sim no)
     (at 21.5 64 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "66bbf254-7017-5df8-97c1-ffe208beaf61"))
+    (uuid "dfc5c3a8-5999-5087-a966-f6ff3fe8ba7b"))
   (text
-    "Резистор 0805 10 кОм ±1%"
+    "Дроссель SRR1260-330M 33 мкГн 4 А"
     (exclude_from_sim no)
     (at 41.5 64 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "1ede5307-dee3-5524-9dfe-e429c8638e24"))
+    (uuid "66bbf254-7017-5df8-97c1-ffe208beaf61"))
   (text
-    "1"
+    "2"
     (exclude_from_sim no)
     (at 155 64 0)
     (effects (font (size 2.5 2.5)))
+    (uuid "1ede5307-dee3-5524-9dfe-e429c8638e24"))
+  (text
+    "Резисторы"
+    (exclude_from_sim no)
+    (at 95 80 0)
+    (effects (font (size 3 3)))
     (uuid "08842fd7-be47-5233-a1a2-594f52e4d4e9"))
   (text
-    "R3"
+    "R1"
     (exclude_from_sim no)
-    (at 21.5 72 0)
+    (at 21.5 88 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "9e326624-32b8-50dc-8235-a003c55a137f"))
   (text
-    "Резистор 0805 2,7 кОм ±1%"
+    "Резистор 0805 2,2 кОм ±5%"
     (exclude_from_sim no)
-    (at 41.5 72 0)
+    (at 41.5 88 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "18536299-abcf-5b12-ae43-1b57460302cc"))
   (text
     "1"
     (exclude_from_sim no)
-    (at 155 72 0)
+    (at 155 88 0)
     (effects (font (size 2.5 2.5)))
     (uuid "bb7962c9-7c17-505c-b20d-9bf29ab897b0"))
   (text
-    "R4"
+    "R2"
     (exclude_from_sim no)
-    (at 21.5 80 0)
+    (at 21.5 96 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "f5c03223-d3a3-5de6-b726-afcd61bc9c25"))
   (text
-    "Резистор 0805 3,9 кОм ±1%"
+    "Резистор 0805 10 кОм ±1%"
     (exclude_from_sim no)
-    (at 41.5 80 0)
+    (at 41.5 96 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "1c757c7b-91e7-53e3-b030-44ce32430428"))
   (text
     "1"
     (exclude_from_sim no)
-    (at 155 80 0)
+    (at 155 96 0)
     (effects (font (size 2.5 2.5)))
     (uuid "cf265bfd-3b56-5e2f-8eff-ade0754669de"))
   (text
-    "R5"
+    "R3"
     (exclude_from_sim no)
-    (at 21.5 88 0)
+    (at 21.5 104 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "b67c55d4-4d1e-5c94-a63b-345bbbdaffea"))
   (text
-    "Резистор 0805 1 кОм ±1%"
+    "Резистор 0805 2,7 кОм ±1%"
     (exclude_from_sim no)
-    (at 41.5 88 0)
+    (at 41.5 104 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "17e54cff-bd09-5b23-884c-c6a4eee44474"))
   (text
     "1"
     (exclude_from_sim no)
-    (at 155 88 0)
+    (at 155 104 0)
     (effects (font (size 2.5 2.5)))
     (uuid "7a353822-df76-5214-a9f0-6b1da9a6b5bc"))
   (text
-    "R6"
+    "R4"
     (exclude_from_sim no)
-    (at 21.5 96 0)
+    (at 21.5 112 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "7fd57808-b14c-574a-b3cf-916f99206dc5"))
   (text
-    "Резистор 0805 10 кОм ±5%"
+    "Резистор 0805 3,9 кОм ±1%"
     (exclude_from_sim no)
-    (at 41.5 96 0)
+    (at 41.5 112 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "4e233492-53af-58c8-ba7d-2dcda838788d"))
   (text
     "1"
     (exclude_from_sim no)
-    (at 155 96 0)
+    (at 155 112 0)
     (effects (font (size 2.5 2.5)))
     (uuid "5e4e76c0-898c-583c-9402-94bc2b79f4ab"))
   (text
-    "R7…R9"
-    (exclude_from_sim no)
-    (at 21.5 104 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "ac28cb24-903d-59f5-9e54-f8319193d1eb"))
-  (text
-    "Резистор 0805 220 Ом ±5%"
-    (exclude_from_sim no)
-    (at 41.5 104 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "7b637330-5e40-5209-aaec-616fc36ae873"))
-  (text
-    "3"
-    (exclude_from_sim no)
-    (at 155 104 0)
-    (effects (font (size 2.5 2.5)))
-    (uuid "46654aba-8230-56b4-a1f2-faf2ea829696"))
-  (text
-    "R10"
-    (exclude_from_sim no)
-    (at 21.5 112 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "e217582e-6903-50c0-83e9-de3b4f31ea04"))
-  (text
-    "Резистор 0805 100 Ом ±5%"
-    (exclude_from_sim no)
-    (at 41.5 112 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "bdfe84cd-6c87-5673-8d8c-0c91e137f91b"))
-  (text
-    "1"
-    (exclude_from_sim no)
-    (at 155 112 0)
-    (effects (font (size 2.5 2.5)))
-    (uuid "3f47405b-df73-5aff-a200-075d25a859e0"))
-  (text
-    "R11"
+    "R5"
     (exclude_from_sim no)
     (at 21.5 120 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "06cf2668-6686-5710-a7dc-90f2ad9abda8"))
+    (uuid "ac28cb24-903d-59f5-9e54-f8319193d1eb"))
   (text
-    "Резистор 0805 100 кОм ±5%"
+    "Резистор 0805 1 кОм ±1%"
     (exclude_from_sim no)
     (at 41.5 120 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "d88437ee-ff3e-5059-b7d4-05a1ed105e3f"))
+    (uuid "7b637330-5e40-5209-aaec-616fc36ae873"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 120 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "2843b675-fed3-5ec7-a571-26964af29c64"))
+    (uuid "46654aba-8230-56b4-a1f2-faf2ea829696"))
   (text
-    "R12"
+    "R6"
     (exclude_from_sim no)
     (at 21.5 128 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "a12c4df4-3084-580f-8de2-feb2c8c4e35b"))
+    (uuid "e217582e-6903-50c0-83e9-de3b4f31ea04"))
   (text
-    "Резистор 0805 100 Ом ±5%"
+    "Резистор 0805 10 кОм ±5%"
     (exclude_from_sim no)
     (at 41.5 128 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "d9a37b7c-7aad-51d1-aa27-3a066db9dbaf"))
+    (uuid "bdfe84cd-6c87-5673-8d8c-0c91e137f91b"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 128 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "d8876867-62d9-5899-a8aa-c94c61a90891"))
+    (uuid "3f47405b-df73-5aff-a200-075d25a859e0"))
   (text
-    "R13"
+    "R7…R9"
     (exclude_from_sim no)
     (at 21.5 136 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "379b7b3b-6a4f-5b97-b08d-7156b2cad3cc"))
+    (uuid "06cf2668-6686-5710-a7dc-90f2ad9abda8"))
   (text
-    "Резистор 0805 100 кОм ±5%"
+    "Резистор 0805 220 Ом ±5%"
     (exclude_from_sim no)
     (at 41.5 136 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "8ff6c3ae-c7df-505e-8eff-416198d5826d"))
+    (uuid "d88437ee-ff3e-5059-b7d4-05a1ed105e3f"))
   (text
-    "1"
+    "3"
     (exclude_from_sim no)
     (at 155 136 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "1f8694da-f66f-507a-8206-8d70ed5d946d"))
+    (uuid "2843b675-fed3-5ec7-a571-26964af29c64"))
   (text
-    "R14"
+    "R10"
     (exclude_from_sim no)
     (at 21.5 144 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "32d52f0b-0f87-53fb-91d9-a8c1eccecc4d"))
+    (uuid "a12c4df4-3084-580f-8de2-feb2c8c4e35b"))
   (text
     "Резистор 0805 100 Ом ±5%"
     (exclude_from_sim no)
     (at 41.5 144 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "70884e52-2a6f-5ff9-81ff-bc261304759d"))
+    (uuid "d9a37b7c-7aad-51d1-aa27-3a066db9dbaf"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 144 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "50c71e34-af4f-5c57-a12c-93e66a5755e1"))
+    (uuid "d8876867-62d9-5899-a8aa-c94c61a90891"))
   (text
-    "R15"
+    "R11"
     (exclude_from_sim no)
     (at 21.5 152 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "44a17d72-8eed-51cf-b2ff-7335829fcff8"))
+    (uuid "379b7b3b-6a4f-5b97-b08d-7156b2cad3cc"))
   (text
     "Резистор 0805 100 кОм ±5%"
     (exclude_from_sim no)
     (at 41.5 152 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "6424e385-d86f-5428-b673-d817862dffdb"))
+    (uuid "8ff6c3ae-c7df-505e-8eff-416198d5826d"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 152 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "a05fbd43-098f-5e3d-b218-c5866093161f"))
+    (uuid "1f8694da-f66f-507a-8206-8d70ed5d946d"))
   (text
-    "R16"
+    "R12"
     (exclude_from_sim no)
     (at 21.5 160 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "dba75e54-0a64-5218-ba7b-a4b79081abde"))
+    (uuid "32d52f0b-0f87-53fb-91d9-a8c1eccecc4d"))
   (text
-    "Резистор 0805 330 Ом ±5%"
+    "Резистор 0805 100 Ом ±5%"
     (exclude_from_sim no)
     (at 41.5 160 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "85fd825f-513d-53d1-bb77-b76a65669eb9"))
+    (uuid "70884e52-2a6f-5ff9-81ff-bc261304759d"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 160 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "97278ea5-1c8c-5dc4-8cfb-5ec5e028eca1"))
+    (uuid "50c71e34-af4f-5c57-a12c-93e66a5755e1"))
   (text
-    "R17…R19"
+    "R13"
     (exclude_from_sim no)
     (at 21.5 168 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "a66a4aac-40fd-5638-ba8c-b138eb34f5cd"))
+    (uuid "44a17d72-8eed-51cf-b2ff-7335829fcff8"))
   (text
-    "Резистор 0805 10 кОм ±5%"
+    "Резистор 0805 100 кОм ±5%"
     (exclude_from_sim no)
     (at 41.5 168 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "56caf89c-0731-5a30-90cf-84311846e1f1"))
+    (uuid "6424e385-d86f-5428-b673-d817862dffdb"))
   (text
-    "3"
+    "1"
     (exclude_from_sim no)
     (at 155 168 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "cf25fd31-fdc1-5f26-98d1-2aa5c43d6f06"))
+    (uuid "a05fbd43-098f-5e3d-b218-c5866093161f"))
   (text
-    "R20"
+    "R14"
     (exclude_from_sim no)
     (at 21.5 176 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "bc6581dc-b2bd-5928-85c9-7b142494d8d7"))
+    (uuid "dba75e54-0a64-5218-ba7b-a4b79081abde"))
   (text
-    "Резистор 0805 10 кОм ±1%"
+    "Резистор 0805 100 Ом ±5%"
     (exclude_from_sim no)
     (at 41.5 176 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "deda4aac-d915-5e55-8818-f93da66715fa"))
+    (uuid "85fd825f-513d-53d1-bb77-b76a65669eb9"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 176 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "ac78ce54-2250-50ee-885f-e004bb0e44b2"))
+    (uuid "97278ea5-1c8c-5dc4-8cfb-5ec5e028eca1"))
   (text
-    "R21"
+    "R15"
     (exclude_from_sim no)
     (at 21.5 184 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "1154de6b-0f7c-5738-a16b-b877874e91b6"))
+    (uuid "a66a4aac-40fd-5638-ba8c-b138eb34f5cd"))
   (text
-    "Резистор 0805 20 кОм ±1%"
+    "Резистор 0805 100 кОм ±5%"
     (exclude_from_sim no)
     (at 41.5 184 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "fb5ab870-9c80-5a47-bf75-93a89f71fcee"))
+    (uuid "56caf89c-0731-5a30-90cf-84311846e1f1"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 184 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "73a8971e-c5ef-535e-91be-54bcf6ff2379"))
+    (uuid "cf25fd31-fdc1-5f26-98d1-2aa5c43d6f06"))
   (text
-    "R22, R23"
+    "R16"
     (exclude_from_sim no)
     (at 21.5 192 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "98af2695-70d4-5588-af07-bb7d1672bc4a"))
+    (uuid "bc6581dc-b2bd-5928-85c9-7b142494d8d7"))
   (text
-    "Резистор 0805 10 кОм ±5%"
+    "Резистор 0805 330 Ом ±5%"
     (exclude_from_sim no)
     (at 41.5 192 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "f234313a-28f5-5537-a395-18458af4df00"))
+    (uuid "deda4aac-d915-5e55-8818-f93da66715fa"))
   (text
-    "2"
+    "1"
     (exclude_from_sim no)
     (at 155 192 0)
     (effects (font (size 2.5 2.5)))
+    (uuid "ac78ce54-2250-50ee-885f-e004bb0e44b2"))
+  (text
+    "R17…R19"
+    (exclude_from_sim no)
+    (at 21.5 200 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "1154de6b-0f7c-5738-a16b-b877874e91b6"))
+  (text
+    "Резистор 0805 10 кОм ±5%"
+    (exclude_from_sim no)
+    (at 41.5 200 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "fb5ab870-9c80-5a47-bf75-93a89f71fcee"))
+  (text
+    "3"
+    (exclude_from_sim no)
+    (at 155 200 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "73a8971e-c5ef-535e-91be-54bcf6ff2379"))
+  (text
+    "R20"
+    (exclude_from_sim no)
+    (at 21.5 208 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "98af2695-70d4-5588-af07-bb7d1672bc4a"))
+  (text
+    "Резистор 0805 10 кОм ±1%"
+    (exclude_from_sim no)
+    (at 41.5 208 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "f234313a-28f5-5537-a395-18458af4df00"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 208 0)
+    (effects (font (size 2.5 2.5)))
     (uuid "6ed496d6-a126-50b4-954d-1c53cd70e346"))
   (text
-    "Диоды"
-    (exclude_from_sim no)
-    (at 95 208 0)
-    (effects (font (size 3 3)))
-    (uuid "427522ef-dd0f-55ac-9d0a-5a535157702f"))
-  (text
-    "VD1"
+    "R21"
     (exclude_from_sim no)
     (at 21.5 216 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "4dd1a326-cf64-506c-b6a2-5b7370f5e4c7"))
+    (uuid "427522ef-dd0f-55ac-9d0a-5a535157702f"))
   (text
-    "Диод защитный SMBJ15A"
+    "Резистор 0805 20 кОм ±1%"
     (exclude_from_sim no)
     (at 41.5 216 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "335b45ef-989e-55c2-8554-69019507b1d7"))
+    (uuid "4dd1a326-cf64-506c-b6a2-5b7370f5e4c7"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 216 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "c2ce3a60-8346-5e22-8392-6136af33ae63"))
+    (uuid "335b45ef-989e-55c2-8554-69019507b1d7"))
   (text
-    "VD2, VD3"
+    "R22…R25"
     (exclude_from_sim no)
     (at 21.5 224 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "df5d25a4-2c6f-5538-91d5-57560a8dad43"))
+    (uuid "c2ce3a60-8346-5e22-8392-6136af33ae63"))
   (text
-    "Диод Шоттки SS54"
+    "Резистор 0805 10 кОм ±5%"
     (exclude_from_sim no)
     (at 41.5 224 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "4213da62-c97d-559c-b3a6-43d59ed6cde6"))
+    (uuid "df5d25a4-2c6f-5538-91d5-57560a8dad43"))
   (text
-    "2"
+    "4"
     (exclude_from_sim no)
     (at 155 224 0)
     (effects (font (size 2.5 2.5)))
+    (uuid "4213da62-c97d-559c-b3a6-43d59ed6cde6"))
+  (text
+    "Кнопки"
+    (exclude_from_sim no)
+    (at 95 240 0)
+    (effects (font (size 3 3)))
     (uuid "32cd3c46-e8c1-5883-a1fa-279cd508be00"))
   (text
-    "VD4, VD5"
+    "SB1"
     (exclude_from_sim no)
-    (at 21.5 232 0)
+    (at 21.5 248 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "f8e9602c-ada8-50a1-9af5-d278365c3f8d"))
   (text
-    "Диод Шоттки SS34"
+    "Кнопка тактовая 6x6 мм, h 8,5"
     (exclude_from_sim no)
-    (at 41.5 232 0)
+    (at 41.5 248 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "05bb8222-96cd-505e-a7c5-f381bc44e393"))
   (text
-    "2"
+    "1"
     (exclude_from_sim no)
-    (at 155 232 0)
+    (at 155 248 0)
     (effects (font (size 2.5 2.5)))
     (uuid "15efce65-5d13-5957-a11f-8c7cc81ace76"))
   (text
-    "Транзисторы"
+    "«Старт»"
     (exclude_from_sim no)
-    (at 95 248 0)
-    (effects (font (size 3 3)))
+    (at 161.5 248 0)
+    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "c06d7de5-6e8e-526a-bfd6-42f7af3d586a"))
   (text
-    "VT1…VT3"
+    "SB2"
     (exclude_from_sim no)
     (at 21.5 256 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "e354435b-001e-5cdf-a362-2fb908430b70"))
   (text
-    "Транзистор AO3400A"
+    "Кнопка тактовая 6x6 мм, h 8,5"
     (exclude_from_sim no)
     (at 41.5 256 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "6dca0d36-31e7-5b17-8690-8d037acc0d35"))
   (text
-    "3"
+    "1"
     (exclude_from_sim no)
     (at 155 256 0)
     (effects (font (size 2.5 2.5)))
     (uuid "2cf87686-2aca-50e7-92d1-85b301e42393"))
   (text
-    "VT4"
+    "Выбор"
     (exclude_from_sim no)
-    (at 21.5 264 0)
+    (at 161.5 256 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "7376ea79-6dce-575a-8727-b0ac67426cdc"))
   (text
-    "Транзистор BSS138"
+    "SB3"
+    (exclude_from_sim no)
+    (at 21.5 264 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "84262f81-a13e-56b3-9fdf-2b06656c18f7"))
+  (text
+    "Кнопка тактовая 6x6 мм, h 8,5"
     (exclude_from_sim no)
     (at 41.5 264 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "84262f81-a13e-56b3-9fdf-2b06656c18f7"))
+    (uuid "0bc92214-5d97-58c0-ba96-373078e5bcc0"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 264 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "0bc92214-5d97-58c0-ba96-373078e5bcc0"))
+    (uuid "2dec5f95-1de5-5fda-902f-9794cd895a7e"))
+  (text
+    "Ввод"
+    (exclude_from_sim no)
+    (at 161.5 264 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e8f1ca65-d8a4-58a5-9b1a-c6172382bd05"))
   (sheet
     (at 150 300)
     (size 20 5)

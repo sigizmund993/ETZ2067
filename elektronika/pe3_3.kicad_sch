@@ -416,19 +416,19 @@
     (effects (font (size 2.5 2.5)))
     (uuid "85ca4a77-a000-5e1c-95bf-fbd70ec2da07"))
   (text
-    "Соединители"
+    "Диоды"
     (exclude_from_sim no)
     (at 95 24 0)
     (effects (font (size 3 3)))
     (uuid "8fd4acb8-c8ac-5837-9bcc-ef21fde7e6c3"))
   (text
-    "X1"
+    "VD1"
     (exclude_from_sim no)
     (at 21.5 32 0)
     (effects (font (size 2.5 2.5)) (justify left))
     (uuid "b84f067b-a665-56d6-90b0-395f78b2a179"))
   (text
-    "Вилка IDC-34MS 2x17 2,54 мм"
+    "Диод защитный SMBJ15A"
     (exclude_from_sim no)
     (at 41.5 32 0)
     (effects (font (size 2.5 2.5)) (justify left))
@@ -440,519 +440,563 @@
     (effects (font (size 2.5 2.5)))
     (uuid "83666506-16d0-54d3-815b-0c0412a19eb8"))
   (text
-    "Контроллер"
-    (exclude_from_sim no)
-    (at 161.5 32 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "62ec4b4a-7fa2-54bf-b66b-87a5503cd09a"))
-  (text
-    "X2"
+    "VD2, VD3"
     (exclude_from_sim no)
     (at 21.5 40 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "518ccb8e-989a-5372-bbe4-5ddc3157905b"))
+    (uuid "62ec4b4a-7fa2-54bf-b66b-87a5503cd09a"))
   (text
-    "Вилка XT30PW-M"
+    "Диод Шоттки SS54"
     (exclude_from_sim no)
     (at 41.5 40 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "ddacc155-09dd-5aba-81df-fafeb40b40f9"))
+    (uuid "518ccb8e-989a-5372-bbe4-5ddc3157905b"))
   (text
-    "1"
+    "2"
     (exclude_from_sim no)
     (at 155 40 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "37eb5331-da87-5e49-9c05-24356f3df990"))
+    (uuid "ddacc155-09dd-5aba-81df-fafeb40b40f9"))
   (text
-    "АКБ 3S"
-    (exclude_from_sim no)
-    (at 161.5 40 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "00e04c73-22b5-5a0d-baa0-14f9e04b5201"))
-  (text
-    "X3"
+    "VD4, VD5"
     (exclude_from_sim no)
     (at 21.5 48 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "577dcd9f-81a6-5d95-b1fd-af09f66aecf9"))
+    (uuid "37eb5331-da87-5e49-9c05-24356f3df990"))
   (text
-    "Клеммник винтовой 2 конт. 5,08 мм"
+    "Диод Шоттки SS34"
     (exclude_from_sim no)
     (at 41.5 48 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "33fe25c5-6176-5ec5-96dc-392cde7dfbfd"))
+    (uuid "00e04c73-22b5-5a0d-baa0-14f9e04b5201"))
   (text
-    "1"
+    "2"
     (exclude_from_sim no)
     (at 155 48 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "4e302daf-02a8-537f-b906-4e77e7511459"))
+    (uuid "577dcd9f-81a6-5d95-b1fd-af09f66aecf9"))
   (text
-    "Выключатель"
+    "Транзисторы"
     (exclude_from_sim no)
-    (at 161.5 48 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "471a3c70-926f-592b-8648-68881dd84e75"))
+    (at 95 64 0)
+    (effects (font (size 3 3)))
+    (uuid "33fe25c5-6176-5ec5-96dc-392cde7dfbfd"))
   (text
-    "X4"
-    (exclude_from_sim no)
-    (at 21.5 56 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "9c704500-9b3c-56d6-9691-4b053b964190"))
-  (text
-    "Клеммник винтовой 2 конт. 5,08 мм"
-    (exclude_from_sim no)
-    (at 41.5 56 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "76e5b2e5-0b18-53e3-a0cb-d291873c7639"))
-  (text
-    "1"
-    (exclude_from_sim no)
-    (at 155 56 0)
-    (effects (font (size 2.5 2.5)))
-    (uuid "be6e2783-e084-56b0-96e0-3e6ac4cffd7c"))
-  (text
-    "Кнопка останова"
-    (exclude_from_sim no)
-    (at 161.5 56 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "e34ab1a2-81a8-5a59-82f0-316c61e2c886"))
-  (text
-    "X5"
-    (exclude_from_sim no)
-    (at 21.5 64 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "5029aba1-ddb0-5b0a-ab47-6bed51b395b4"))
-  (text
-    "Вилка JST XH 2 конт."
-    (exclude_from_sim no)
-    (at 41.5 64 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "3ef4103b-edfa-56ab-8067-b0f4e453d0ad"))
-  (text
-    "1"
-    (exclude_from_sim no)
-    (at 155 64 0)
-    (effects (font (size 2.5 2.5)))
-    (uuid "d60f5850-b0b7-5b45-aacf-d792ccd06a8f"))
-  (text
-    "Зелёный индикатор"
-    (exclude_from_sim no)
-    (at 161.5 64 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "90cab89d-9b01-51cd-9221-cf22bd350d4d"))
-  (text
-    "X6"
+    "VT1…VT3"
     (exclude_from_sim no)
     (at 21.5 72 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "6c6e9391-67dc-5262-ae1b-56ca4d6c507e"))
+    (uuid "4e302daf-02a8-537f-b906-4e77e7511459"))
   (text
-    "Вилка JST XH 4 конт."
+    "Транзистор AO3400A"
     (exclude_from_sim no)
     (at 41.5 72 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "a0f88c02-c363-5003-a035-b577c4401244"))
+    (uuid "471a3c70-926f-592b-8648-68881dd84e75"))
   (text
-    "1"
+    "3"
     (exclude_from_sim no)
     (at 155 72 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "968454f3-c60d-52c9-824d-87df29b58356"))
+    (uuid "9c704500-9b3c-56d6-9691-4b053b964190"))
   (text
-    "Мотор плеча"
-    (exclude_from_sim no)
-    (at 161.5 72 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "88b01d58-0408-5c1a-b834-9a2d5a3c1312"))
-  (text
-    "X7"
+    "VT4"
     (exclude_from_sim no)
     (at 21.5 80 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "15cca4be-0b6c-5cc8-acbf-5c589d528c3c"))
+    (uuid "76e5b2e5-0b18-53e3-a0cb-d291873c7639"))
   (text
-    "Вилка JST XH 4 конт."
+    "Транзистор BSS138"
     (exclude_from_sim no)
     (at 41.5 80 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "ea0dbaff-1114-5cf5-a87a-b6e3df1dbccc"))
+    (uuid "be6e2783-e084-56b0-96e0-3e6ac4cffd7c"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 80 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "5e803793-7d25-584d-a7e0-8b41c0df26e6"))
+    (uuid "e34ab1a2-81a8-5a59-82f0-316c61e2c886"))
   (text
-    "Мотор предплечья"
+    "Соединители"
     (exclude_from_sim no)
-    (at 161.5 80 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "06b4ef47-286c-5ca6-847c-3b79da0c3559"))
+    (at 95 96 0)
+    (effects (font (size 3 3)))
+    (uuid "5029aba1-ddb0-5b0a-ab47-6bed51b395b4"))
   (text
-    "X8, X9"
-    (exclude_from_sim no)
-    (at 21.5 88 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "b1427a22-1213-55e9-ac53-cf4278ee743d"))
-  (text
-    "Вилка штыревая 2x2 2,54 мм"
-    (exclude_from_sim no)
-    (at 41.5 88 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "cb6255ab-57dc-5629-a467-1859511c3638"))
-  (text
-    "2"
-    (exclude_from_sim no)
-    (at 155 88 0)
-    (effects (font (size 2.5 2.5)))
-    (uuid "3000bac1-e7f4-57ae-ac33-218b22d883fe"))
-  (text
-    "Шаг 1/8 без"
-    (exclude_from_sim no)
-    (at 161.5 88 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "c499511e-a36e-505d-8eb1-6e2f298314c7"))
-  (text
-    "перемычек"
-    (exclude_from_sim no)
-    (at 161.5 96 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "69e189e6-25c8-5f33-9265-dcb263e942f7"))
-  (text
-    "X10"
+    "X2"
     (exclude_from_sim no)
     (at 21.5 104 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "560e406a-bde4-5aed-aa22-faf2b13e3ad0"))
+    (uuid "3ef4103b-edfa-56ab-8067-b0f4e453d0ad"))
   (text
-    "Вилка штыревая 1x3 2,54 мм"
+    "Вилка XT60-M вертикальная"
     (exclude_from_sim no)
     (at 41.5 104 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "ef92a598-1677-5634-8fad-32ac311c223d"))
+    (uuid "d60f5850-b0b7-5b45-aacf-d792ccd06a8f"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 104 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "a3c687c0-6bff-57b7-a4d3-6b52722357fe"))
+    (uuid "90cab89d-9b01-51cd-9221-cf22bd350d4d"))
   (text
-    "Серво Z"
+    "АКБ 3S"
     (exclude_from_sim no)
     (at 161.5 104 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "ac53232e-de3f-538e-b75c-e18cdc1d411c"))
+    (uuid "6c6e9391-67dc-5262-ae1b-56ca4d6c507e"))
   (text
-    "X11"
+    "X3"
     (exclude_from_sim no)
     (at 21.5 112 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "92942dcc-e566-5701-970e-8c3c29cb7329"))
+    (uuid "a0f88c02-c363-5003-a035-b577c4401244"))
   (text
-    "Вилка штыревая 1x3 2,54 мм"
+    "Клеммник винтовой 2 конт. 5,08 мм"
     (exclude_from_sim no)
     (at 41.5 112 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "4420eb97-e569-5358-b9bb-8b2d74cb12bc"))
+    (uuid "968454f3-c60d-52c9-824d-87df29b58356"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 112 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "bf900c1d-d242-5d72-8526-e03e0a0a6a48"))
+    (uuid "88b01d58-0408-5c1a-b834-9a2d5a3c1312"))
   (text
-    "Серво поворота"
+    "Выключатель"
     (exclude_from_sim no)
     (at 161.5 112 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "c01ad119-61fa-5a2d-873b-89c48bd4f61d"))
+    (uuid "15cca4be-0b6c-5cc8-acbf-5c589d528c3c"))
   (text
-    "X12"
+    "X4"
     (exclude_from_sim no)
     (at 21.5 120 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "f2d2f200-1701-57cb-81f8-e280b465e263"))
+    (uuid "ea0dbaff-1114-5cf5-a87a-b6e3df1dbccc"))
   (text
-    "Вилка штыревая 1x3 2,54 мм"
+    "Клеммник винтовой 2 конт. 5,08 мм"
     (exclude_from_sim no)
     (at 41.5 120 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "9e0397c3-67f0-5a5e-8ace-e443378760ff"))
+    (uuid "5e803793-7d25-584d-a7e0-8b41c0df26e6"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 120 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "1e134cff-3df6-5749-953b-803797b37ed9"))
+    (uuid "06b4ef47-286c-5ca6-847c-3b79da0c3559"))
   (text
-    "Серво камеры"
+    "Кнопка останова"
     (exclude_from_sim no)
     (at 161.5 120 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "c5ae8a8b-0d63-58b8-8339-6453b4a6fd87"))
+    (uuid "b1427a22-1213-55e9-ac53-cf4278ee743d"))
   (text
-    "X13"
+    "X6"
     (exclude_from_sim no)
     (at 21.5 128 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "1a3d8372-749d-52f0-9ebd-6c0797ce815b"))
+    (uuid "cb6255ab-57dc-5629-a467-1859511c3638"))
   (text
-    "Вилка JST XH 2 конт."
+    "Вилка JST XH 4 конт."
     (exclude_from_sim no)
     (at 41.5 128 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "67e3945a-1768-56ea-8991-0575b7ed6920"))
+    (uuid "3000bac1-e7f4-57ae-ac33-218b22d883fe"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 128 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "c7aaa748-ea09-521b-9f19-719aa6fe4fc5"))
+    (uuid "c499511e-a36e-505d-8eb1-6e2f298314c7"))
   (text
-    "Помпа 6 В"
+    "Мотор плеча"
     (exclude_from_sim no)
     (at 161.5 128 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "146081f6-6556-517b-8594-187323f96b40"))
+    (uuid "69e189e6-25c8-5f33-9265-dcb263e942f7"))
   (text
-    "X14"
+    "X7"
     (exclude_from_sim no)
     (at 21.5 136 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "cbe16d7c-9f46-5873-bd92-367cfc98da71"))
+    (uuid "560e406a-bde4-5aed-aa22-faf2b13e3ad0"))
   (text
-    "Вилка JST XH 2 конт."
+    "Вилка JST XH 4 конт."
     (exclude_from_sim no)
     (at 41.5 136 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "6b92d301-501d-5a14-aa0f-87e008c5f732"))
+    (uuid "ef92a598-1677-5634-8fad-32ac311c223d"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 136 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "e2af9a83-4581-52f2-82a0-3b1b4058fdc6"))
+    (uuid "a3c687c0-6bff-57b7-a4d3-6b52722357fe"))
   (text
-    "Клапан 6 В (НО)"
+    "Мотор предплечья"
     (exclude_from_sim no)
     (at 161.5 136 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "34753e52-337a-5268-8772-a33b741f4c9f"))
+    (uuid "ac53232e-de3f-538e-b75c-e18cdc1d411c"))
   (text
-    "X15"
+    "X8, X9"
     (exclude_from_sim no)
     (at 21.5 144 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "bc7ab9be-35d9-5555-a399-d7dbac9949ac"))
+    (uuid "92942dcc-e566-5701-970e-8c3c29cb7329"))
   (text
-    "Вилка JST XH 2 конт."
+    "Вилка штыревая 2x2 2,54 мм"
     (exclude_from_sim no)
     (at 41.5 144 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "afb34499-99e5-5208-9ffc-d260b24cbdd6"))
+    (uuid "4420eb97-e569-5358-b9bb-8b2d74cb12bc"))
   (text
-    "1"
+    "2"
     (exclude_from_sim no)
     (at 155 144 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "bb537602-559c-53e3-864e-fcfb9da0794f"))
+    (uuid "bf900c1d-d242-5d72-8526-e03e0a0a6a48"))
   (text
-    "Красный индикатор"
+    "Шаг 1/8 без"
     (exclude_from_sim no)
     (at 161.5 144 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "ed28f727-98c0-5f91-a900-dbf2365043dc"))
+    (uuid "c01ad119-61fa-5a2d-873b-89c48bd4f61d"))
   (text
-    "X16"
-    (exclude_from_sim no)
-    (at 21.5 152 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "270aa2b6-bf9c-5724-8efb-c42697ee8cf7"))
-  (text
-    "Вилка JST XH 2 конт."
-    (exclude_from_sim no)
-    (at 41.5 152 0)
-    (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "f4b11853-9a0a-57c4-b9a2-5d9bbd5c3580"))
-  (text
-    "1"
-    (exclude_from_sim no)
-    (at 155 152 0)
-    (effects (font (size 2.5 2.5)))
-    (uuid "c25e9b17-8ad8-5ebb-abf8-edb0bdb5eaa4"))
-  (text
-    "Кнопка «Старт»"
+    "перемычек"
     (exclude_from_sim no)
     (at 161.5 152 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "31ef14ac-23c4-52d3-9f52-5e7b3fa0a2a5"))
+    (uuid "f2d2f200-1701-57cb-81f8-e280b465e263"))
   (text
-    "X17"
+    "X10"
     (exclude_from_sim no)
     (at 21.5 160 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "078f94a7-2d6f-5253-b7de-cfc72874fbc9"))
+    (uuid "9e0397c3-67f0-5a5e-8ace-e443378760ff"))
   (text
-    "Вилка JST XH 3 конт."
+    "Вилка штыревая 1x3 2,54 мм"
     (exclude_from_sim no)
     (at 41.5 160 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "00883f72-56c3-5564-9a72-b74e4ffabed8"))
+    (uuid "1e134cff-3df6-5749-953b-803797b37ed9"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 160 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "bd44bcf1-4e47-5a68-9d41-9705766df78f"))
+    (uuid "c5ae8a8b-0d63-58b8-8339-6453b4a6fd87"))
   (text
-    "Холл плеча"
+    "Серво Z"
     (exclude_from_sim no)
     (at 161.5 160 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "b4004aa3-eebb-5371-96ab-be8ea7de1112"))
+    (uuid "1a3d8372-749d-52f0-9ebd-6c0797ce815b"))
   (text
-    "X18"
+    "X11"
     (exclude_from_sim no)
     (at 21.5 168 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "d4838ea1-8e75-53ee-8358-da6212eced06"))
+    (uuid "67e3945a-1768-56ea-8991-0575b7ed6920"))
   (text
-    "Вилка JST XH 3 конт."
+    "Вилка штыревая 1x3 2,54 мм"
     (exclude_from_sim no)
     (at 41.5 168 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "e40b8424-2582-5512-9ea9-c20a6c8b7ca3"))
+    (uuid "c7aaa748-ea09-521b-9f19-719aa6fe4fc5"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 168 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "ae55731f-f6ab-5309-acec-0b6de8ae3299"))
+    (uuid "146081f6-6556-517b-8594-187323f96b40"))
   (text
-    "Холл предплечья"
+    "Серво поворота"
     (exclude_from_sim no)
     (at 161.5 168 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "3b4ac98b-ff5a-5be5-93dd-a5c895b243c6"))
+    (uuid "cbe16d7c-9f46-5873-bd92-367cfc98da71"))
   (text
-    "X19"
+    "X12"
     (exclude_from_sim no)
     (at 21.5 176 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "10e2f16d-8899-574b-bbfd-ce1b28ac5abb"))
+    (uuid "6b92d301-501d-5a14-aa0f-87e008c5f732"))
   (text
-    "Вилка JST XH 3 конт."
+    "Вилка штыревая 1x3 2,54 мм"
     (exclude_from_sim no)
     (at 41.5 176 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "7a947c86-6818-59a9-b157-004255fdafd0"))
+    (uuid "e2af9a83-4581-52f2-82a0-3b1b4058fdc6"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 176 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "0f7ed739-5df3-587c-a420-c0cbbfd9cabd"))
+    (uuid "34753e52-337a-5268-8772-a33b741f4c9f"))
   (text
-    "Датчик вакуума"
+    "Серво камеры"
     (exclude_from_sim no)
     (at 161.5 176 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "afc8195c-de33-5ca1-b6fb-179ea612ecfe"))
+    (uuid "bc7ab9be-35d9-5555-a399-d7dbac9949ac"))
   (text
-    "X20"
+    "X13"
     (exclude_from_sim no)
     (at 21.5 184 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "992ba673-6683-578d-b068-1daed8ab68f0"))
+    (uuid "afb34499-99e5-5208-9ffc-d260b24cbdd6"))
   (text
-    "Вилка штыревая 1x3 2,54 мм"
+    "Вилка JST XH 2 конт."
     (exclude_from_sim no)
     (at 41.5 184 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "4e660522-be52-5d5c-ab96-98384ba82220"))
+    (uuid "bb537602-559c-53e3-864e-fcfb9da0794f"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 184 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "70d72090-5058-5432-8d38-a7bede4f281c"))
+    (uuid "ed28f727-98c0-5f91-a900-dbf2365043dc"))
   (text
-    "Разъём «А»"
+    "Помпа 6 В"
     (exclude_from_sim no)
     (at 161.5 184 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "0c1abea6-fe57-53b7-b132-6f748b8ded81"))
+    (uuid "270aa2b6-bf9c-5724-8efb-c42697ee8cf7"))
   (text
-    "X21"
+    "X14"
     (exclude_from_sim no)
     (at 21.5 192 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "32677222-9fff-5278-9261-b4f356696451"))
+    (uuid "f4b11853-9a0a-57c4-b9a2-5d9bbd5c3580"))
   (text
-    "Вилка штыревая 1x3 2,54 мм"
+    "Вилка JST XH 2 конт."
     (exclude_from_sim no)
     (at 41.5 192 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "569f7f12-08ca-5238-b422-d7d52d058f5c"))
+    (uuid "c25e9b17-8ad8-5ebb-abf8-edb0bdb5eaa4"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 192 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "61274759-9f6f-553b-85c9-5873c38f8b05"))
+    (uuid "31ef14ac-23c4-52d3-9f52-5e7b3fa0a2a5"))
   (text
-    "Разъём «Б»"
+    "Клапан 6 В (НО)"
     (exclude_from_sim no)
     (at 161.5 192 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "d71f4669-f7bb-549d-9de1-76eaf0bc9b99"))
+    (uuid "078f94a7-2d6f-5253-b7de-cfc72874fbc9"))
   (text
-    "X22"
+    "X17"
     (exclude_from_sim no)
     (at 21.5 200 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "edc3a163-c30e-5083-986d-0b0180e69e67"))
+    (uuid "00883f72-56c3-5564-9a72-b74e4ffabed8"))
   (text
-    "Вилка штыревая 1x4 2,54 мм"
+    "Вилка JST XH 3 конт."
     (exclude_from_sim no)
     (at 41.5 200 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "bd6772f0-0d18-5920-be9d-f865b25cbd9c"))
+    (uuid "bd44bcf1-4e47-5a68-9d41-9705766df78f"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 200 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "56c05fbf-d2bc-55b7-aaf9-d03cd209084f"))
+    (uuid "b4004aa3-eebb-5371-96ab-be8ea7de1112"))
   (text
-    "Разъём «В»"
+    "Холл плеча"
     (exclude_from_sim no)
     (at 161.5 200 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "11b7af75-4fb5-5de6-bfee-ed419aaa7aa5"))
+    (uuid "d4838ea1-8e75-53ee-8358-da6212eced06"))
   (text
-    "X23"
+    "X18"
     (exclude_from_sim no)
     (at 21.5 208 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "e7ad2d9b-5550-5860-8f93-dd21917dcaa0"))
+    (uuid "e40b8424-2582-5512-9ea9-c20a6c8b7ca3"))
   (text
-    "Вилка штыревая 1x4 2,54 мм"
+    "Вилка JST XH 3 конт."
     (exclude_from_sim no)
     (at 41.5 208 0)
     (effects (font (size 2.5 2.5)) (justify left))
-    (uuid "e23c5281-d044-54ee-be0f-6b130b3b7b39"))
+    (uuid "ae55731f-f6ab-5309-acec-0b6de8ae3299"))
   (text
     "1"
     (exclude_from_sim no)
     (at 155 208 0)
     (effects (font (size 2.5 2.5)))
-    (uuid "b048e4ab-e969-55e4-9825-8a614e093d96"))
+    (uuid "3b4ac98b-ff5a-5be5-93dd-a5c895b243c6"))
   (text
-    "Резерв"
+    "Холл предплечья"
     (exclude_from_sim no)
     (at 161.5 208 0)
     (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "10e2f16d-8899-574b-bbfd-ce1b28ac5abb"))
+  (text
+    "X19"
+    (exclude_from_sim no)
+    (at 21.5 216 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "7a947c86-6818-59a9-b157-004255fdafd0"))
+  (text
+    "Розетка PBS-3 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 216 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "0f7ed739-5df3-587c-a420-c0cbbfd9cabd"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 216 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "afc8195c-de33-5ca1-b6fb-179ea612ecfe"))
+  (text
+    "Модуль датчика"
+    (exclude_from_sim no)
+    (at 161.5 216 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "992ba673-6683-578d-b068-1daed8ab68f0"))
+  (text
+    "вакуума XGZP6847A"
+    (exclude_from_sim no)
+    (at 161.5 224 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "4e660522-be52-5d5c-ab96-98384ba82220"))
+  (text
+    "X20"
+    (exclude_from_sim no)
+    (at 21.5 232 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "70d72090-5058-5432-8d38-a7bede4f281c"))
+  (text
+    "Вилка штыревая 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 232 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "0c1abea6-fe57-53b7-b132-6f748b8ded81"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 232 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "32677222-9fff-5278-9261-b4f356696451"))
+  (text
+    "Разъём «А»"
+    (exclude_from_sim no)
+    (at 161.5 232 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "569f7f12-08ca-5238-b422-d7d52d058f5c"))
+  (text
+    "X21"
+    (exclude_from_sim no)
+    (at 21.5 240 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "61274759-9f6f-553b-85c9-5873c38f8b05"))
+  (text
+    "Вилка штыревая 1x3 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 240 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "d71f4669-f7bb-549d-9de1-76eaf0bc9b99"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 240 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "edc3a163-c30e-5083-986d-0b0180e69e67"))
+  (text
+    "Разъём «Б»"
+    (exclude_from_sim no)
+    (at 161.5 240 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "bd6772f0-0d18-5920-be9d-f865b25cbd9c"))
+  (text
+    "X22"
+    (exclude_from_sim no)
+    (at 21.5 248 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "56c05fbf-d2bc-55b7-aaf9-d03cd209084f"))
+  (text
+    "Вилка штыревая 1x4 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 248 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "11b7af75-4fb5-5de6-bfee-ed419aaa7aa5"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 248 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "e7ad2d9b-5550-5860-8f93-dd21917dcaa0"))
+  (text
+    "Разъём «В»"
+    (exclude_from_sim no)
+    (at 161.5 248 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "e23c5281-d044-54ee-be0f-6b130b3b7b39"))
+  (text
+    "X24"
+    (exclude_from_sim no)
+    (at 21.5 256 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "b048e4ab-e969-55e4-9825-8a614e093d96"))
+  (text
+    "Розетка PBS-8 1x8 2,54 мм"
+    (exclude_from_sim no)
+    (at 41.5 256 0)
+    (effects (font (size 2.5 2.5)) (justify left))
     (uuid "63c4a4a7-0364-5e74-8580-6e2a58acb6c7"))
+  (text
+    "1"
+    (exclude_from_sim no)
+    (at 155 256 0)
+    (effects (font (size 2.5 2.5)))
+    (uuid "c40ef82d-8556-50ed-97dc-34be0849f175"))
+  (text
+    "Дисплей 0,96\""
+    (exclude_from_sim no)
+    (at 161.5 256 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "1aae90c8-861a-5f1c-8440-36133afe5052"))
+  (text
+    "ST7735S"
+    (exclude_from_sim no)
+    (at 161.5 264 0)
+    (effects (font (size 2.5 2.5)) (justify left))
+    (uuid "5c408b1c-6111-5f89-abcf-8f22092f2b30"))
+  (sheet
+    (at 150 300)
+    (size 20 5)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (stroke (width 0.1) (type solid))
+    (fill (color 0 0 0 0))
+    (uuid "9ceedc01-f0dd-573a-9d9a-1a7548375062")
+    (property
+      "Sheetname"
+      "ПЭ3 лист 4"
+      (at 150 299.5 0)
+      (effects (font (size 1.5 1.5)) (justify left bottom)))
+    (property
+      "Sheetfile"
+      "pe3_4.kicad_sch"
+      (at 150 305.6 0)
+      (effects (font (size 1.5 1.5)) (justify left top)))
+    (instances
+      (project
+        "etz_plata"
+        (path
+          "/682757a5-4c87-57dc-8e78-46908122b5db/2746c6c4-288d-5d4d-bfb3-fa15884d185b/3be46d36-95da-5f93-b052-8018d011bbd9/4e34ff26-c63e-52ac-a240-9b93290acf3e"
+          (page "5")))))
   (embedded_fonts no))

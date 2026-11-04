@@ -13,6 +13,9 @@ def _lib_symbols(lib):
         return _cache[lib]
     out = {}
     f = os.path.join(SYM_DIR, lib + ".kicad_sym")
+    own = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib", lib + ".kicad_sym")
+    if os.path.exists(own):              # библиотека проекта (elektronika/lib)
+        f = own
     files = [f] if os.path.exists(f) else []
     d = os.path.join(SYM_DIR, lib + ".kicad_symdir")
     if os.path.isdir(d):
@@ -62,7 +65,7 @@ def pins(symbol, unit=1):
         # имя юнита Name_U_S: U = 0 — общий для всех юнитов
         parts = u[1].rsplit("_", 2)
         un = int(parts[-2])
-        if un not in (0, unit):
+        if unit is not None and un not in (0, unit):
             continue
         for p in find(u, "pin"):
             at = find1(p, "at")

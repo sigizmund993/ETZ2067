@@ -924,8 +924,10 @@ def cam(report=True):
         if a <= work + 1e-6:
             break
         a = max(work, a - 4.0)
-    lines.append("консоль: сложена %.1f° -> в работе %.1f° (поворот %.1f°, SG90 %.0f° через z13 -> z30), "
-                 "проверено положений %d" % (stow, work, stow - work, (stow - work) * 30.0 / 13.0, n_ok))
+    lines.append("консоль: сложена %.1f° -> в работе %.1f° (поворот %.1f°, SG90 %.0f° через z13 -> z26), "
+                 "проверено положений %d" % (stow, work, stow - work, (stow - work) * 26.0 / 13.0, n_ok))
+    if (stow - work) * 26.0 / 13.0 > 175.0:
+        issues.append("SG90 консоли: нужно %.0f° — больше 175°" % ((stow - work) * 26.0 / 13.0))
     lines.append("мачта, продлённая на %g мм выше головы: до поворотных деталей не ближе %.1f мм"
                  % (MAST_EXTRA, mast_gap))
     if mast_gap < 3.0:
@@ -982,8 +984,7 @@ STEPS = [
     (21, ("FR_PlateB", "Body001", "FR_MotScrB")),            # мотор 2 под плитой, винты сверху
     (30, ("Pulley", "Driver2")),
     (33, ("FR_Base", "FR_Std", "FR_Column", "FR_BaseIns", "FR_BaseScr",
-          "CAM_Foot", "CAM_BaseIns", "CAM_BaseScr")),  # стойки на фанеру снизу
-    (35, ("FR_ShaftNut",)),                               # гайка M8 в стойку вала
+          "FR_ShaftBolt")),             # стойки на фанеру снизу; болт вала — головкой в колонну
     (40, ("FR_PlScrA",)),                                 # плита 1 на латунные стойки
     (41, ("FR_PlScrB",)),
     (50, ("FR_ShaftBushLo", "Body003", "BRG_1", "FR_Belt1", "Body_Tube", "Body_Cap", "HW_")),
@@ -1001,10 +1002,11 @@ STEPS = [
     (71, ("CR_GearRt",)),
     (72, ("CR_BlkScr",)),                                 # плита каретки к MGN9H спереди
     (75, ("EF_GearZ",)),
-    (80, ("Body_Prost", "Body_Pulley2", "BRG_2", "FR_Belt2", "FR_ShaftBushHi", "FR_ShaftBolt")),
+    (80, ("Body_Prost", "Body_Pulley2", "BRG_2", "FR_Belt2", "FR_ShaftBushHi", "FR_ShaftWash",
+          "FR_ShaftNut")),
     (90, ("Body_Rod", "RD_")),
-    # камера: стойка мачты — вместе с остальными стойками (шаг 33)
-    (93, ("CAM_Mast", "CAM_FootScr", "CAM_FootNut")),
+    # камера: пробка на конец болта вала, мачта на пробку
+    (93, ("CAM_Plug", "CAM_PlugNutM8", "CAM_Mast", "CAM_PlugScr", "CAM_PlugNut")),
     # голова надевается на мачту и зажимается на нужной высоте
     (94, ("CAM_Head", "CAM_HeadScr", "CAM_HeadNut", "CAM_AxNut", "CAM_Servo", "CAM_SvScr")),
     # ступица: гайки хомута в пазы, 625ZZ, ось M5 — ключом сверху через
@@ -1035,13 +1037,13 @@ def step_of(n):
 SCREWS = [
     ("FR_MotScrB", 1.2, 2.85, True), ("FR_PlScr", 1.2, 2.85, True),   # ISO 7380, ключ 2
     ("FR_MotScr", 1.5, 2.75, True),
-    ("FR_ShaftBolt", 3.5, 6.5, True), ("FR_BaseScr", 1.5, 3.1, True),
+    ("FR_BaseScr", 1.5, 3.1, True),
     ("HW_Vint", 1.5, 2.75, True), ("EH_Vint", 1.5, 2.75, True),
     ("PV_Screw", 1.5, 2.75, False), ("RD_Vint", 1.1, 3.4, True),
     ("EF_ClScr", 1.5, 2.75, True), ("CR_Screw", 2.3, 4.25, True),
     ("EF_SvScrZ", 1.5, 2.0, True), ("CR_SvScr", 1.5, 2.0, True),
     ("EF_RailScr", 1.5, 2.75, True), ("CR_BlkScr", 1.5, 2.75, True),
-    ("CAM_BaseScr", 1.5, 3.1, True), ("CAM_FootScr", 1.5, 2.75, True),
+    ("CAM_PlugScr", 1.5, 2.75, True),
     ("CAM_HeadScr", 1.5, 2.75, True), ("CAM_AxBolt", 2.3, 4.25, True),
     ("CAM_HubScr", 1.5, 2.75, True), ("CAM_BrScr", 1.5, 2.75, True),
     ("CAM_SvScr", 1.5, 2.0, True), ("CAM_BoardScr", 1.5, 1.9, True),
@@ -1131,9 +1133,11 @@ def screws(report=True):
 SCREWS_SERVICE = ("FR_PlScr",)
 
 
-NUTS_CAPTIVE = ("CR_HolderNut", "FR_ShaftNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut",
-                "CAM_FootNut", "CAM_HeadNut", "CAM_AxNut", "CAM_HubNut", "CAM_BrNut")
-NUTS_OPEN = ("RD_Gayka",)
+NUTS_CAPTIVE = ("CR_HolderNut", "EF_ClNut", "HW_Gayka", "EH_Gayka", "PV_Nut", "CAM_PlugNutM8",
+                "CAM_HeadNut", "CAM_AxNut", "CAM_HubNut", "CAM_BrNut")
+NUTS_OPEN = ("RD_Gayka", "CAM_PlugNut", "FR_ShaftNut")
+# болты головкой в шестигранном гнезде: (болт, держатель) — не проворачиваются
+BOLTS_HEX = (("FR_ShaftBolt", "FR_Column"),)
 
 
 def _holder(P, n, sh):
@@ -1142,7 +1146,7 @@ def _holder(P, n, sh):
     big.scale(1.3, sh.BoundBox.Center)
     for m, x in P.items():
         if m == n or m.startswith(("FR_PlScr", "FR_ShaftBolt", "HW_Vint", "EH_Vint", "PV_Screw",
-                                    "EF_ClScr", "CAM_FootScr", "CAM_HeadScr", "CAM_AxBolt",
+                                    "EF_ClScr", "CAM_PlugScr", "CAM_HeadScr", "CAM_AxBolt",
                                     "CAM_HubScr", "CAM_BrScr", "CAM_Mast", "CAM_Boom")):
             continue
         if not bb_hit(x, big):
@@ -1220,23 +1224,46 @@ def nuts(report=True):
                 issues.append("гайку %s не завести в гнездо %s" % (label(n), h))
         elif n.startswith(NUTS_OPEN):
             cnt += 1
-            # рожковый ключ 5.5: «губки» — коробка 10 x 30 в плоскости гайки,
-            # в одном из 12 направлений свободна от всего, кроме своих деталей
+            # рожковый ключ: «губки» — коробка 30 в длину в плоскости гайки
+            # (ширина 10 под M3, 24 под M8), в одном из 12 направлений
+            # свободна от всего, кроме своих деталей. Ось гайки — любая
+            ax = global_shape(D().getObject(n)).Placement.Rotation.multVec(V(0, 0, 1))
             c = sh.BoundBox.Center
-            zb, zt = sh.BoundBox.ZMin, sh.BoundBox.ZMax
+            hs_ = [v.Point.dot(ax) for v in sh.Vertexes]
+            h0, h1 = min(hs_), max(hs_)
+            c = c + ax * ((h0 + h1) / 2.0 - c.dot(ax))
+            big = h1 - h0 > 5.0
+            wj, rc = (24.0, 8.0) if big else (10.0, 4.0)
+            u = V(1, 0, 0) if abs(ax.x) < 0.9 else V(0, 1, 0)
+            e1 = ax.cross(u); e1.normalize()
+            e2 = ax.cross(e1)
             ok = False
             for k in range(12):
-                a = 30.0 * k
-                w = Part.makeBox(30.0, 10.0, zt - zb, V(0, -5.0, zb))
-                w.rotate(V(0, 0, 0), V(0, 0, 1), a)
-                w.translate(V(c.x, c.y, 0))
-                w = w.cut(Part.makeCylinder(4.0, zt - zb + 2, V(c.x, c.y, zb - 1)))
+                a = math.radians(30.0 * k)
+                dv = e1 * math.cos(a) + e2 * math.sin(a)
+                w = Part.makeBox(30.0, wj, h1 - h0, V(0, -wj / 2.0, -(h1 - h0) / 2.0))
+                w = w.cut(Part.makeCylinder(rc, h1 - h0 + 2, V(0, 0, -(h1 - h0) / 2.0 - 1)))
+                w.Placement = App.Placement(c, App.Rotation(dv, ax.cross(dv), ax, "ZXY"))
                 hit = [m for m, x in P.items() if m != n and bb_hit(x, w) and x.common(w).Volume > TOL]
                 if not hit:
                     ok = True
                     break
             if not ok:
                 issues.append("к гайке %s не подлезть рожковым ключом" % label(n))
+    # болты головкой в шестигранном гнезде: без натяга и не проворачиваются
+    for n, h in BOLTS_HEX:
+        if n not in P or h not in P:
+            continue
+        cnt += 1
+        sh, hs = P[n], P[h]
+        v0 = hs.common(sh).Volume
+        if v0 > TOL:
+            issues.append("болт %s: натяг в гнезде %s %.2f мм3" % (label(n), h, v0))
+        pl = global_shape(D().getObject(n)).Placement
+        r = sh.copy()
+        r.rotate(pl.Base, pl.Rotation.multVec(V(0, 0, 1)), 20.0)
+        if hs.common(r).Volume < 0.5:
+            issues.append("болт %s проворачивается в %s — нет шестигранного гнезда" % (label(n), h))
     if report:
         print("NUTS: гаек %d, замечаний %d" % (cnt, len(issues)))
         for i in issues:
@@ -1251,7 +1278,8 @@ def nuts(report=True):
 RUB_GAP = 0.2
 RUB_PAIRS = [
     ("Body003", ["FR_ShaftBushLo", "FR_PlateA", "Body_Prost", "FR_ShaftBolt"]),
-    ("Body_Pulley2", ["Body_Prost", "FR_ShaftBushHi", "FR_ShaftBolt", "Body003", "Body_Cap"]),
+    ("Body_Pulley2", ["Body_Prost", "FR_ShaftBushHi", "FR_ShaftBolt", "Body003", "Body_Cap",
+                      "FR_ShaftWash", "FR_ShaftNut", "CAM_Plug", "CAM_PlugNutM8"]),
     ("Body_Elbow2", ["Body_Elbow", "Body_ElbowCap", "PV_Screw", "PV_Nut"]),
     ("Body_Elbow2Cap", ["Body_ElbowCap", "Body_Elbow"]),
     ("Body_Rod", ["RD_VtulA", "RD_VtulB", "RD_ShaybaA", "RD_ShaybaB", "RD_GaykaA", "RD_GaykaB",
@@ -1329,15 +1357,15 @@ MASS_FIXED = {"Body": 280.0, "Body001": 280.0, "EF_ServoZ": 9.0, "CR_ServoR": 9.
               "CAM_Servo": 9.0, "CAM_Board": 12.0, "CAM_Lens": 6.0,
               "CR_Magnet": 45.0, "CR_Cup1": 1.0, "CR_Cup2": 1.0, "CR_Cup3": 1.0, "FR_Belt1": 4.0, "FR_Belt2": 4.0,
               # электроника (elektronika_etz.FCMacro) — по паспортам/весам, г
-              "EL_Board": 55.0, "EL_Drv1": 6.0, "EL_Drv2": 6.0, "EL_XT30": 3.0, "EL_Mega": 37.0,
-              "EL_Breadboard": 30.0, "EL_EStopBody": 35.0, "EL_EStopHead": 10.0, "EL_StartBody": 8.0,
-              "EL_StartCap": 1.0, "EL_Switch": 5.0, "EL_LedG": 3.0, "EL_LedR": 3.0, "EL_Pump": 60.0,
-              "EL_Valve": 20.0, "EL_VacSensor": 4.0, "EL_BatCells": 141.0, "EL_BatHolder": 25.0,
+              "EL_Board": 70.0, "EL_Drv1": 6.0, "EL_Drv2": 6.0, "EL_Esp": 10.0,
+              "EL_DispPcb": 2.0, "EL_DispLcd": 2.0, "EL_VacSensor": 3.0,
+              "EL_SB1": 1.0, "EL_SB2": 1.0, "EL_SB3": 1.0, "EL_Breadboard": 30.0,
+              "EL_Pump": 60.0, "EL_Valve": 20.0, "EL_BatCells": 141.0, "EL_BatHolder": 25.0,
               "EL_Hall1": 1.0, "EL_Hall2": 1.0, "EL_MagS": 0.1, "EL_MagL": 0.1}
-RHO = [(("FR_Base", "FR_Plate", "EL_Shelf"), 0.65),  # фанера берёзовая
-       (("FR_Std", "EL_Std", "EL_PcbStd", "EL_MegaStd"), 8.5),   # латунные стойки
-       (("EL_Clamp", "EL_HallPost", "EL_HallBr"), 1.24 * 0.6),
-       (("FR_Column", "CAM_Foot", "CAM_Head", "CAM_Hub", "CAM_Bracket",
+RHO = [(("FR_Base", "FR_Plate"), 0.65),              # фанера берёзовая
+       (("FR_Std", "EL_PcbStd"), 8.5),                # латунные стойки
+       (("EL_HallPost", "EL_HallBr"), 1.24 * 0.6),
+       (("FR_Column", "CAM_Plug", "CAM_Head", "CAM_Hub", "CAM_Bracket",
          "CAM_GearSv", "EF_Bracket", "CR_Carriage", "Body003", "Body_Pulley2",
          "Body_Cap", "Body_Elbow", "Body_RodJoint", "Body_Rod", "EF_BracketCap", "CR_Gear",
          "EF_Gear", "Body_Prost", "CR_CupHolder"), 1.24 * 0.6),       # печать, заполнение ~60 %

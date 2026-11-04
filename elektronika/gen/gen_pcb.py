@@ -68,7 +68,7 @@ def write_project():
     erc["power_pin_not_driven"] = "ignore"     # питание приходит снаружи платы (АКБ, USB)
     sch = pro.setdefault("schematic", {})
     sch.setdefault("drawing", {})["default_text_size"] = 98.4     # 2.5 мм в милах
-    sch["page_layout_descr_file"] = "gost_A3.kicad_wks"
+    sch["page_layout_descr_file"] = "gost_A2.kicad_wks"
     pro.setdefault("pcbnew", {}).setdefault("page_layout_descr_file", "")
     json.dump(pro, open(PRO, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
@@ -121,12 +121,29 @@ def place():
         return nets[name]
 
     import symlib
+    # гнёзда сменных драйверов — на выводы 1 и 16 того места, где стоял бы модуль
+    anchor = {}
+    for p in N.PARTS:
+        if p["on_board"] or p["ref"] not in LY.PCB:
+            continue
+        ax, ay, arot, _ = LY.PCB[p["ref"]]
+        vf = load_fp("Module:Pololu_Breakout-16_15.2x20.3mm")
+        vf.SetPosition(V(ax, ay)); vf.SetOrientationDegrees(arot)
+        for pd in vf.Pads():
+            pos = pd.GetPosition()
+            anchor[(p["ref"], pd.GetNumber())] = (pcbnew.ToMM(pos.x) - OX, pcbnew.ToMM(pos.y) - OY, arot)
     for p in N.PARTS:
         ref = p["ref"]
+        if not p["on_board"]:
+            continue                      # модули драйверов — в гнёздах, не паяются
         fp = load_fp(p["fp"])
         fp.SetReference(ref)
         fp.SetValue(p["value"])
-        x, y, rot, side = LY.PCB[ref]
+        lay = LY.PCB[ref]
+        if isinstance(lay[0], str):
+            x, y, rot = anchor[lay]
+        else:
+            x, y, rot, side = lay
         fp.SetPosition(V(x, y))
         fp.SetOrientationDegrees(rot)
         if p["sym"].startswith("Mechanical:"):
@@ -138,7 +155,7 @@ def place():
             # выводы по имени (модуль драйвера) -> номера символа
             conn = {}
             sym = symlib.load(p["sym"])
-            spins = symlib.pins(sym)
+            spins = symlib.pins(sym, None)
             for k, n in p["pins"].items():
                 if isinstance(k, str) and not k.isdigit():
                     for num, lst in spins.items():
@@ -150,6 +167,16 @@ def place():
                 n = conn.get(pad.GetNumber())
                 if n:
                     pad.SetNet(net(n))
+                elif pad.GetNumber():
+                    # свободный вывод: схема даёт ему цепь «unconnected-(REF-PadN)»
+                    pn = spins.get(pad.GetNumber(), [("", "", "", "")])[0][3]
+                    pn = "" if pn in ("", "~") else pn + "-"
+                    nm = "unconnected-(%s-%sPad%s)" % (ref, pn, pad.GetNumber())
+                    if nm not in nets:
+                        ni = pcbnew.NETINFO_ITEM(board, nm)
+                        board.Add(ni)
+                        nets[nm] = ni
+                    pad.SetNet(nets[nm])
         fp.Reference().SetTextSize(pcbnew.VECTOR2I(MM(0.9), MM(0.9)))
         fp.Reference().SetTextThickness(MM(0.14))
         fp.Value().SetVisible(False)
@@ -195,10 +222,17 @@ def place():
         t.SetTextThickness(MM(0.18))
         t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
         board.Add(t)
+    # проекции модулей дисплея и ESP32: под ними — только низкие SMD
+    for x0, y0, x1, y1 in (LY.DISPLAY_AREA, LY.ESP_AREA):
+        r_ = pcbnew.PCB_SHAPE(board)
+        r_.SetShape(pcbnew.SHAPE_T_RECT)
+        r_.SetStart(V(x0, y0)); r_.SetEnd(V(x1, y1))
+        r_.SetLayer(pcbnew.F_SilkS); r_.SetWidth(MM(0.15))
+        board.Add(r_)
     t = pcbnew.PCB_TEXT(board)
-    t.SetText("ЕТЗ плата приводов v1\nKiCad 10, 2026")
-    t.SetPosition(V(32, 46)); t.SetLayer(pcbnew.F_SilkS)
-    t.SetTextSize(pcbnew.VECTOR2I(MM(1.5), MM(1.5))); t.SetTextThickness(MM(0.22))
+    t.SetText("ЕТЗ плата v3\nKiCad 10, 2026")
+    t.SetPosition(V(66, 90)); t.SetLayer(pcbnew.F_SilkS)
+    t.SetTextSize(pcbnew.VECTOR2I(MM(1.0), MM(1.0))); t.SetTextThickness(MM(0.15))
     t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
     board.Add(t)
     board.Save(PCB)
@@ -206,16 +240,22 @@ def place():
 
 
 LABELS = {
-    "X2": "АКБ 3S +", "X3": "ВЫКЛ", "X4": "СТОП", "X5": "ЗЕЛ 12В",
-    "X6": "МОТОР 1", "X7": "МОТОР 2", "X8": "MS1 MS2", "X9": "MS1 MS2",
+    "X2": "АКБ 3S", "X3": "ВЫКЛ", "X4": "СТОП",
+    "X6": "МОТОР 1", "X7": "МОТОР 2",
     "X10": "S Z", "X11": "S ROT", "X12": "S CAM", "X13": "ПОМПА", "X14": "КЛАПАН",
-    "X15": "КРАСН", "X16": "СТАРТ", "X17": "ХОЛЛ1", "X18": "ХОЛЛ2", "X19": "ВАКУУМ",
-    "X20": "А", "X21": "Б", "X22": "В", "X23": "РЕЗЕРВ", "X1": "КОНТРОЛЛЕР",
+    "X17": "ХОЛЛ1", "X18": "ХОЛЛ2", "X19": "ВАКУУМ",
+    "X20": "А", "X21": "Б", "X22": "В",
+    "SB1": "СТАРТ", "SB2": "ВЫБОР", "SB3": "ВВОД", "HL2": "ПРОГР", "HL1": "ПРИВ",
+    "X24": "ДИСПЛЕЙ", "XS5": "(<- USB)  ESP32-S3-DevKitC-1",
 }
-LABEL_OFFS = {"X1": (0, -8.5), "X2": (-13, 11), "X3": (5.5, -5), "X4": (-5.5, 5.3), "X5": (-2.5, 5.2),
-              "X6": (11.5, 0), "X7": (11.5, 0), "X13": (-3, 4.3), "X14": (-3, 4.3),
-              "X20": (-1.5, -3.2), "X21": (-1.5, -3.2), "X22": (-1.5, -3.2), "X23": (-1.5, -3.2),
-              "X10": (-1.5, 3.2), "X11": (-1.5, 3.2), "X12": (-1.5, 3.2)}
+LABEL_OFFS = {"X2": (-8, -5.5), "X3": (-7, 6.3), "X4": (-7, 6.3),
+              "X6": (11.5, 0), "X7": (11.5, 0), "X8": (6, 1.5), "X9": (6, 1.5),
+              "X13": (-3, 4.3), "X14": (-3, 4.3),
+              "X20": (-4.5, 1.5), "X21": (-4.5, 1.5), "X22": (-4.5, 1.5),
+              "X10": (-1.5, 3.2), "X11": (-1.5, 3.2), "X12": (-1.5, 3.2),
+              "X17": (-3, -9.5), "X18": (-3, -9.5), "X19": (-1, -2.5),
+              "SB1": (-0.5, 8.0), "SB2": (-0.5, 8.0), "SB3": (-0.5, 8.0),
+              "HL2": (-1, -4.5), "HL1": (-1, -4.5), "X24": (0, -3), "XS5": (-50, 11.5)}
 
 
 def zones(board, fill=True):

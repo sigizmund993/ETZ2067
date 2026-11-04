@@ -1,6 +1,6 @@
 """Схема Э3 (лист 1, A3) и перечень элементов ПЭ3 (листы 2...) из netlist.py.
 
-    python3 gen_sch.py      -> ../etz_plata.kicad_sch (+ pe3.kicad_sch), ../gost_A3.kicad_wks
+    python3 gen_sch.py      -> ../etz_plata.kicad_sch (+ pe3.kicad_sch), ../gost_A2.kicad_wks
 
 Линии связи — короткие отрезки от выводов с метками цепей (ГОСТ 2.702,
 п. 5.1.5: обрыв линии связи с адресом). UUID детерминированы (от
@@ -63,6 +63,75 @@ def snap(v, g=1.27):
 from layout import SCH as LAYOUT, BLOCKS
 
 
+def place_unit(items, p, sym, unit, x, y, rot, conn):
+    ref = p["ref"]
+    pins = symlib.pins(sym, unit)
+    props = {pr[1]: pr for pr in sexp.find(sym, "property")}
+    su = U("sym", ref) if unit == 1 else U("sym", ref, unit)
+    inst = [S("symbol"), [S("lib_id"), p["sym"]], [S("at"), x, y, rot], [S("unit"), unit],
+            [S("exclude_from_sim"), S("no")], [S("in_bom"), S("yes")],
+            [S("on_board"), S("yes" if p.get("on_board", True) else "no")],
+            [S("dnp"), S("no")], [S("uuid"), su]]
+    # 2-выводные: обозначение и номинал сбоку от оси выводов
+    two = None
+    if len(pins) == 2:
+        pts = [symlib.place(x, y, rot, *lst[0][:3])[:2] for lst in pins.values()]
+        two = "v" if abs(pts[0][0] - pts[1][0]) < 0.01 else "h"
+    for key, val, hide in (("Reference", ref, False), ("Value", p["value"], False),
+                           ("Footprint", p["fp"], True), ("Datasheet", "", True),
+                           ("Description", "", True)):
+        pr = props.get(key)
+        j = None
+        if two == "v" and key in ("Reference", "Value"):
+            fx, fy, j = x + 2.54, y + (-0.635 if key == "Reference" else 2.54), "left"
+        elif two == "h" and key in ("Reference", "Value"):
+            fx, fy = x, y + (-3.81 if key == "Reference" else 3.81)
+        else:
+            at = sexp.find1(pr, "at") if pr else None
+            px, py = (float(at[1]), float(at[2])) if at else (0, 0)
+            a = math.radians(rot)
+            fx = x + px * math.cos(a) - py * math.sin(a)
+            fy = y - (px * math.sin(a) + py * math.cos(a))
+            jj = sexp.find1(sexp.find1(pr, "effects") or [], "justify") if pr else None
+            if jj:
+                j = " ".join(str(v) for v in jj[1:])
+        inst.append([S("property"), key, val, [S("at"), snap(fx, 0.635), snap(fy, 0.635), 0],
+                     eff(2.5 if key != "Value" else 2.0, j, hide)])
+    for n in pins:
+        inst.append([S("pin"), n, [S("uuid"), U("pin", ref, n)]])
+    inst.append([S("instances"), [S("project"), PROJECT,
+                                  [S("path"), "/" + ROOT, [S("reference"), ref], [S("unit"), unit]]]])
+    items.append(inst)
+
+    # отрезки и метки
+    for n, lst in pins.items():
+        net = conn.get(n)
+        for (px, py, pang, pname, ptype) in lst:
+            ax, ay, d = symlib.place(x, y, rot, px, py, pang)
+            if net is None:
+                if ptype == "no_connect" or pname in ("NC",):
+                    continue
+                items.append([S("no_connect"), [S("at"), ax, ay], [S("uuid"), U("nc", ref, n, px, py)]])
+                continue
+            L = 2.54
+            ex = ax + L * math.cos(math.radians(d))
+            ey = ay - L * math.sin(math.radians(d))
+            ex, ey = round(ex, 4), round(ey, 4)
+            items.append([S("wire"), [S("pts"), [S("xy"), ax, ay], [S("xy"), ex, ey]],
+                          [S("stroke"), [S("width"), 0], [S("type"), S("default")]],
+                          [S("uuid"), U("w", ref, n, px, py)]])
+            dd = round(d) % 360
+            ang, just = (180, "right bottom") if dd == 180 else (0, "left bottom")
+            if dd == 90:
+                ang, just = 90, "left bottom"
+            elif dd == 270:
+                ang, just = 270, "right bottom"
+            items.append([S("label"), net, [S("at"), ex, ey, ang],
+                          [S("effects"), font(1.8),
+                           [S("justify")] + [S(v) for v in just.split()]],
+                          [S("uuid"), U("lbl", ref, n, px, py)]])
+
+
 def build_main():
     items = []
     libs = {}
@@ -80,81 +149,22 @@ def build_main():
             continue          # крепёжные отверстия — только на плате
         sym = libs.get(p["sym"]) or symlib.load(p["sym"])
         libs[p["sym"]] = sym
-        x, y, rot = LAYOUT[ref]
-        pins = symlib.pins(sym)
+        allpins = symlib.pins(sym, None)
         # выводы по имени -> номер
         conn = {}
         for k, net in p["pins"].items():
             if isinstance(k, str) and not k.isdigit():
-                nums = [n for n, lst in pins.items() if any(t[3] == k for t in lst)]
+                nums = [n for n, lst in allpins.items() if any(t[3] == k for t in lst)]
                 if not nums:
                     raise KeyError("%s: нет вывода %s" % (ref, k))
                 for n in nums:
                     conn[n] = net
             else:
                 conn[str(k)] = net
-        props = {pr[1]: pr for pr in sexp.find(sym, "property")}
-        inst = [S("symbol"), [S("lib_id"), p["sym"]], [S("at"), x, y, rot], [S("unit"), 1],
-                [S("exclude_from_sim"), S("no")], [S("in_bom"), S("yes")], [S("on_board"), S("yes")],
-                [S("dnp"), S("no")], [S("uuid"), U("sym", ref)]]
-        # 2-выводные: обозначение и номинал сбоку от оси выводов
-        two = None
-        if len(pins) == 2:
-            pts = [symlib.place(x, y, rot, *lst[0][:3])[:2] for lst in pins.values()]
-            two = "v" if abs(pts[0][0] - pts[1][0]) < 0.01 else "h"
-        for key, val, hide in (("Reference", ref, False), ("Value", p["value"], False),
-                               ("Footprint", p["fp"], True), ("Datasheet", "", True),
-                               ("Description", "", True)):
-            pr = props.get(key)
-            j = None
-            if two == "v" and key in ("Reference", "Value"):
-                fx, fy, j = x + 2.54, y + (-0.635 if key == "Reference" else 2.54), "left"
-            elif two == "h" and key in ("Reference", "Value"):
-                fx, fy = x, y + (-3.81 if key == "Reference" else 3.81)
-            else:
-                at = sexp.find1(pr, "at") if pr else None
-                px, py = (float(at[1]), float(at[2])) if at else (0, 0)
-                a = math.radians(rot)
-                fx = x + px * math.cos(a) - py * math.sin(a)
-                fy = y - (px * math.sin(a) + py * math.cos(a))
-                jj = sexp.find1(sexp.find1(pr, "effects") or [], "justify") if pr else None
-                if jj:
-                    j = " ".join(str(v) for v in jj[1:])
-            inst.append([S("property"), key, val, [S("at"), snap(fx, 0.635), snap(fy, 0.635), 0],
-                         eff(2.5 if key != "Value" else 2.0, j, hide)])
-        for n in pins:
-            inst.append([S("pin"), n, [S("uuid"), U("pin", ref, n)]])
-        inst.append([S("instances"), [S("project"), PROJECT,
-                                      [S("path"), "/" + ROOT, [S("reference"), ref], [S("unit"), 1]]]])
-        items.append(inst)
-
-        # отрезки и метки
-        for n, lst in pins.items():
-            net = conn.get(n)
-            for (px, py, pang, pname, ptype) in lst:
-                ax, ay, d = symlib.place(x, y, rot, px, py, pang)
-                if net is None:
-                    if ptype == "no_connect" or pname in ("NC",):
-                        continue
-                    items.append([S("no_connect"), [S("at"), ax, ay], [S("uuid"), U("nc", ref, n, px, py)]])
-                    continue
-                L = 2.54
-                ex = ax + L * math.cos(math.radians(d))
-                ey = ay - L * math.sin(math.radians(d))
-                ex, ey = round(ex, 4), round(ey, 4)
-                items.append([S("wire"), [S("pts"), [S("xy"), ax, ay], [S("xy"), ex, ey]],
-                              [S("stroke"), [S("width"), 0], [S("type"), S("default")]],
-                              [S("uuid"), U("w", ref, n, px, py)]])
-                dd = round(d) % 360
-                ang, just = (180, "right bottom") if dd == 180 else (0, "left bottom")
-                if dd == 90:
-                    ang, just = 90, "left bottom"
-                elif dd == 270:
-                    ang, just = 270, "right bottom"
-                items.append([S("label"), net, [S("at"), ex, ey, ang],
-                              [S("effects"), font(1.8),
-                               [S("justify")] + [S(v) for v in just.split()]],
-                              [S("uuid"), U("lbl", ref, n, px, py)]])
+        lay = LAYOUT[ref]
+        units = lay if isinstance(lay, list) else [(1,) + tuple(lay)]
+        for unit, x, y, rot in units:
+            place_unit(items, p, sym, unit, x, y, rot, conn)
 
     # функциональные группы: штриховой контур и название (ГОСТ 2.702, п. 5.1.8)
     for title, x1, y1, x2, y2 in BLOCKS:
@@ -165,21 +175,21 @@ def build_main():
                       eff(3.0, "left bottom"), [S("uuid"), U("blkt", title)]])
 
     # лист ПЭ3 — вложенный, отдельным файлом
-    items.append([S("sheet"), [S("at"), 160.02, 246.38], [S("size"), 30.48, 12.7],
+    items.append([S("sheet"), [S("at"), 30.48, 375.92], [S("size"), 30.48, 12.7],
                   [S("exclude_from_sim"), S("no")], [S("in_bom"), S("yes")], [S("on_board"), S("yes")],
                   [S("dnp"), S("no")], [S("fields_autoplaced"), S("yes")],
                   [S("stroke"), [S("width"), 0.1524], [S("type"), S("solid")]],
                   [S("fill"), [S("color"), 0, 0, 0, 0.0]], [S("uuid"), PE_SHEET],
-                  [S("property"), "Sheetname", "Перечень элементов", [S("at"), 160.02, 245.6, 0],
+                  [S("property"), "Sheetname", "Перечень элементов", [S("at"), 30.48, 375.1, 0],
                    eff(2.0, "left bottom")],
-                  [S("property"), "Sheetfile", "pe3.kicad_sch", [S("at"), 160.02, 259.7, 0],
+                  [S("property"), "Sheetfile", "pe3.kicad_sch", [S("at"), 30.48, 389.2, 0],
                    eff(1.5, "left top")],
                   [S("instances"), [S("project"), PROJECT, [S("path"), "/" + ROOT, [S("page"), "2"]]]]])
 
     tb = [S("title_block"), [S("title"), DOC["name"][0]], [S("date"), ""], [S("company"), DOC["org"][0]],
           [S("comment"), 1, DOC["code"]]]
     sch = [S("kicad_sch"), [S("version"), 20250114], [S("generator"), "eeschema"],
-           [S("generator_version"), "9.0"], [S("uuid"), ROOT], [S("paper"), "A3"], tb,
+           [S("generator_version"), "9.0"], [S("uuid"), ROOT], [S("paper"), "A2"], tb,
            [S("lib_symbols")] + list(libs.values())] + items + \
           [[S("sheet_instances"), [S("path"), "/", [S("page"), "1"]]], [S("embedded_fonts"), S("no")]]
     open(os.path.join(OUT, PROJECT + ".kicad_sch"), "w", encoding="utf-8").write(sexp.dump(sch) + "\n")
@@ -187,9 +197,10 @@ def build_main():
 
 
 # ---------------------------------------------------------------- ПЭ3
-GROUPS = [("A", "Модули"), ("C", "Конденсаторы"), ("DA", "Микросхемы"), ("FU", "Предохранители"),
-          ("HL", "Индикаторы"), ("L", "Дроссели"), ("R", "Резисторы"), ("VD", "Диоды"),
-          ("VT", "Транзисторы"), ("X", "Соединители")]
+GROUPS = [("A", "Модули"), ("C", "Конденсаторы"), ("DA", "Микросхемы аналоговые"),
+          ("DD", "Микросхемы цифровые"), ("FU", "Предохранители"),
+          ("HL", "Индикаторы"), ("L", "Дроссели"), ("R", "Резисторы"), ("SB", "Кнопки"), ("VD", "Диоды"),
+          ("VT", "Транзисторы"), ("X", "Соединители"), ("XS", "Розетки")]
 
 
 def _prefix(ref):
@@ -358,12 +369,12 @@ def write_pe3():
 
 
 def write_wks():
-    sh = gost.Sheet(420, 297)
+    sh = gost.Sheet(594, 420)
     gost.frame(sh)
     gost.form1(sh, dict(code="${COMMENT1}", name=DOC["name"], org=DOC["org"], listov="1",
                         signs=DOC["signs"]))
     gost.extra_graphs(sh, "${COMMENT1}")
-    gost.to_wks(sh, os.path.join(OUT, "gost_A3.kicad_wks"), page1only=True)
+    gost.to_wks(sh, os.path.join(OUT, "gost_A2.kicad_wks"), page1only=True)
 
 
 if __name__ == "__main__":
