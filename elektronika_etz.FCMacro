@@ -345,6 +345,7 @@ def main():
     base = doc.getObject("FR_Base")
     bs = base.Shape.copy()
     bs.Placement = global_pl(base).multiply(bs.Placement)
+    base_top = float(bs.BoundBox.ZMax)          # до импорта STEP: потом габарит бывает порчен
     shelf(doc, P, (mc.x, mc.y))
     comp, colors = load_board()
     App.setActiveDocument(doc.Name)
@@ -357,7 +358,7 @@ def main():
     board_extras(doc, P)
     level2(doc, P)
     level1(doc, P)
-    battery(doc, P, bs.BoundBox.ZMax)
+    battery(doc, P, base_top)
     hall(doc, P)
     doc.recompute()
     print("Электроника: %d деталей" % len([x for x in doc.Objects if x.Name.startswith("EL_")]))
